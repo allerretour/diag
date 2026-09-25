@@ -128,4 +128,29 @@ document.addEventListener("DOMContentLoaded", () => {
             reader.readAsText(file);
         });
     }
+
+    // --- GESTION DE LA GRILLE VISUELLE ---
+    const gridOverlay = document.getElementById('grid-overlay');
+    const chkToggleGrid = document.getElementById('chk-toggle-grid');
+
+    if (gridOverlay && chkToggleGrid) {
+        // 1. Générer dynamiquement les cases de la grille (9 * 17 = 153 cases)
+        const totalCells = 9 * 17;
+        for (let i = 0; i < totalCells; i++) {
+            const cell = document.createElement('div');
+            gridOverlay.appendChild(cell);
+        }
+
+        // 2. Écouter le changement d'état du bouton Toggle
+        chkToggleGrid.addEventListener('change', () => {
+            if (chkToggleGrid.checked) {
+                gridOverlay.style.display = 'grid';
+            } else {
+                gridOverlay.style.display = 'none';
+            }
+        });
+    }
+    // -------------------------------------
+
+
 });

@@ -123,9 +123,16 @@ function resolveCollisions(currentBall) {
     }
 
     const clamped = clampPosition(currentX, currentY);
-    currentBall.style.left = clamped.x + 'px';
-    currentBall.style.top = clamped.y + 'px';
-    return clamped;
+    
+    // --- NOUVEAU : Alignement final sur la grille de 10px ---
+    const gridSize = 7; 
+    const snappedX = Math.round(clamped.x / gridSize) * gridSize;
+    const snappedY = Math.round(clamped.y / gridSize) * gridSize;
+
+    currentBall.style.left = snappedX + 'px';
+    currentBall.style.top = snappedY + 'px';
+    
+    return { x: snappedX, y: snappedY };
 }
 
 function makeDraggable(element) {
@@ -151,7 +158,7 @@ function makeDraggable(element) {
         if (e.target === element || element.contains(e.target)) isDragging = true;
     }
 
-    function drag(e) {
+        function drag(e) {
         if (isDragging) {
             if (e.cancelable) e.preventDefault(); 
             if (e.type === 'touchmove') {
@@ -159,6 +166,12 @@ function makeDraggable(element) {
             } else {
                 currentX = e.clientX - initialX; currentY = e.clientY - initialY;
             }
+
+            // --- NOUVEAU : Calcul du magnétisme pendant le déplacement ---
+            const gridSize = 10; 
+            currentX = Math.round(currentX / gridSize) * gridSize;
+            currentY = Math.round(currentY / gridSize) * gridSize;
+            // -------------------------------------------------------------
 
             const clamped = clampPosition(currentX, currentY);
             element.style.left = clamped.x + 'px';
@@ -168,6 +181,7 @@ function makeDraggable(element) {
             xOffset = finalPos.x; yOffset = finalPos.y;
         }
     }
+
 
     function dragEnd() {
         if (isDragging) {
