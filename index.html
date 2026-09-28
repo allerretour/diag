@@ -185,8 +185,238 @@
     box-sizing: border-box;
 }
 
+/* Conteneur principal pliable ajusté à la table */
+.controls-accordion {
+    background-color: #2c3e50;
+    color: #ffffff;
+    border-radius: 8px;
+    margin: 15px auto; /* Centrage automatique si la table est centrée */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    border: 1px solid #34495e;
+    
+    /* --- ALIGNEMENT SUR LA LARGEUR DE LA TABLE --- */
+    width: 100%;
+    max-width: 800px; /* Aligné sur la coordonnée maximale de 800px définie dans clampPosition */
+    box-sizing: border-box; /* Évite que les paddings/bordures dépassent de la largeur */
+}
 
+/* En-tête cliquable */
+.controls-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+    background-color: #34495e;
+    transition: background-color 0.2s ease;
+    box-sizing: border-box;
+}
 
+.controls-summary:hover {
+    background-color: #415b76;
+}
+
+/* Masquer la flèche native du navigateur */
+.controls-summary::-webkit-details-marker,
+.controls-summary::marker {
+    display: none;
+}
+
+/* Animation du chevron */
+.controls-summary .summary-chevron {
+    font-size: 0.8rem;
+    transition: transform 0.2s ease;
+}
+
+/* Rotation du chevron quand le panneau est ouvert */
+.controls-accordion[open] .summary-chevron {
+    transform: rotate(180deg);
+}
+
+/* Contenu interne */
+.controls-content {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    box-sizing: border-box;
+}
+
+/* Section regroupant les textes */
+.text-fields-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Groupe de formulaire (Label + Champ) */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+}
+
+/* Style des étiquettes (Labels) */
+.form-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #b9bbbe; /* Gris clair élégant */
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Conteneur pour inclure l'icône dans le titre */
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-wrapper .input-icon {
+    position: absolute;
+    left: 12px;
+    font-size: 0.95rem;
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+/* Style commun pour l'Input et le Textarea */
+.form-control {
+    width: 100%;
+    background-color: #1e2b38; /* Plus sombre que le fond du panneau pour du contraste */
+    color: #ffffff;
+    border: 1px solid #3d566e;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+/* Ajustement spécifique pour le titre avec icône (décalage à gauche) */
+.input-wrapper .form-control {
+    padding-left: 36px;
+}
+
+/* Ajustement spécifique pour la zone de texte */
+.textarea-control {
+    resize: vertical; /* Permet à l'utilisateur d'ajuster la hauteur uniquement */
+    min-height: 80px;
+    line-height: 1.4;
+}
+
+/* Styles au survol (Hover) */
+.form-control:hover {
+    border-color: #5d7e9e;
+    background-color: #223140;
+}
+
+/* Styles lors de la saisie (Focus) */
+.form-control:focus {
+    outline: none;
+    border-color: #3498db; /* Bleu vif pour attirer l'attention de manière propre */
+    background-color: #1e2b38;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.25); /* Effet de halo doux */
+}
+
+/* Style des placeholders (textes d'aide en fond) */
+.form-control::placeholder {
+    color: #627d98;
+    font-style: italic;
+    opacity: 0.8;
+}
+
+/* Conteneur de la ligne de boutons */
+.actions-button-row {
+    display: flex;
+    gap: 12px; /* Espace uniforme entre chaque bouton */
+    width: 100%;
+    margin-top: 8px;
+    box-sizing: border-box;
+}
+
+/* Base commune pour tous les boutons */
+.btn {
+    flex: 1; /* Permet aux boutons de prendre exactement la même largeur */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+}
+
+/* Effet d'enfoncement au clic pour tous les boutons */
+.btn:active {
+    transform: scale(0.98);
+}
+
+.btn .btn-icon {
+    font-size: 1rem;
+}
+
+/* 1. Bouton Exporter (Action principale) */
+.btn-primary {
+    background-color: #3498db;
+    color: #ffffff;
+}
+.btn-primary:hover {
+    background-color: #2980b9;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.25);
+}
+
+/* 2. Bouton Importer */
+.btn-secondary {
+    background-color: #34495e;
+    color: #ffffff;
+    border: 1px solid #4f6f8f;
+}
+.btn-secondary:hover {
+    background-color: #415b76;
+    border-color: #5d7e9e;
+}
+
+/* 3. Bouton Annuler Tracé */
+.btn-action {
+    background-color: #16a085;
+    color: #ffffff;
+}
+.btn-action:hover {
+    background-color: #117a65;
+    box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.25);
+}
+
+/* 4. Bouton Effacer Tout (Danger) */
+.btn-danger {
+    background-color: #e74c3c;
+    color: #ffffff;
+}
+.btn-danger:hover {
+    background-color: #c0392b;
+    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.25);
+}
+
+/* Gestion de la réactivité si l'écran devient trop petit */
+@media (max-width: 600px) {
+    .actions-button-row {
+        flex-direction: column; /* Aligne les boutons verticalement sur mobile */
+        gap: 8px;
+    }
+}
 
 
     </style>
@@ -196,24 +426,37 @@
         <h1>Table de Billard Interactive</h1>
     <p>Positionnez vos billes. Exportez ou importez vos configurations via des fichiers JSON.</p>
 
-    <!-- AJOUT : Champs de texte pour le Titre et la Description -->
-    <div style="margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 860px; background-color: #2c3a47; padding: 15px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
-        <div style="display: flex; flex-direction: column; gap: 5px;">
-            <label for="input-title" style="font-weight: bold; font-size: 14px; color: #f5f6fa;">Titre de la configuration :</label>
-            <input type="text" id="input-title" value="Ma configuration de billard" style="padding: 10px; background-color: #1e272e; color: white; border: 1px solid #57606f; border-radius: 5px; font-size: 14px; font-weight: bold;">
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 5px;">
-            <label for="input-desc" style="font-weight: bold; font-size: 14px; color: #f5f6fa;">Description / Notes :</label>
-            <textarea id="input-desc" rows="2" style="padding: 10px; background-color: #1e272e; color: white; border: 1px solid #57606f; border-radius: 5px; font-size: 14px; resize: vertical;" placeholder="Ajoutez des notes ou des instructions sur cette disposition de billes..."></textarea>
+
+<!-- Section Pliable des Contrôles -->
+<details class="controls-accordion" open>
+    <summary class="controls-summary">
+        <span class="summary-title">⚙️ Panneau de Contrôle</span>
+        <span class="summary-chevron">▼</span>
+    </summary>
+    
+    <div class="controls-content">
+        <div class="text-fields-section">
+    <!-- Champ Titre -->
+    <div class="form-group">
+        <label for="input-title" class="form-label">Titre de la configuration</label>
+        <div class="input-wrapper">
+            <span class="input-icon">✏️</span>
+            <input type="text" id="input-title" class="form-control" placeholder="Ex: Attaque en bande, Position de départ..." value="Ma configuration de billard">
         </div>
     </div>
 
-   
-    <!-- BARRE DE BOUTONS MAJ AVEC SÉLECTEUR 1 À 15 -->
-    <div style="margin-bottom: 20px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
-        <div style="display: flex; align-items: center; gap: 8px;">
-            <label for="select-balls-count" style="font-weight: bold; font-size: 14px;">Billes sur la table :</label>
-            <select id="select-balls-count" style="padding: 9px 15px; background-color: #34495e; color: white; border: 1px solid #57606f; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 14px;">
+    <!-- Champ Description -->
+    <div class="form-group">
+        <label for="input-desc" class="form-label">Description & Notes tactiques</label>
+        <textarea id="input-desc" class="form-control textarea-control" rows="3" placeholder="Ajoutez des détails sur les effets, la force du coup ou l'objectif de l'exercice..."></textarea>
+    </div>
+</div>
+
+
+        <div class="control-group">
+            <label for="select-balls-count">Billes sur la table :</label>
+            <select id="select-balls-count">
+                <option value="15">Blanche + 15 billes (Complet)</option>
                 <option value="0">Bille blanche uniquement</option>
                 <option value="1">Blanche + 1 bille</option>
                 <option value="2">Blanche + 2 billes</option>
@@ -229,38 +472,53 @@
                 <option value="12">Blanche + 12 billes</option>
                 <option value="13">Blanche + 13 billes</option>
                 <option value="14">Blanche + 14 billes</option>
-                <option value="15" selected>Blanche + 15 billes (Complet)</option>
+                
             </select>
+            <label>
+                <input type="checkbox" id="chk-toggle-grid"> Afficher la grille
+            </label>
         </div>
 
-        <button id="btn-export" style="padding: 10px 20px; background-color: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Exporter en JSON</button>
-        <button id="btn-import-trigger" style="padding: 10px 20px; background-color: #2980b9; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Importer un JSON</button>
-        <input type="file" id="file-import" accept=".json" style="display: none;">
-<label class="toggle-grid">
-    <input type="checkbox" id="chk-toggle-grid"> Afficher la grille
-</label>
+<!-- Barre d'actions horizontale unique -->
+<div class="actions-button-row">
+    <button id="btn-export" class="btn btn-primary">
+        <span class="btn-icon">💾</span> Exporter JSON
+    </button>
+    
+    <button id="btn-import-trigger" class="btn btn-secondary">
+        <span class="btn-icon">📂</span> Importer JSON
+    </button>
+    <input type="file" id="file-import" accept=".json" style="display: none;">
 
-<!-- Nouveaux contrôles pour le dessin -->
-<div class="drawing-controls" style="margin: 10px 0; display: flex; gap: 10px; align-items: center;">
-    <label for="marker-color">Couleur du tracé :</label>
-    <select id="marker-color">
-        <option value="#ffffff" selected>Blanc</option>
-        <option value="#e74c3c">Rouge</option>
-        <option value="#f1c40f">Jaune</option>
-        <option value="#2ecc71">Vert fluo</option>
-    </select>
+    <button id="btn-undo-lines" class="btn btn-action">
+        <span class="btn-icon">↩️</span> Annuler tracé
+    </button>
 
-<button id="btn-undo-lines">↩️ Annuler (Ctrl+Z)</button>
-
-
-    <button id="btn-clear-lines" type="button" style="padding: 5px 10px; cursor: pointer;">
-        Effacer les lignes
+    <button id="btn-clear-lines" class="btn btn-danger">
+        <span class="btn-icon">🗑️</span> Effacer tout
     </button>
 </div>
 
 
-    
+        
+        
+
+        <div class="drawing-controls">
+            <label for="marker-color">Couleur du tracé :</label>
+            <select id="marker-color">
+                <option value="#ffffff">Blanc</option>
+                <option value="#e74c3c">Rouge</option>
+                <option value="#f1c40f">Jaune</option>
+                <option value="#2ecc71">Vert fluo</option>
+            </select>
+            
+        </div>
+        <!-- Fin de votre bloc de contrôles existant -->
     </div>
+</details>
+
+
+
 
         <!-- La table de billard avec mouches et spots -->
     <div id="table-frame">
