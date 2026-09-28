@@ -47,12 +47,15 @@ document.addEventListener("DOMContentLoaded", () => {
             const configDesc = descInput ? descInput.value : "";
 
             // On crée l'objet global intégrant vos nouveaux champs éditables
-            const donneesExport = {
-                titre: configTitle,
-                description: configDesc,
-                nombreBillesVisibles: ballsCountSelect ? parseInt(ballsCountSelect.value, 10) : 15,
-                billes: listBilles
-            };
+            // On intègre le tableau des dessins à l'objet global exporté
+const donneesExport = {
+    titre: configTitle,
+    description: configDesc,
+    nombreBillesVisibles: ballsCountSelect ? parseInt(ballsCountSelect.value, 10) : 15,
+    billes: listBilles,
+    lignesDessinees: window.dessinsSauvegardes || [] // AJOUT : capture des lignes
+};
+
 
             // Nettoyage du titre pour en faire un nom de fichier système valide (enlève les caractères interdits)
             const nomFichierSecurise = configTitle.replace(/[/\\?%*:|"<>]/g, '-').substring(0, 100) || "configuration_billard";
@@ -80,49 +83,63 @@ document.addEventListener("DOMContentLoaded", () => {
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
-                    const donneesImportees = JSON.parse(e.target.result);
-                    
-                    let listeBilles = [];
-                    let nbVisibles = 15;
-                    let titreImported = "Configuration importée";
-                    let descImported = "";
+    const donneesImportees = JSON.parse(e.target.result);
+    
+    let listeBilles = [];
+    let nbVisibles = 15;
+    let titreImported = "Configuration importée";
+    let descImported = "";
 
-                    // Analyse du format de fichier (nouveau format complet vs ancien format simple)
-                    if (donneesImportees.billes && Array.isArray(donneesImportees.billes)) {
-                        listeBilles = donneesImportees.billes;
-                        nbVisibles = donneesImportees.nombreBillesVisibles;
-                        titreImported = donneesImportees.titre || "Configuration sans titre";
-                        descImported = donneesImportees.description || "";
-                    } else if (Array.isArray(donneesImportees)) {
-                        listeBilles = donneesImportees;
-                        nbVisibles = donneesImportees.filter(b => parseInt(b.id, 10) > 0).length;
-                    } else {
-                        throw new Error();
-                    }
+    // Analyse du format de fichier
+    if (donneesImportees.billes && Array.isArray(donneesImportees.billes)) {
+        listeBilles = donneesImportees.billes;
+        nbVisibles = donneesImportees.nombreBillesVisibles;
+        titreImported = donneesImportees.titre || "Configuration sans titre";
+        descImported = donneesImportees.description || "";
+        
+        // AJOUT : Restauration des lignes de dessin
+        if (donneesImportees.lignesDessinees && Array.isArray(donneesImportees.lignesDessinees)) {
+            window.dessinsSauvegardes = donneesImportees.lignesDessinees;
+        } else {
+            window.dessinsSauvegardes = [];
+        }
+    } else if (Array.isArray(donneesImportees)) {
+        listeBilles = donneesImportees;
+        nbVisibles = donneesImportees.filter(b => parseInt(b.id, 10) > 0).length;
+        window.dessinsSauvegardes = []; // Ancien format sans dessin
+    } else {
+        throw new Error();
+    }
 
-                    // 1. Restaurer la position de toutes les billes
-                    listeBilles.forEach(savedBall => {
-                        const ballEl = activeBalls.find(b => b.getAttribute('data-id') === savedBall.id);
-                        if (ballEl) {
-                            ballEl.style.left = savedBall.x;
-                            ballEl.style.top = savedBall.y;
-                        }
-                    });
+    // 1. Restaurer la position de toutes les billes
+    listeBilles.forEach(savedBall => {
+        const ballEl = activeBalls.find(b => b.getAttribute('data-id') === savedBall.id);
+        if (ballEl) {
+            ballEl.style.left = savedBall.x;
+            ballEl.style.top = savedBall.y;
+        }
+    });
 
-                    // 2. Ajuster le sélecteur numérique et masquer les billes en trop
-                    if (ballsCountSelect) {
-                        ballsCountSelect.value = nbVisibles;
-                        updateVisibleBalls();
-                    }
+    // 2. Ajuster le sélecteur numérique et masquer les billes en trop
+    if (ballsCountSelect) {
+        ballsCountSelect.value = nbVisibles;
+        updateVisibleBalls();
+    }
 
-                    // 3. Mettre à jour les champs de texte éditables du HTML
-                    if (titleInput) titleInput.value = titreImported;
-                    if (descInput) descInput.value = descImported;
+    // 3. Mettre à jour les champs de texte éditables du HTML
+    if (titleInput) titleInput.value = titreImported;
+    if (descInput) descInput.value = descImported;
 
-                    alert(`Configuration "${titreImported}" restaurée avec succès !`);
-                } catch (error) {
-                    alert("Erreur lors de la lecture du fichier JSON. Vérifiez sa structure.");
-                }
+    // AJOUT : Forcer le canvas à redessiner les lignes chargées
+    if (typeof window.redessinerToutesLesLignes === "function") {
+        window.redessinerToutesLesLignes();
+    }
+
+    alert(`Configuration "${titreImported}" restaurée avec succès !`);
+} catch (error) {
+    alert("Erreur lors de la lecture du fichier JSON. Vérifiez sa structure.");
+}
+
                 fileImportInput.value = "";
             };
             reader.readAsText(file);

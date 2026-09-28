@@ -239,6 +239,23 @@
 <label class="toggle-grid">
     <input type="checkbox" id="chk-toggle-grid"> Afficher la grille
 </label>
+
+<!-- Nouveaux contrôles pour le dessin -->
+<div class="drawing-controls" style="margin: 10px 0; display: flex; gap: 10px; align-items: center;">
+    <label for="marker-color">Couleur du tracé :</label>
+    <select id="marker-color">
+        <option value="#ffffff" selected>Blanc</option>
+        <option value="#e74c3c">Rouge</option>
+        <option value="#f1c40f">Jaune</option>
+        <option value="#2ecc71">Vert fluo</option>
+    </select>
+
+    <button id="btn-clear-lines" type="button" style="padding: 5px 10px; cursor: pointer;">
+        Effacer les lignes
+    </button>
+</div>
+
+
     
     </div>
 
@@ -269,6 +286,11 @@
         <div class="diamond rv-3" style="position: absolute; right: 11px; top: 330px;"></div>
 
         <div id="pool-table">
+
+            <!-- À insérer à l'intérieur de <div id="pool-table"> -->
+<!-- À insérer à l'intérieur de <div id="pool-table"> -->
+<canvas id="drawing-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;"></canvas>
+
             <!-- Traçage du tapis : Head string (Ligne de cadre) -->
             <div style="position: absolute; top: 18px; bottom: 18px; left: 200px; width: 1px; background-color: rgba(255,255,255,0.15); pointer-events: none; z-index: 0;"></div>
 
@@ -303,6 +325,7 @@
         <!-- Liaison avec vos deux scripts séparés -->
     <script src="physique.js"></script>
     <script src="outils.js"></script>
+    <script src="dessin.js"></script>
 </body>
 </html>
 
