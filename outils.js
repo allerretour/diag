@@ -129,28 +129,56 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // --- GESTION DE LA GRILLE VISUELLE ---
+       // --- GESTION DE LA GRILLE VISUELLE COMPLÈTE CORRIGÉE (17x9) ---
     const gridOverlay = document.getElementById('grid-overlay');
     const chkToggleGrid = document.getElementById('chk-toggle-grid');
+    const poolTable = document.getElementById('pool-table');
 
-    if (gridOverlay && chkToggleGrid) {
-        // 1. Générer dynamiquement les cases de la grille (9 * 17 = 153 cases)
-        const totalCells = 9 * 17;
+    if (gridOverlay && chkToggleGrid && poolTable) {
+        const cols = 17;
+        const rows = 9;
+        const totalCells = cols * rows;
+
+        // Position de départ exacte du tapis vert (limites minimales physiques)
+        const offsetLeft = 19;  // minX
+        const offsetTop = 18;   // minY
+
+        // Diamètre de la bille défini dans le moteur physique (28px)
+        const ballDiameter = 28;
+
+        // Ajustement : On ajoute le diamètre de la bille pour obtenir les bords réels de la surface
+        // Largeur totale : 754 - 18 + 28 = 764px
+        // Hauteur totale : 354 - 18 + 28 = 364px
+        const playWidth = (754 - offsetLeft) + ballDiameter -8;  
+        const playHeight = (354 - offsetTop) + ballDiameter ; 
+
+        // Application stricte des dimensions de surface sur l'overlay
+        gridOverlay.style.position = 'absolute';
+        gridOverlay.style.left = `${offsetLeft}px`;
+        gridOverlay.style.top = `${offsetTop}px`;
+        gridOverlay.style.width = `${playWidth}px`;
+        gridOverlay.style.height = `${playHeight}px`;
+
+        // Répartition parfaite des 17x9 cases sur toute la surface étendue
+        gridOverlay.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        gridOverlay.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+
+        // Nettoyage et injection des 153 cases
+        gridOverlay.innerHTML = '';
         for (let i = 0; i < totalCells; i++) {
             const cell = document.createElement('div');
             gridOverlay.appendChild(cell);
         }
 
-        // 2. Écouter le changement d'état du bouton Toggle
+        // Gestion de l'affichage (Toggle)
         chkToggleGrid.addEventListener('change', () => {
-            if (chkToggleGrid.checked) {
-                gridOverlay.style.display = 'grid';
-            } else {
-                gridOverlay.style.display = 'none';
-            }
+            gridOverlay.style.display = chkToggleGrid.checked ? 'grid' : 'none';
         });
     }
-    // -------------------------------------
+    // --------------------------------------------------------------
+
+
+
 
 
 });

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Table de Billard Réaliste</title>
@@ -173,6 +174,19 @@
     border-left: 1px dashed rgba(255, 255, 255, 0.15);
 }
 
+#grid-overlay {
+    display: none; /* Masqué par défaut */
+    pointer-events: none; /* Laisse passer les clics pour glisser les billes */
+    box-sizing: border-box;
+}
+
+#grid-overlay div {
+    border: 1px solid rgba(255, 255, 255, 0.08); /* Lignes subtiles pour le tapis */
+    box-sizing: border-box;
+}
+
+
+
 
 
     </style>
@@ -225,6 +239,7 @@
 <label class="toggle-grid">
     <input type="checkbox" id="chk-toggle-grid"> Afficher la grille
 </label>
+    
     </div>
 
         <!-- La table de billard avec mouches et spots -->
