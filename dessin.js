@@ -1,4 +1,4 @@
-// Variable globale pour stocker les lignes tracées
+// Variable globale pour stocker les lignes et les cibles tracées
 window.dessinsSauvegardes = [];
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -17,6 +17,17 @@ document.addEventListener("DOMContentLoaded", () => {
     let isCtrlPressed = false;
     let isShiftPressed = false;
 
+    // Variables pour suivre la position du curseur sur la table de billard
+    let mouseX = 0;
+    let mouseY = 0;
+
+    // Suivi permanent de la souris pour positionner la cible au pixel près
+    table.addEventListener('mousemove', (e) => {
+        const rect = table.getBoundingClientRect();
+        mouseX = Math.round(e.clientX - rect.left);
+        mouseY = Math.round(e.clientY - rect.top);
+    });
+
     function configurerStyleDessin(couleur) {
         ctx.strokeStyle = couleur || (colorSelect ? colorSelect.value : '#ffffff');
         ctx.lineWidth = 3;           
@@ -24,7 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.lineJoin = 'round';
     }
 
-    // Dessine la pointe géométrique au bout de la ligne
+    // Dessine la pointe géométrique au bout d'une ligne standard
     function dessinerPointeFleche(fromX, fromY, toX, toY, couleur) {
         const arrowLength = 12; 
         const arrowAngle = Math.PI / 6; 
@@ -46,6 +57,37 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.fill(); 
     }
 
+    // Dessine une cible de 100x100 pixels centrée sur (x, y)
+    function dessinerCible(x, y, couleur) {
+        ctx.save();
+        ctx.strokeStyle = couleur;
+        ctx.lineWidth = 2;
+
+        // 1. Cercle extérieur (Rayon 50 -> Diamètre 100)
+        ctx.beginPath();
+        ctx.arc(x, y, 50, 0, 2 * Math.PI);
+        ctx.stroke();
+
+        // 2. Cercle intérieur (Rayon 25 -> Diamètre 50)
+        ctx.beginPath();
+        ctx.arc(x, y, 25, 0, 2 * Math.PI);
+        ctx.stroke();
+
+        // 3. Ligne réticulaire horizontale (Déborde de 5px de chaque côté)
+        ctx.beginPath();
+        ctx.moveTo(x - 55, y);
+        ctx.lineTo(x + 55, y);
+        ctx.stroke();
+
+        // 4. Ligne réticulaire verticale (Déborde de 5px de chaque côté)
+        ctx.beginPath();
+        ctx.moveTo(x, y - 55);
+        ctx.lineTo(x, y + 55);
+        ctx.stroke();
+
+        ctx.restore();
+    }
+
     function resizeCanvas() {
         canvas.width = table.clientWidth;
         canvas.height = table.clientHeight;
@@ -54,27 +96,37 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     window.addEventListener('resize', resizeCanvas);
 
-    // Redessine l'ensemble des calques de dessin
+    // Redessine l'ensemble des calques de dessin (lignes, flèches et cibles)
     window.redessinerToutesLesLignes = function() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        window.dessinsSauvegardes.forEach(ligne => {
-            if (ligne.points.length < 2) return;
-            configurerStyleDessin(ligne.couleur);
+        
+        window.dessinsSauvegardes.forEach(dessin => {
+            // Gestion exclusive des éléments de type Cible
+            if (dessin.estCible) {
+                if (dessin.points && dessin.points.length > 0) {
+                    const centre = dessin.points[0];
+                    dessinerCible(centre.x, centre.y, dessin.couleur);
+                }
+                return;
+            }
+
+            // Gestion des tracés standards et lignes droites
+            if (dessin.points.length < 2) return;
+            configurerStyleDessin(dessin.couleur);
             ctx.beginPath();
-            ctx.moveTo(ligne.points[0].x, ligne.points[0].y);
+            ctx.moveTo(dessin.points[0].x, dessin.points[0].y);
             
-            if (ligne.estDroite) {
-                const dernierPoint = ligne.points[ligne.points.length - 1];
+            if (dessin.estDroite) {
+                const dernierPoint = dessin.points[dessin.points.length - 1];
                 ctx.lineTo(dernierPoint.x, dernierPoint.y);
                 ctx.stroke();
                 
-                // Si la ligne a été enregistrée avec l'option flèche
-                if (ligne.avecFleche) {
-                    dessinerPointeFleche(ligne.points[0].x, ligne.points[0].y, dernierPoint.x, dernierPoint.y, ligne.couleur);
+                if (dessin.avecFleche) {
+                    dessinerPointeFleche(dessin.points[0].x, dessin.points[0].y, dernierPoint.x, dernierPoint.y, dessin.couleur);
                 }
             } else {
-                for (let i = 1; i < ligne.points.length; i++) {
-                    ctx.lineTo(ligne.points[i].x, ligne.points[i].y);
+                for (let i = 1; i < dessin.points.length; i++) {
+                    ctx.lineTo(dessin.points[i].x, dessin.points[i].y);
                 }
                 ctx.stroke();
             }
@@ -120,6 +172,20 @@ document.addEventListener("DOMContentLoaded", () => {
             e.preventDefault(); 
             annulerDernierTrace();
         }
+
+        // Interception du raccourci de la touche 'T' pour injecter une cible
+        if (e.key.toLowerCase() === 't') {
+            const couleurActive = colorSelect ? colorSelect.value : '#ffffff';
+
+            const nouvelleCible = {
+                couleur: couleurActive,
+                estCible: true,
+                points: [{ x: mouseX, y: mouseY }]
+            };
+
+            window.dessinsSauvegardes.push(nouvelleCible);
+            window.redessinerToutesLesLignes();
+        }
     });
 
     document.addEventListener('keyup', (e) => {
@@ -153,13 +219,10 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.moveTo(x, y);
         startPoint = { x, y }; 
 
-        // Détermination du mode selon les combinaisons de touches enfoncées
         const activeCtrl = isCtrlPressed || e.ctrlKey;
         const activeShift = isShiftPressed || e.shiftKey;
 
-        // Ctrl seul ou Ctrl+Shift forcent une ligne droite
         const forceLigneDroite = activeCtrl;
-        // Il y a une flèche uniquement si Ctrl ET Shift sont actifs en même temps
         const forceFleche = activeCtrl && activeShift;
 
         currentLine = {
@@ -190,7 +253,6 @@ document.addEventListener("DOMContentLoaded", () => {
             ctx.lineTo(x, y);
             ctx.stroke();
 
-            // Rendu de la flèche en temps réel si l'option est active
             if (currentLine.avecFleche) {
                 dessinerPointeFleche(startPoint.x, startPoint.y, x, y, currentLine.couleur);
             }
