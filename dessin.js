@@ -9,9 +9,13 @@ document.addEventListener("DOMContentLoaded", () => {
     
     const colorSelect = document.getElementById('marker-color');
     const clearBtn = document.getElementById('btn-clear-lines');
-    
+    const undoBtn = document.getElementById('btn-undo-lines'); 
+
     let isDrawing = false;
-    let currentLine = null; // Ligne en cours de tracé
+    let currentLine = null; 
+    let startPoint = null; 
+    let isCtrlPressed = false;
+    let isShiftPressed = false;
 
     function configurerStyleDessin(couleur) {
         ctx.strokeStyle = couleur || (colorSelect ? colorSelect.value : '#ffffff');
@@ -20,15 +24,37 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.lineJoin = 'round';
     }
 
+    // Dessine la pointe géométrique au bout de la ligne
+    function dessinerPointeFleche(fromX, fromY, toX, toY, couleur) {
+        const arrowLength = 12; 
+        const arrowAngle = Math.PI / 6; 
+        const angle = Math.atan2(toY - fromY, toX - fromX);
+
+        ctx.fillStyle = couleur || (colorSelect ? colorSelect.value : '#ffffff');
+        
+        ctx.beginPath();
+        ctx.moveTo(toX, toY);
+        ctx.lineTo(
+            toX - arrowLength * Math.cos(angle - arrowAngle),
+            toY - arrowLength * Math.sin(angle - arrowAngle)
+        );
+        ctx.lineTo(
+            toX - arrowLength * Math.cos(angle + arrowAngle),
+            toY - arrowLength * Math.sin(angle + arrowAngle)
+        );
+        ctx.closePath();
+        ctx.fill(); 
+    }
+
     function resizeCanvas() {
         canvas.width = table.clientWidth;
         canvas.height = table.clientHeight;
         configurerStyleDessin();
-        window.redessinerToutesLesLignes(); // Redessine si la fenêtre change de taille
+        window.redessinerToutesLesLignes(); 
     }
     window.addEventListener('resize', resizeCanvas);
 
-    // Fonction globale pour redessiner tout le tableau depuis la mémoire
+    // Redessine l'ensemble des calques de dessin
     window.redessinerToutesLesLignes = function() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         window.dessinsSauvegardes.forEach(ligne => {
@@ -36,13 +62,32 @@ document.addEventListener("DOMContentLoaded", () => {
             configurerStyleDessin(ligne.couleur);
             ctx.beginPath();
             ctx.moveTo(ligne.points[0].x, ligne.points[0].y);
-            for (let i = 1; i < ligne.points.length; i++) {
-                ctx.lineTo(ligne.points[i].x, ligne.points[i].y);
+            
+            if (ligne.estDroite) {
+                const dernierPoint = ligne.points[ligne.points.length - 1];
+                ctx.lineTo(dernierPoint.x, dernierPoint.y);
+                ctx.stroke();
+                
+                // Si la ligne a été enregistrée avec l'option flèche
+                if (ligne.avecFleche) {
+                    dessinerPointeFleche(ligne.points[0].x, ligne.points[0].y, dernierPoint.x, dernierPoint.y, ligne.couleur);
+                }
+            } else {
+                for (let i = 1; i < ligne.points.length; i++) {
+                    ctx.lineTo(ligne.points[i].x, ligne.points[i].y);
+                }
+                ctx.stroke();
             }
-            ctx.stroke();
         });
-        configurerStyleDessin(); // Remet la couleur active du sélecteur
+        configurerStyleDessin(); 
     };
+
+    function annulerDernierTrace() {
+        if (window.dessinsSauvegardes.length > 0) {
+            window.dessinsSauvegardes.pop(); 
+            window.redessinerToutesLesLignes(); 
+        }
+    }
 
     if (colorSelect) {
         colorSelect.addEventListener('change', () => {
@@ -53,20 +98,38 @@ document.addEventListener("DOMContentLoaded", () => {
     if (clearBtn) {
         clearBtn.addEventListener('click', () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            window.dessinsSauvegardes = []; // Vide la mémoire
+            window.dessinsSauvegardes = []; 
         });
     }
 
-    // --- LOGIQUE DE TRACÉ ET CAPTURE DES POINTS ---
-    
+    if (undoBtn) {
+        undoBtn.addEventListener('click', annulerDernierTrace);
+    }
+
+    // --- LOGIQUE DE CLAVIER ET RACCOURCIS ---
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Shift') canvas.style.pointerEvents = 'auto';
+        if (e.key === 'Shift') {
+            isShiftPressed = true;
+            canvas.style.pointerEvents = 'auto';
+        }
+        if (e.key === 'Control') {
+            isCtrlPressed = true;
+        }
+
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+            e.preventDefault(); 
+            annulerDernierTrace();
+        }
     });
 
     document.addEventListener('keyup', (e) => {
         if (e.key === 'Shift') {
+            isShiftPressed = false;
             canvas.style.pointerEvents = 'none';
             if (isDrawing) finTrace();
+        }
+        if (e.key === 'Control') {
+            isCtrlPressed = false;
         }
     });
 
@@ -80,19 +143,30 @@ document.addEventListener("DOMContentLoaded", () => {
     function commencerDessin(e) {
         isDrawing = true;
         const rect = table.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const x = Math.round(e.clientX - rect.left);
+        const y = Math.round(e.clientY - rect.top);
         
         const couleurActive = colorSelect ? colorSelect.value : '#ffffff';
         configurerStyleDessin(couleurActive);
         
         ctx.beginPath();
         ctx.moveTo(x, y);
+        startPoint = { x, y }; 
 
-        // Initialise la nouvelle ligne en mémoire
+        // Détermination du mode selon les combinaisons de touches enfoncées
+        const activeCtrl = isCtrlPressed || e.ctrlKey;
+        const activeShift = isShiftPressed || e.shiftKey;
+
+        // Ctrl seul ou Ctrl+Shift forcent une ligne droite
+        const forceLigneDroite = activeCtrl;
+        // Il y a une flèche uniquement si Ctrl ET Shift sont actifs en même temps
+        const forceFleche = activeCtrl && activeShift;
+
         currentLine = {
             couleur: couleurActive,
-            points: [{ x: Math.round(x), y: Math.round(y) }]
+            estDroite: forceLigneDroite, 
+            avecFleche: forceFleche,
+            points: [{ x, y }]
         };
     }
 
@@ -104,23 +178,39 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!isDrawing || !currentLine) return;
 
         const rect = table.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const x = Math.round(e.clientX - rect.left);
+        const y = Math.round(e.clientY - rect.top);
 
-        ctx.lineTo(x, y);
-        ctx.stroke();
+        if (currentLine.estDroite) {
+            window.redessinerToutesLesLignes();
+            
+            configurerStyleDessin(currentLine.couleur);
+            ctx.beginPath();
+            ctx.moveTo(startPoint.x, startPoint.y);
+            ctx.lineTo(x, y);
+            ctx.stroke();
 
-        // Ajoute le point actuel à la ligne
-        currentLine.points.push({ x: Math.round(x), y: Math.round(y) });
+            // Rendu de la flèche en temps réel si l'option est active
+            if (currentLine.avecFleche) {
+                dessinerPointeFleche(startPoint.x, startPoint.y, x, y, currentLine.couleur);
+            }
+
+            currentLine.points = [startPoint, { x, y }];
+        } else {
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            currentLine.points.push({ x, y });
+        }
     });
 
     function finTrace() {
         if (isDrawing && currentLine) {
             if (currentLine.points.length >= 2) {
-                window.dessinsSauvegardes.push(currentLine); // Sauvegarde définitive de la ligne
+                window.dessinsSauvegardes.push(currentLine); 
             }
             isDrawing = false;
             currentLine = null;
+            startPoint = null; 
         }
     }
 
@@ -132,6 +222,5 @@ document.addEventListener("DOMContentLoaded", () => {
     table.addEventListener('contextmenu', e => e.preventDefault());
     canvas.addEventListener('contextmenu', e => e.preventDefault());
 
-    // Premier allumage
     setTimeout(resizeCanvas, 100);
 });
