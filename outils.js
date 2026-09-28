@@ -37,7 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Le CENTRE de la bille de tête doit être sur le Foot Spot (X: 600).
         // On soustrait le rayon de la bille (14px) + l'ajustement de 2px pour un alignement parfait.
         const apexX = 587; 
-        const apexY = 185; // Ajustement vertical également (186px - 14px de rayon)
+        const apexY = 189; // Ajustement vertical également (186px - 14px de rayon)
         
         // Espacements géométriques standards basés sur le diamètre de la bille (28px)
         const dx = 24.25; // Décalage horizontal par colonne (28 * cos(30°) ajusté pour l'imbrication)
@@ -93,8 +93,8 @@ document.addEventListener("DOMContentLoaded", () => {
         // Remettre la bille blanche à sa place de départ (Head Spot : 186 - 14 = 172 pour être centrée verticalement)
         const cueBall = activeBalls.find(b => b.getAttribute('data-id') === '0');
         if (cueBall) {
-            cueBall.style.left = '186px';
-            cueBall.style.top = '172px';
+            cueBall.style.left = '187px';
+            cueBall.style.top = '188px';
         }
     }
 
