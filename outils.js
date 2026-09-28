@@ -26,6 +26,9 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+
+
+
     if (ballsCountSelect) {
         ballsCountSelect.addEventListener('change', updateVisibleBalls);
     }
@@ -71,6 +74,8 @@ const donneesExport = {
             URL.revokeObjectURL(url);
         });
     }
+
+
 
     // IMPORTATION : Lit et réinjecte le titre, la description et la table de billard
     if (importTriggerBtn && fileImportInput) {
