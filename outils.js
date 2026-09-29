@@ -204,6 +204,7 @@ const donneesExport = {
 
     // 3. Mettre à jour les champs de texte éditables du HTML
     if (titleInput) titleInput.value = titreImported;
+	rafraichirTitreSurTapis();
     if (descInput) descInput.value = descImported;
 
     // AJOUT : Forcer le canvas à redessiner les lignes chargées

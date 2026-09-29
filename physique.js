@@ -200,3 +200,36 @@ function makeDraggable(element) {
     }
 }
 
+// --- GESTION DE L'AFFICHAGE DU TITRE SUR LE TAPIS ---
+const chkShowTitle = document.getElementById('chk-show-title');
+const tableTitleOverlay = document.getElementById('table-title-overlay');
+const titleInput = document.getElementById('input-title'); // Déjà présent dans votre code
+
+function rafraichirTitreSurTapis() {
+    if (!tableTitleOverlay) return;
+    
+    // Récupère la valeur de l'input titre ou met une valeur par défaut
+    const texteTitre = titleInput ? titleInput.value.trim() : "";
+    tableTitleOverlay.innerText = texteTitre;
+
+    // Affiche ou masque selon la case à cocher et la présence d'un texte
+    if (chkShowTitle && chkShowTitle.checked && texteTitre !== "") {
+        tableTitleOverlay.style.display = 'block';
+    } else {
+        tableTitleOverlay.style.display = 'none';
+    }
+}
+
+if (chkShowTitle && tableTitleOverlay) {
+    // Écoute le clic sur la case à cocher
+    chkShowTitle.addEventListener('change', rafraichirTitreSurTapis);
+    
+    // Écoute la saisie en direct dans l'input pour mettre à jour le tapis instantanément
+    if (titleInput) {
+        titleInput.addEventListener('input', rafraichirTitreSurTapis);
+    }
+}
+
+
+
+

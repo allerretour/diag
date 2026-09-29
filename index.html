@@ -418,6 +418,30 @@
     }
 }
 
+#table-title-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: sans-serif;
+    font-size: 28px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    pointer-events: none; /* Laisse passer les clics pour pouvoir bouger les billes dessous */
+    z-index: 1;           /* Derrière les billes mais visible sur le tapis */
+    
+    /* Couleur très discrète : blanc avec une très forte transparence */
+    color: rgba(255, 255, 255, 0.08); 
+    
+    /* Optionnel : si votre tapis est vert standard, vous pouvez aussi utiliser un vert discret comme : 
+    color: rgba(20, 100, 40, 0.4); */
+    
+    white-space: nowrap;
+    user-select: none;
+}
+
+
 
     </style>
 </head>
@@ -452,29 +476,32 @@
 
 
         <div class="control-group">
-            <label for="select-balls-count">Billes sur la table :</label>
-            <select id="select-balls-count">
-                <option value="15">Blanche + 15 billes (Complet)</option>
-                <option value="0">Bille blanche uniquement</option>
-                <option value="1">Blanche + 1 bille</option>
-                <option value="2">Blanche + 2 billes</option>
-                <option value="3">Blanche + 3 billes</option>
-                <option value="4">Blanche + 4 billes</option>
-                <option value="5">Blanche + 5 billes</option>
-                <option value="6">Blanche + 6 billes</option>
-                <option value="7">Blanche + 7 billes</option>
-                <option value="8">Blanche + 8 billes</option>
-                <option value="9">Blanche + 9 billes</option>
-                <option value="10">Blanche + 10 billes</option>
-                <option value="11">Blanche + 11 billes</option>
-                <option value="12">Blanche + 12 billes</option>
-                <option value="13">Blanche + 13 billes</option>
-                <option value="14">Blanche + 14 billes</option>
-                
-            </select>
+    <label for="select-balls-count">🎱 Billes sur la table :</label>
+    <select id="select-balls-count">
+        <option value="0">⚪ Bille blanche uniquement</option>
+        <option value="1">🔴 Blanche + 1 bille</option>
+        <option value="2">🔴 Blanche + 2 billes</option>
+        <option value="3">🔴 Blanche + 3 billes</option>
+        <option value="4">🔴 Blanche + 4 billes</option>
+        <option value="5">🔴 Blanche + 5 billes</option>
+        <option value="6">🔴 Blanche + 6 billes</option>
+        <option value="7">🔴 Blanche + 7 billes</option>
+        <option value="8">🎱 Blanche + 8 billes (Jeu de la 8)</option>
+        <option value="9">🔴 Blanche + 9 billes (Jeu de la 9)</option>
+        <option value="10">🔴 Blanche + 10 billes</option>
+        <option value="11">🔴 Blanche + 11 billes</option>
+        <option value="12">🔴 Blanche + 12 billes</option>
+        <option value="13">🔴 Blanche + 13 billes</option>
+        <option value="14">🔴 Blanche + 14 billes</option>
+        <option value="15" selected>🏆 Blanche + 15 billes (Complet)</option>
+    </select>
             <label>
                 <input type="checkbox" id="chk-toggle-grid"> Afficher la grille
             </label>
+			<label>
+				<input type="checkbox" id="chk-show-title"> Afficher le titre sur le tapis
+			</label>
+
 			
         </div>
 
@@ -503,13 +530,23 @@
         
 
         <div class="drawing-controls">
-            <label for="marker-color">Couleur du tracé :</label>
-            <select id="marker-color">
-                <option value="#ffffff">Blanc</option>
-                <option value="#e74c3c">Rouge</option>
-                <option value="#f1c40f">Jaune</option>
-                <option value="#2ecc71">Vert fluo</option>
-            </select>
+            <label for="marker-color">🎨 Couleur du tracé :</label>
+<select id="marker-color">
+    <!-- Couleurs d'origine -->
+    <option value="#ffffff">⚪ Blanc</option>
+    <option value="#e74c3c">🔴 Rouge</option>
+    <option value="#f1c40f">🟡 Jaune</option>
+    <option value="#2ecc71">🟢 Vert fluo</option>
+    
+    <!-- Nouvelles couleurs ajoutées -->
+    <option value="#3498db">🔵 Bleu ciel</option>
+    <option value="#1abc9c">🌐 Turquoise</option>
+    <option value="#e67e22">🟠 Orange</option>
+    <option value="#9b59b6">🟣 Violet</option>
+    <option value="#e84393">💗 Rose</option>
+    <option value="#2c3e50">⚫ Noir</option>
+</select>
+
 			
 			<label for="chk-dashed-lines" style="color: white; margin-left: 10px;">
     <input type="checkbox" id="chk-dashed-lines"> Lignes pointillés
@@ -553,6 +590,9 @@
         <div class="diamond rv-3" style="position: absolute; right: 11px; top: 330px;"></div>
 
         <div id="pool-table">
+		
+		<div id="table-title-overlay" style="display: none;"></div>
+
 
             <!-- À insérer à l'intérieur de <div id="pool-table"> -->
 <!-- À insérer à l'intérieur de <div id="pool-table"> -->
