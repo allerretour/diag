@@ -167,24 +167,25 @@ if (importTriggerBtn && fileImportInput) {
                 let descImported = "";
 
                 // Analyse du format de fichier
-                if (donneesImportees.billes && Array.isArray(donneesImportees.billes)) {
-                    listeBilles = donneesImportees.billes;
-                    nbVisibles = donneesImportees.nombreBillesVisibles;
-                    titreImported = donneesImportees.titre || "Configuration sans titre";
-                    descImported = donneesImportees.description || "";
-                    
-                    if (donneesImportees.lignesDessinees && Array.isArray(donneesImportees.lignesDessinees)) {
-                        window.dessinsSauvegardes = donneesImportees.lignesDessinees;
-                    } else {
-                        window.dessinsSauvegardes = [];
-                    }
-                } else if (Array.isArray(donneesImportees)) {
-                    listeBilles = donneesImportees;
-                    nbVisibles = donneesImportees.filter(b => parseInt(b.id, 10) > 0).length;
-                    window.dessinsSauvegardes = [];
-                } else {
-                    throw new Error();
-                }
+    if (donneesImportees.billes && Array.isArray(donneesImportees.billes)) {
+        listeBilles = donneesImportees.billes;
+        nbVisibles = donneesImportees.nombreBillesVisibles;
+        titreImported = donneesImportees.titre || "Configuration sans titre";
+        descImported = donneesImportees.description || "";
+        
+        // CORRECTION / AJOUT : On accepte et restaure les tracés contenant la propriété "estCarre"
+        if (donneesImportees.lignesDessinees && Array.isArray(donneesImportees.lignesDessinees)) {
+            window.dessinsSauvegardes = donneesImportees.lignesDessinees;
+        } else {
+            window.dessinsSauvegardes = [];
+        }
+    } else if (Array.isArray(donneesImportees)) {
+        listeBilles = donneesImportees;
+        nbVisibles = donneesImportees.filter(b => parseInt(b.id, 10) > 0).length;
+        window.dessinsSauvegardes = [];
+    } else {
+        throw new Error();
+    }
 
                 // 1. Ajuster le sélecteur numérique
                 if (ballsCountSelect) {

@@ -102,6 +102,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
         ctx.restore();
     }
+	
+	// Dessine un carré de 150x150 pixels centré sur (x, y)
+function dessinerCarre(x, y, couleur) {
+    ctx.save();
+    ctx.setLineDash([]); // Les carrés restent en lignes pleines
+    ctx.strokeStyle = couleur;
+    ctx.lineWidth = 2;
+
+    // MODIFICATION : Taille passée de 200 à 150 pixels
+    const taille = 150;
+    const demiTaille = taille / 2;
+    
+    ctx.beginPath();
+    ctx.rect(x - demiTaille, y - demiTaille, taille, taille);
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+
 
     function resizeCanvas() {
         canvas.width = table.clientWidth;
@@ -125,6 +145,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
                 return;
             }
+			
+			// AJOUT : Gestion exclusive des éléments de type Carré
+			if (dessin.estCarre) {
+				if (dessin.points && dessin.points.length > 0) {
+                const centre = dessin.points[0];
+                dessinerCarre(centre.x, centre.y, dessin.couleur);
+				}
+            return;
+			}
 
             // Gestion des tracés standards et lignes droites
             if (dessin.points.length < 2) return;
@@ -209,6 +238,20 @@ document.addEventListener("DOMContentLoaded", () => {
             window.dessinsSauvegardes.push(nouvelleCible);
             window.redessinerToutesLesLignes();
         }
+		
+		// AJOUT : Interception du raccourci de la touche 'Z' (sans Ctrl) pour injecter un carré
+    if (e.key.toLowerCase() === 'z' && !e.ctrlKey && !e.metaKey) {
+        const couleurActive = colorSelect ? colorSelect.value : '#ffffff';
+
+        const nouveauCarre = {
+            couleur: couleurActive,
+            estCarre: true,
+            points: [{ x: mouseX, y: mouseY }]
+        };
+
+        window.dessinsSauvegardes.push(nouveauCarre);
+        window.redessinerToutesLesLignes();
+    }
     });
 
 
