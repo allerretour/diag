@@ -10,6 +10,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const colorSelect = document.getElementById('marker-color');
     const clearBtn = document.getElementById('btn-clear-lines');
     const undoBtn = document.getElementById('btn-undo-lines'); 
+    // AJOUT : Récupération de la case à cocher
+    const dashedCheck = document.getElementById('chk-dashed-lines');
 
     let isDrawing = false;
     let currentLine = null; 
@@ -28,11 +30,20 @@ document.addEventListener("DOMContentLoaded", () => {
         mouseY = Math.round(e.clientY - rect.top);
     });
 
-    function configurerStyleDessin(couleur) {
+    // MODIFICATION : Ajout du paramètre "estPointille" pour configurer les pointillés
+    function configurerStyleDessin(couleur, estPointille) {
         ctx.strokeStyle = couleur || (colorSelect ? colorSelect.value : '#ffffff');
         ctx.lineWidth = 3;           
         ctx.lineCap = 'round';       
         ctx.lineJoin = 'round';
+
+        // Si la ligne doit être en pointillés, on définit un motif [longueur_trait, espace]
+        // Sinon, on réinitialise le tableau de tirets à vide []
+        if (estPointille) {
+            ctx.setLineDash([4, 8]); 
+        } else {
+            ctx.setLineDash([]);
+        }
     }
 
     // Dessine la pointe géométrique au bout d'une ligne standard
@@ -41,6 +52,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const arrowAngle = Math.PI / 6; 
         const angle = Math.atan2(toY - fromY, toX - fromX);
 
+        ctx.save(); // Sauvegarde pour isoler le style de la flèche
+        ctx.setLineDash([]); // On force la flèche à rester pleine (esthétique)
         ctx.fillStyle = couleur || (colorSelect ? colorSelect.value : '#ffffff');
         
         ctx.beginPath();
@@ -55,11 +68,13 @@ document.addEventListener("DOMContentLoaded", () => {
         );
         ctx.closePath();
         ctx.fill(); 
+        ctx.restore();
     }
 
     // Dessine une cible de 100x100 pixels centrée sur (x, y)
     function dessinerCible(x, y, couleur) {
         ctx.save();
+        ctx.setLineDash([]); // Les cibles restent en lignes pleines
         ctx.strokeStyle = couleur;
         ctx.lineWidth = 2;
 
@@ -91,7 +106,8 @@ document.addEventListener("DOMContentLoaded", () => {
     function resizeCanvas() {
         canvas.width = table.clientWidth;
         canvas.height = table.clientHeight;
-        configurerStyleDessin();
+        const modeDashed = dashedCheck ? dashedCheck.checked : false;
+        configurerStyleDessin(null, modeDashed);
         window.redessinerToutesLesLignes(); 
     }
     window.addEventListener('resize', resizeCanvas);
@@ -112,7 +128,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // Gestion des tracés standards et lignes droites
             if (dessin.points.length < 2) return;
-            configurerStyleDessin(dessin.couleur);
+            // MODIFICATION : On transmet la propriété "estPointille" sauvegardée dans l'objet
+            configurerStyleDessin(dessin.couleur, dessin.estPointille);
             ctx.beginPath();
             ctx.moveTo(dessin.points[0].x, dessin.points[0].y);
             
@@ -131,7 +148,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 ctx.stroke();
             }
         });
-        configurerStyleDessin(); 
+        const modeDashed = dashedCheck ? dashedCheck.checked : false;
+        configurerStyleDessin(null, modeDashed); 
     };
 
     function annulerDernierTrace() {
@@ -213,7 +231,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const y = Math.round(e.clientY - rect.top);
         
         const couleurActive = colorSelect ? colorSelect.value : '#ffffff';
-        configurerStyleDessin(couleurActive);
+        // AJOUT : Vérification si le mode pointillé est actif au moment du clic
+        const modeDashed = dashedCheck ? dashedCheck.checked : false;
+        configurerStyleDessin(couleurActive, modeDashed);
         
         ctx.beginPath();
         ctx.moveTo(x, y);
@@ -229,6 +249,7 @@ document.addEventListener("DOMContentLoaded", () => {
             couleur: couleurActive,
             estDroite: forceLigneDroite, 
             avecFleche: forceFleche,
+            estPointille: modeDashed, // AJOUT : On sauvegarde le style pour le rendu futur
             points: [{ x, y }]
         };
     }
@@ -247,7 +268,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (currentLine.estDroite) {
             window.redessinerToutesLesLignes();
             
-            configurerStyleDessin(currentLine.couleur);
+            // MODIFICATION : Passage du mode pointillé lors du dessin en direct
+            configurerStyleDessin(currentLine.couleur, currentLine.estPointille);
             ctx.beginPath();
             ctx.moveTo(startPoint.x, startPoint.y);
             ctx.lineTo(x, y);
