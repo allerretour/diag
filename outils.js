@@ -148,80 +148,89 @@ const donneesExport = {
 
 
 
-    // IMPORTATION : Lit et réinjecte le titre, la description et la table de billard
-    if (importTriggerBtn && fileImportInput) {
-        importTriggerBtn.addEventListener('click', () => fileImportInput.click());
+   // IMPORTATION : Lit et réinjecte le titre, la description et la table de billard
+if (importTriggerBtn && fileImportInput) {
+    importTriggerBtn.addEventListener('click', () => fileImportInput.click());
 
-        fileImportInput.addEventListener('change', (event) => {
-            const file = event.target.files[0]; // Correction pour lire le premier fichier de la liste
-            if (!file) return;
+    fileImportInput.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
 
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-    const donneesImportees = JSON.parse(e.target.result);
-    
-    let listeBilles = [];
-    let nbVisibles = 15;
-    let titreImported = "Configuration importée";
-    let descImported = "";
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const donneesImportees = JSON.parse(e.target.result);
+                
+                let listeBilles = [];
+                let nbVisibles = 15;
+                let titreImported = "Configuration importée";
+                let descImported = "";
 
-    // Analyse du format de fichier
-    if (donneesImportees.billes && Array.isArray(donneesImportees.billes)) {
-        listeBilles = donneesImportees.billes;
-        nbVisibles = donneesImportees.nombreBillesVisibles;
-        titreImported = donneesImportees.titre || "Configuration sans titre";
-        descImported = donneesImportees.description || "";
-        
-        // AJOUT : Restauration des lignes de dessin
-        if (donneesImportees.lignesDessinees && Array.isArray(donneesImportees.lignesDessinees)) {
-            window.dessinsSauvegardes = donneesImportees.lignesDessinees;
-        } else {
-            window.dessinsSauvegardes = [];
-        }
-    } else if (Array.isArray(donneesImportees)) {
-        listeBilles = donneesImportees;
-        nbVisibles = donneesImportees.filter(b => parseInt(b.id, 10) > 0).length;
-        window.dessinsSauvegardes = []; // Ancien format sans dessin
-    } else {
-        throw new Error();
-    }
+                // Analyse du format de fichier
+                if (donneesImportees.billes && Array.isArray(donneesImportees.billes)) {
+                    listeBilles = donneesImportees.billes;
+                    nbVisibles = donneesImportees.nombreBillesVisibles;
+                    titreImported = donneesImportees.titre || "Configuration sans titre";
+                    descImported = donneesImportees.description || "";
+                    
+                    if (donneesImportees.lignesDessinees && Array.isArray(donneesImportees.lignesDessinees)) {
+                        window.dessinsSauvegardes = donneesImportees.lignesDessinees;
+                    } else {
+                        window.dessinsSauvegardes = [];
+                    }
+                } else if (Array.isArray(donneesImportees)) {
+                    listeBilles = donneesImportees;
+                    nbVisibles = donneesImportees.filter(b => parseInt(b.id, 10) > 0).length;
+                    window.dessinsSauvegardes = [];
+                } else {
+                    throw new Error();
+                }
 
-    // 1. Restaurer la position de toutes les billes
-    listeBilles.forEach(savedBall => {
-        const ballEl = activeBalls.find(b => b.getAttribute('data-id') === savedBall.id);
-        if (ballEl) {
-            ballEl.style.left = savedBall.x;
-            ballEl.style.top = savedBall.y;
-        }
+                // 1. Ajuster le sélecteur numérique
+                if (ballsCountSelect) {
+                    ballsCountSelect.value = nbVisibles;
+                }
+
+                // 2. Gérer uniquement la VISIBILITÉ des billes (sans appeler updateVisibleBalls qui écraserait tout)
+                activeBalls.forEach(ball => {
+                    const ballId = parseInt(ball.getAttribute('data-id'), 10);
+                    if (ballId === 0) {
+                        ball.style.display = 'flex';
+                    } else {
+                        ball.style.display = ballId <= nbVisibles ? 'flex' : 'none';
+                    }
+                });
+
+                // 3. Restaurer la position personnalisée de toutes les billes (APREÈS la visibilité)
+                listeBilles.forEach(savedBall => {
+                    const ballEl = activeBalls.find(b => b.getAttribute('data-id') === savedBall.id);
+                    if (ballEl) {
+                        ballEl.style.left = savedBall.x;
+                        ballEl.style.top = savedBall.y;
+                    }
+                });
+
+                // 4. Mettre à jour les champs de texte éditables du HTML
+                if (titleInput) titleInput.value = titreImported;
+                if (typeof rafraichirTitreSurTapis === "function") rafraichirTitreSurTapis();
+                if (descInput) descInput.value = descImported;
+
+                // 5. Forcer le canvas à redessiner les lignes chargées
+                if (typeof window.redessinerToutesLesLignes === "function") {
+                    window.redessinerToutesLesLignes();
+                }
+
+                alert(`Configuration "${titreImported}" restaurée avec succès !`);
+            } catch (error) {
+                alert("Erreur lors de la lecture du fichier JSON. Vérifiez sa structure.");
+            }
+
+            fileImportInput.value = "";
+        };
+        reader.readAsText(file);
     });
-
-    // 2. Ajuster le sélecteur numérique et masquer les billes en trop
-    if (ballsCountSelect) {
-        ballsCountSelect.value = nbVisibles;
-        updateVisibleBalls();
-    }
-
-    // 3. Mettre à jour les champs de texte éditables du HTML
-    if (titleInput) titleInput.value = titreImported;
-	rafraichirTitreSurTapis();
-    if (descInput) descInput.value = descImported;
-
-    // AJOUT : Forcer le canvas à redessiner les lignes chargées
-    if (typeof window.redessinerToutesLesLignes === "function") {
-        window.redessinerToutesLesLignes();
-    }
-
-    alert(`Configuration "${titreImported}" restaurée avec succès !`);
-} catch (error) {
-    alert("Erreur lors de la lecture du fichier JSON. Vérifiez sa structure.");
 }
 
-                fileImportInput.value = "";
-            };
-            reader.readAsText(file);
-        });
-    }
 
 
      // --- GESTION DE LA GRILLE VISUELLE ALIGNÉE SUR LES DIAMANDS (Bandes incluses, sans contour externe) ---
