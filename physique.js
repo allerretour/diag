@@ -137,8 +137,7 @@ function resolveCollisions(currentBall) {
 
 function makeDraggable(element) {
     let currentX, currentY, initialX, initialY;
-    let xOffset = parseInt(element.style.left);
-    let yOffset = parseInt(element.style.top);
+    // Supprimez les variables globales figées xOffset et yOffset d'ici
     let isDragging = false;
 
     element.addEventListener('mousedown', dragStart);
@@ -150,44 +149,54 @@ function makeDraggable(element) {
 
     function dragStart(e) {
         if (element.style.display === 'none') return;
+
+        // MISE À JOUR CRUCIALE : On récupère la position RÉELLE et actuelle de la bille au clic
+        const xOffset = parseInt(element.style.left) || 0;
+        const yOffset = parseInt(element.style.top) || 0;
+
         if (e.type === 'touchstart') {
-            initialX = e.touches.clientX - xOffset; initialY = e.touches.clientY - yOffset;
+            initialX = e.touches[0].clientX - xOffset; 
+            initialY = e.touches[0].clientY - yOffset;
         } else {
-            initialX = e.clientX - xOffset; initialY = e.clientY - yOffset;
+            initialX = e.clientX - xOffset; 
+            initialY = e.clientY - yOffset;
         }
-        if (e.target === element || element.contains(e.target)) isDragging = true;
+        
+        if (e.target === element || element.contains(e.target)) {
+            isDragging = true;
+        }
     }
 
-        function drag(e) {
+    function drag(e) {
         if (isDragging) {
             if (e.cancelable) e.preventDefault(); 
             if (e.type === 'touchmove') {
-                currentX = e.touches.clientX - initialX; currentY = e.touches.clientY - initialY;
+                currentX = e.touches[0].clientX - initialX; 
+                currentY = e.touches[0].clientY - initialY;
             } else {
-                currentX = e.clientX - initialX; currentY = e.clientY - initialY;
+                currentX = e.clientX - initialX; 
+                currentY = e.clientY - initialY;
             }
 
-            // --- NOUVEAU : Calcul du magnétisme pendant le déplacement ---
+            // Calcul du magnétisme pendant le déplacement
             const gridSize = 7; 
             currentX = Math.round(currentX / gridSize) * gridSize;
             currentY = Math.round(currentY / gridSize) * gridSize;
-            // -------------------------------------------------------------
 
             const clamped = clampPosition(currentX, currentY);
             element.style.left = clamped.x + 'px';
             element.style.top = clamped.y + 'px';
             
-            const finalPos = resolveCollisions(element);
-            xOffset = finalPos.x; yOffset = finalPos.y;
+            // On résout les collisions (la fonction applique déjà le style CSS)
+            resolveCollisions(element);
         }
     }
 
-
     function dragEnd() {
         if (isDragging) {
-            const finalPos = resolveCollisions(element);
-            xOffset = finalPos.x; yOffset = finalPos.y;
+            resolveCollisions(element);
             isDragging = false;
         }
     }
 }
+
