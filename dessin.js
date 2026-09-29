@@ -176,8 +176,13 @@ document.addEventListener("DOMContentLoaded", () => {
         undoBtn.addEventListener('click', annulerDernierTrace);
     }
 
-    // --- LOGIQUE DE CLAVIER ET RACCOURCIS ---
+     // --- LOGIQUE DE CLAVIER ET RACCOURCIS ---
     document.addEventListener('keydown', (e) => {
+        // AJOUT : Si l'utilisateur est en train d'écrire dans un champ de texte, on ignore les raccourcis
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+            return; 
+        }
+
         if (e.key === 'Shift') {
             isShiftPressed = true;
             canvas.style.pointerEvents = 'auto';
@@ -205,6 +210,7 @@ document.addEventListener("DOMContentLoaded", () => {
             window.redessinerToutesLesLignes();
         }
     });
+
 
     document.addEventListener('keyup', (e) => {
         if (e.key === 'Shift') {
