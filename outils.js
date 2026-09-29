@@ -222,45 +222,49 @@ const donneesExport = {
         });
     }
 
-       // --- GESTION DE LA GRILLE VISUELLE COMPLÈTE CORRIGÉE (17x9) ---
+
+     // --- GESTION DE LA GRILLE VISUELLE ALIGNÉE SUR LES DIAMANDS (Bandes incluses, sans contour externe) ---
     const gridOverlay = document.getElementById('grid-overlay');
     const chkToggleGrid = document.getElementById('chk-toggle-grid');
     const poolTable = document.getElementById('pool-table');
 
     if (gridOverlay && chkToggleGrid && poolTable) {
-        const cols = 17;
-        const rows = 9;
-        const totalCells = cols * rows;
-
-        // Position de départ exacte du tapis vert (limites minimales physiques)
-        const offsetLeft = 19;  // minX
-        const offsetTop = 18;   // minY
-
-        // Diamètre de la bille défini dans le moteur physique (28px)
-        const ballDiameter = 28;
-
-        // Ajustement : On ajoute le diamètre de la bille pour obtenir les bords réels de la surface
-        // Largeur totale : 754 - 18 + 28 = 764px
-        // Hauteur totale : 354 - 18 + 28 = 364px
-        const playWidth = (754 - offsetLeft) + ballDiameter -8;  
-        const playHeight = (354 - offsetTop) + ballDiameter ; 
-
-        // Application stricte des dimensions de surface sur l'overlay
+        const cols = 8;
+        const rows = 4;
+        
+        // Configuration de l'overlay de la grille (Aucune bordure externe ici)
         gridOverlay.style.position = 'absolute';
-        gridOverlay.style.left = `${offsetLeft}px`;
-        gridOverlay.style.top = `${offsetTop}px`;
-        gridOverlay.style.width = `${playWidth}px`;
-        gridOverlay.style.height = `${playHeight}px`;
+        gridOverlay.style.left = '6px';
+        gridOverlay.style.top = '6px';
+        gridOverlay.style.width = '786px';
+        gridOverlay.style.height = '394px';
+        gridOverlay.style.border = 'none'; // Assure que le grand cadre extérieur est invisible
 
-        // Répartition parfaite des 17x9 cases sur toute la surface étendue
+        // Répartition en 8x4 cases
         gridOverlay.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
         gridOverlay.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
 
-        // Nettoyage et injection des 153 cases
+        // Nettoyage et injection des cases avec lignes intérieures uniquement
         gridOverlay.innerHTML = '';
-        for (let i = 0; i < totalCells; i++) {
-            const cell = document.createElement('div');
-            gridOverlay.appendChild(cell);
+        gridOverlay.style.pointerEvents = 'none'; 
+        
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const cell = document.createElement('div');
+                cell.style.boxSizing = 'border-box';
+                
+                // On applique la ligne verticale SEULEMENT si ce n'est pas la dernière colonne à droite
+                if (c < cols - 1) {
+                    cell.style.borderRight = '1px dashed rgba(255, 255, 255, 0.25)';
+                }
+                
+                // On applique la ligne horizontale SEULEMENT si ce n'est pas la dernière rangée en bas
+                if (r < rows - 1) {
+                    cell.style.borderBottom = '1px dashed rgba(255, 255, 255, 0.25)';
+                }
+
+                gridOverlay.appendChild(cell);
+            }
         }
 
         // Gestion de l'affichage (Toggle)
@@ -268,7 +272,6 @@ const donneesExport = {
             gridOverlay.style.display = chkToggleGrid.checked ? 'grid' : 'none';
         });
     }
-    // --------------------------------------------------------------
 
 
 

@@ -61,7 +61,7 @@ function initialiserBilles() {
 }
 
 function clampPosition(x, y) {
-    let minX = 18, maxX = 754, minY = 18, maxY = 354;
+    let minX = 18, maxX = 754, minY = 18, maxY = 350;
     const pocketSize = 34; 
 
     if (x >= 364 && x <= 408) {
@@ -81,7 +81,7 @@ function clampPosition(x, y) {
     }
     else {
         minX = 18; maxX = 744; 
-        minY = 18; maxY = 354;
+        minY = 18; maxY = 350;
     }
 
     if (x < minX) x = minX;
@@ -168,7 +168,7 @@ function makeDraggable(element) {
             }
 
             // --- NOUVEAU : Calcul du magnétisme pendant le déplacement ---
-            const gridSize = 10; 
+            const gridSize = 7; 
             currentX = Math.round(currentX / gridSize) * gridSize;
             currentY = Math.round(currentY / gridSize) * gridSize;
             // -------------------------------------------------------------
