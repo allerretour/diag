@@ -426,7 +426,7 @@
     left: 50%;
     transform: translate(-50%, -50%);
     font-family: sans-serif;
-    font-size: 28px;
+    font-size: 32px;
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 2px;
@@ -439,7 +439,11 @@
     /* Optionnel : si votre tapis est vert standard, vous pouvez aussi utiliser un vert discret comme : 
     color: rgba(20, 100, 40, 0.4); */
     
-    white-space: nowrap;
+    /* MODIFICATIONS POUR LE RETOUR À LA LIGNE */
+    white-space: normal;    /* Autorise le changement de ligne */
+    text-align: center;     /* Centre le texte sur les nouvelles lignes */
+    width: 100%;            /* Limite la largeur pour forcer le retour à la ligne avant les bords */
+    max-width: 1200px;       /* Optionnel : empêche le conteneur de devenir trop large sur grand écran */
     user-select: none;
 }
 
