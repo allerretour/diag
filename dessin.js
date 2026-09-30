@@ -103,14 +103,14 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.restore();
     }
 	
-// Dessine un carré de 150x150 pixels avec coins arrondis et un fond pâle
+// Dessine un carré de 120x120 pixels avec coins arrondis et un fond pâle
 function dessinerCarre(x, y, couleur) {
     ctx.save();
     ctx.setLineDash([]); // Les carrés restent en lignes pleines
     ctx.strokeStyle = couleur;
     ctx.lineWidth = 2;
 
-    const taille = 150;
+    const taille = 120;
     const demiTaille = taille / 2;
     const rayonCoins = 15; // Rayon de l'arrondi en pixels
     
@@ -119,7 +119,7 @@ function dessinerCarre(x, y, couleur) {
     ctx.roundRect(x - demiTaille, y - demiTaille, taille, taille, rayonCoins);
 
     // 1. Appliquer le contour
-    ctx.stroke();
+    // ctx.stroke();
 
     // 2. Configurer et appliquer le fond pâle (20% d'opacité)
     ctx.globalAlpha = 0.20; 
@@ -213,11 +213,17 @@ function dessinerCarre(x, y, couleur) {
         undoBtn.addEventListener('click', annulerDernierTrace);
     }
 
-     // --- LOGIQUE DE CLAVIER ET RACCOURCIS ---
+    // --- LOGIQUE DE CLAVIER ET RACCOURCIS CORRIGÉE ---
     document.addEventListener('keydown', (e) => {
-        // AJOUT : Si l'utilisateur est en train d'écrire dans un champ de texte, on ignore les raccourcis
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
             return; 
+        }
+
+        // 1. Gestion de l'annulation (on stoppe immédiatement l'exécution pour éviter les conflits)
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+            e.preventDefault(); 
+            annulerDernierTrace();
+            return; // TRÈS IMPORTANT : évite de passer à la suite et de dessiner un carré
         }
 
         if (e.key === 'Shift') {
@@ -228,40 +234,29 @@ function dessinerCarre(x, y, couleur) {
             isCtrlPressed = true;
         }
 
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
-            e.preventDefault(); 
-            annulerDernierTrace();
-        }
-
-        // Interception du raccourci de la touche 'T' pour injecter une cible
         if (e.key.toLowerCase() === 't') {
             const couleurActive = colorSelect ? colorSelect.value : '#ffffff';
-
             const nouvelleCible = {
                 couleur: couleurActive,
                 estCible: true,
                 points: [{ x: mouseX, y: mouseY }]
             };
-
             window.dessinsSauvegardes.push(nouvelleCible);
             window.redessinerToutesLesLignes();
         }
 		
-		// AJOUT : Interception du raccourci de la touche 'Z' (sans Ctrl) pour injecter un carré
-    if (e.key.toLowerCase() === 'z' && !e.ctrlKey && !e.metaKey) {
-        const couleurActive = colorSelect ? colorSelect.value : '#ffffff';
-
-        const nouveauCarre = {
-            couleur: couleurActive,
-            estCarre: true,
-            points: [{ x: mouseX, y: mouseY }]
-        };
-
-        window.dessinsSauvegardes.push(nouveauCarre);
-        window.redessinerToutesLesLignes();
-    }
+        // Le carré ne se déclenche QUE si CTRL n'est PAS enfoncé
+        if (e.key.toLowerCase() === 'z' && !e.ctrlKey && !e.metaKey) {
+            const couleurActive = colorSelect ? colorSelect.value : '#ffffff';
+            const nouveauCarre = {
+                couleur: couleurActive,
+                estCarre: true,
+                points: [{ x: mouseX, y: mouseY }]
+            };
+            window.dessinsSauvegardes.push(nouveauCarre);
+            window.redessinerToutesLesLignes();
+        }
     });
-
 
     document.addEventListener('keyup', (e) => {
         if (e.key === 'Shift') {
@@ -272,6 +267,14 @@ function dessinerCarre(x, y, couleur) {
         if (e.key === 'Control') {
             isCtrlPressed = false;
         }
+    });
+
+    // Sécurité additionnelle : Si l'utilisateur change de fenêtre, on réinitialise les touches
+    window.addEventListener('blur', () => {
+        isShiftPressed = false;
+        isCtrlPressed = false;
+        if (canvas) canvas.style.pointerEvents = 'none';
+        if (isDrawing) finTrace();
     });
 
     table.addEventListener('mousedown', (e) => {
@@ -288,7 +291,6 @@ function dessinerCarre(x, y, couleur) {
         const y = Math.round(e.clientY - rect.top);
         
         const couleurActive = colorSelect ? colorSelect.value : '#ffffff';
-        // AJOUT : Vérification si le mode pointillé est actif au moment du clic
         const modeDashed = dashedCheck ? dashedCheck.checked : false;
         configurerStyleDessin(couleurActive, modeDashed);
         
@@ -296,20 +298,19 @@ function dessinerCarre(x, y, couleur) {
         ctx.moveTo(x, y);
         startPoint = { x, y }; 
 
-        const activeCtrl = isCtrlPressed || e.ctrlKey;
-        const activeShift = isShiftPressed || e.shiftKey;
-
-        const forceLigneDroite = activeCtrl;
-        const forceFleche = activeCtrl && activeShift;
+        // CORRECTION : On se base uniquement sur l'état natif de l'événement de souris (100% fiable)
+        const forceLigneDroite = e.ctrlKey || e.metaKey || isCtrlPressed;
+        const forceFleche = forceLigneDroite && (e.shiftKey || isShiftPressed);
 
         currentLine = {
             couleur: couleurActive,
             estDroite: forceLigneDroite, 
             avecFleche: forceFleche,
-            estPointille: modeDashed, // AJOUT : On sauvegarde le style pour le rendu futur
+            estPointille: modeDashed, 
             points: [{ x, y }]
         };
     }
+
 
     canvas.addEventListener('mousedown', (e) => {
         if (e.shiftKey || e.button === 2) commencerDessin(e);
