@@ -58,19 +58,64 @@
             box-shadow: inset 0 10px 20px rgba(0,0,0,0.5);
         }
         /* Bandes physiques ajustées aux nouvelles positions de vos poches */
-.cushion { position: absolute; background-color: #0b6134; box-shadow: inset 0 4px 6px rgba(255,255,255,0.1); z-index: 2; }
+.cushion { 
+  position: absolute; 
+  background-color: #0a7e43; /* Vert tapis de billard traditionnel (uni et uniforme) */
+  z-index: 2; 
+}
 
-/* Bandes supérieures (laissent un espace parfait pour .tc à left: 374px) */
-.cushion.top-left { top: 0; left: 30px; width: 342px; height: 18px; border-bottom: 12px solid #084726; border-left: 12px solid transparent; border-right: 12px solid transparent; }
-.cushion.top-right { top: 0; right: 30px; width: 342px; height: 18px; border-bottom: 12px solid #084726; border-left: 12px solid transparent; border-right: 12px solid transparent; }
+/* --- BANDES SUPÉRIEURES (Rallongées à 352px pour rétrécir la poche centrale) --- */
+/* Gauche : 45° à gauche (poche coin), 75° à droite (poche centre) */
+.cushion.top-left { 
+  top: 0; 
+  left: 30px; 
+  width: 346px; /* Allongé de 4px */
+  height: 18px; 
+  clip-path: polygon(0 0, 100% 0, calc(100% - 5px) 100%, 18px 100%);
+}
+/* Droite : 75° à gauche (poche centre), 45° à droite (poche coin) */
+.cushion.top-right { 
+  top: 0; 
+  right: 30px; 
+  width: 346px; /* Allongé de 4px */
+  height: 18px; 
+  clip-path: polygon(0 0, 100% 0, calc(100% - 18px) 100%, 5px 100%);
+}
 
-/* Bandes inférieures (laissent un espace parfait pour .bc à left: 374px) */
-.cushion.bottom-left { bottom: 0; left: 30px; width: 342px; height: 18px; border-top: 12px solid #0f522e; border-left: 12px solid transparent; border-right: 12px solid transparent; }
-.cushion.bottom-right { bottom: 0; right: 30px; width: 342px; height: 18px; border-top: 12px solid #0f522e; border-left: 12px solid transparent; border-right: 12px solid transparent; }
+/* --- BANDES INFÉRIEURES (Rallongées à 352px pour rétrécir la poche centrale) --- */
+/* Gauche : 75° à droite (poche centre), 45° à gauche (poche coin) */
+.cushion.bottom-left { 
+  bottom: 0; 
+  left: 30px; 
+  width: 346px; /* Allongé de 4px */
+  height: 18px; 
+  clip-path: polygon(18px 0, calc(100% - 5px) 0, 100% 100%, 0 100%);
+}
+/* Droite : 45° à droite (poche coin), 75° à gauche (poche centre) */
+.cushion.bottom-right { 
+  bottom: 0; 
+  right: 30px; 
+  width: 346px; /* Allongé de 4px */
+  height: 18px; 
+  clip-path: polygon(5px 0, calc(100% - 18px) 0, 100% 100%, 0 100%);
+}
 
-/* Bandes verticales latérales */
-.cushion.left { top: 30px; left: 0; width: 18px; height: 340px; border-right: 12px solid #084726; border-top: 12px solid transparent; border-bottom: 12px solid transparent; }
-.cushion.right { top: 30px; right: 0; width: 18px; height: 340px; border-left: 12px solid #0f522e; border-top: 12px solid transparent; border-bottom: 12px solid transparent; }
+/* --- BANDES VERTICALES (Inchangées) --- */
+.cushion.left { 
+  top: 30px; 
+  left: 0; 
+  width: 18px; 
+  height: 340px; 
+  clip-path: polygon(0 0, 100% 18px, 100% calc(100% - 18px), 0 100%);
+}
+.cushion.right { 
+  top: 30px; 
+  right: 0; 
+  width: 18px; 
+  height: 340px; 
+  clip-path: polygon(100% 0, 100% 100%, 0 calc(100% - 18px), 0 18px);
+}
+
 
 
 
@@ -492,21 +537,21 @@
         <option value="5">🔴 Blanche + 5 billes</option>
         <option value="6">🔴 Blanche + 6 billes</option>
         <option value="7">🔴 Blanche + 7 billes</option>
-        <option value="8">🎱 Blanche + 8 billes (Jeu de la 8)</option>
+        <option value="8">🎱 Blanche + 8 billes</option>
         <option value="9">🔴 Blanche + 9 billes (Jeu de la 9)</option>
-        <option value="10">🔴 Blanche + 10 billes</option>
+        <option value="10">🔴 Blanche + 10 billes (Jeu de la 10)</option>
         <option value="11">🔴 Blanche + 11 billes</option>
         <option value="12">🔴 Blanche + 12 billes</option>
         <option value="13">🔴 Blanche + 13 billes</option>
         <option value="14">🔴 Blanche + 14 billes</option>
-        <option value="15" selected>🏆 Blanche + 15 billes (Complet)</option>
+        <option value="15" selected>🏆 Blanche + 15 billes (Jeu de la 8)</option>
     </select>
             <label>
                 <input type="checkbox" id="chk-toggle-grid"> Afficher la grille
             </label>
 
             <label>
-	<input type="checkbox" id="chk-show-title"> Afficher le titre sur le tapis
+	<input type="checkbox" id="chk-show-title"> Afficher le titre
         </label>
 
 			
@@ -515,11 +560,11 @@
 <!-- Barre d'actions horizontale unique -->
 <div class="actions-button-row">
     <button id="btn-export" class="btn btn-primary">
-        <span class="btn-icon">💾</span> Exporter JSON
+        <span class="btn-icon">💾</span> Exporter
     </button>
     
     <button id="btn-import-trigger" class="btn btn-secondary">
-        <span class="btn-icon">📂</span> Importer JSON
+        <span class="btn-icon">📂</span> Importer
     </button>
     <input type="file" id="file-import" accept=".json" style="display: none;">
 
@@ -544,8 +589,6 @@
     <option value="#e74c3c">🔴 Rouge</option>
     <option value="#f1c40f">🟡 Jaune</option>
     <option value="#2ecc71">🟢 Vert fluo</option>
-    
-    <!-- Nouvelles couleurs ajoutées -->
     <option value="#3498db">🔵 Bleu ciel</option>
     <option value="#1abc9c">🌐 Turquoise</option>
     <option value="#e67e22">🟠 Orange</option>
@@ -555,24 +598,19 @@
 </select>
 
 			
-			<label for="chk-dashed-lines" style="color: white; margin-left: 10px;">
-    <input type="checkbox" id="chk-dashed-lines"> Lignes pointillés
-</label>
+	<label for="chk-dashed-lines" style="color: white; margin-left: 10px;">
+             <input type="checkbox" id="chk-dashed-lines"> Lignes pointillés
+	</label>
 
-<label>
-            <input type="checkbox" id="chk-high-density-grid"> Grille haute densité (16x8)
+        <label>
+            <input type="checkbox" id="chk-high-density-grid"> Grille HD (16x8)
             </label>
             
         </div>
 
-        
-		
-        <!-- Fin de votre bloc de contrôles existant -->
+       <!-- Fin de votre bloc de contrôles existant -->
     </div>
 </details>
-
-
-
 
         <!-- La table de billard avec mouches et spots -->
     <div id="table-frame">
