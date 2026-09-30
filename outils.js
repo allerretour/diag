@@ -234,6 +234,8 @@ if (importTriggerBtn && fileImportInput) {
 
 
 
+
+
      // --- GESTION DE LA GRILLE VISUELLE ALIGNÉE SUR LES DIAMANDS (Bandes incluses, sans contour externe) ---
     const gridOverlay = document.getElementById('grid-overlay');
     const chkToggleGrid = document.getElementById('chk-toggle-grid');
@@ -245,8 +247,8 @@ if (importTriggerBtn && fileImportInput) {
         
         // Configuration de l'overlay de la grille (Aucune bordure externe ici)
         gridOverlay.style.position = 'absolute';
-        gridOverlay.style.left = '6px';
-        gridOverlay.style.top = '6px';
+        gridOverlay.style.left = '5px';
+        gridOverlay.style.top = '5px';
         gridOverlay.style.width = '786px';
         gridOverlay.style.height = '394px';
         gridOverlay.style.border = 'none'; // Assure que le grand cadre extérieur est invisible

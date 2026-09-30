@@ -124,7 +124,7 @@ function resolveCollisions(currentBall) {
 
     const clamped = clampPosition(currentX, currentY);
     
-    // --- NOUVEAU : Alignement final sur la grille de 10px ---
+    // --- NOUVEAU : Alignement final sur la grille de 7px ---
     const gridSize = 7; 
     const snappedX = Math.round(clamped.x / gridSize) * gridSize;
     const snappedY = Math.round(clamped.y / gridSize) * gridSize;

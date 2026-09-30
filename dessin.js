@@ -103,20 +103,28 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.restore();
     }
 	
-	// Dessine un carré de 150x150 pixels centré sur (x, y)
+// Dessine un carré de 150x150 pixels avec coins arrondis et un fond pâle
 function dessinerCarre(x, y, couleur) {
     ctx.save();
     ctx.setLineDash([]); // Les carrés restent en lignes pleines
     ctx.strokeStyle = couleur;
     ctx.lineWidth = 2;
 
-    // MODIFICATION : Taille passée de 200 à 150 pixels
     const taille = 150;
     const demiTaille = taille / 2;
+    const rayonCoins = 15; // Rayon de l'arrondi en pixels
     
     ctx.beginPath();
-    ctx.rect(x - demiTaille, y - demiTaille, taille, taille);
+    // Utilisation de roundRect pour créer les coins arrondis automatiquement
+    ctx.roundRect(x - demiTaille, y - demiTaille, taille, taille, rayonCoins);
+
+    // 1. Appliquer le contour
     ctx.stroke();
+
+    // 2. Configurer et appliquer le fond pâle (20% d'opacité)
+    ctx.globalAlpha = 0.20; 
+    ctx.fillStyle = couleur;
+    ctx.fill();
 
     ctx.restore();
 }
