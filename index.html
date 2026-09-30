@@ -553,6 +553,11 @@
 </label>
             
         </div>
+
+<div id="ball-coordinates" style="color: #ffffff; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 4px; font-family: monospace; display: inline-block; margin-top: 10px;">
+    Bille sélectionnée : Aucune
+</div>
+
 		
 		
 		
@@ -565,29 +570,35 @@
 
         <!-- La table de billard avec mouches et spots -->
     <div id="table-frame">
-        <!-- Les 18 Diamants (Mouches) sur la structure en bois -->
+    <!-- Les 18 Diamants (Mouches) sur la structure en bois -->
         <!-- Bande Haut -->
-        <div class="diamond th-1" style="position: absolute; top: 11px; left: 130px;"></div>
-        <div class="diamond th-2" style="position: absolute; top: 11px; left: 230px;"></div>
-        <div class="diamond th-3" style="position: absolute; top: 11px; left: 330px;"></div>
-        <div class="diamond th-4" style="position: absolute; top: 11px; left: 530px;"></div>
-        <div class="diamond th-5" style="position: absolute; top: 11px; left: 630px;"></div>
-        <div class="diamond th-6" style="position: absolute; top: 11px; left: 730px;"></div>
+        <div class="diamond th-1" style="position: absolute; top: 11px; left: 131px;"></div>
+        <div class="diamond th-2" style="position: absolute; top: 11px; left: 229px;"></div>
+        <div class="diamond th-3" style="position: absolute; top: 11px; left: 327px;"></div>
+        <div class="diamond th-4" style="position: absolute; top: 11px; left: 420px;"></div> <!-- Diamant Central -->
+        <div class="diamond th-5" style="position: absolute; top: 11px; left: 523px;"></div>
+        <div class="diamond th-6" style="position: absolute; top: 11px; left: 621px;"></div>
+        <div class="diamond th-7" style="position: absolute; top: 11px; left: 719px;"></div>
+
         <!-- Bande Bas -->
-        <div class="diamond bh-1" style="position: absolute; bottom: 11px; left: 130px;"></div>
-        <div class="diamond bh-2" style="position: absolute; bottom: 11px; left: 230px;"></div>
-        <div class="diamond bh-3" style="position: absolute; bottom: 11px; left: 330px;"></div>
-        <div class="diamond bh-4" style="position: absolute; bottom: 11px; left: 530px;"></div>
-        <div class="diamond bh-5" style="position: absolute; bottom: 11px; left: 630px;"></div>
-        <div class="diamond bh-6" style="position: absolute; bottom: 11px; left: 730px;"></div>
+        <div class="diamond bh-1" style="position: absolute; bottom: 11px; left: 131px;"></div>
+        <div class="diamond bh-2" style="position: absolute; bottom: 11px; left: 229px;"></div>
+        <div class="diamond bh-3" style="position: absolute; bottom: 11px; left: 327px;"></div>
+        <div class="diamond bh-4" style="position: absolute; bottom: 11px; left: 420px;"></div> <!-- Diamant Central -->
+        <div class="diamond bh-5" style="position: absolute; bottom: 11px; left: 523px;"></div>
+        <div class="diamond bh-6" style="position: absolute; bottom: 11px; left: 621px;"></div>
+        <div class="diamond bh-7" style="position: absolute; bottom: 11px; left: 719px;"></div>
+
         <!-- Bande Gauche -->
         <div class="diamond lv-1" style="position: absolute; left: 11px; top: 130px;"></div>
-        <div class="diamond lv-2" style="position: absolute; left: 11px; top: 230px;"></div>
-        <div class="diamond lv-3" style="position: absolute; left: 11px; top: 330px;"></div>
+        <div class="diamond lv-2" style="position: absolute; left: 11px; top: 229px;"></div>
+        <div class="diamond lv-3" style="position: absolute; left: 11px; top: 326px;"></div>
+
         <!-- Bande Droite -->
         <div class="diamond rv-1" style="position: absolute; right: 11px; top: 130px;"></div>
-        <div class="diamond rv-2" style="position: absolute; right: 11px; top: 230px;"></div>
-        <div class="diamond rv-3" style="position: absolute; right: 11px; top: 330px;"></div>
+        <div class="diamond rv-2" style="position: absolute; right: 11px; top: 229px;"></div>
+        <div class="diamond rv-3" style="position: absolute; right: 11px; top: 326px;"></div>
+
 
         <div id="pool-table">
 		
