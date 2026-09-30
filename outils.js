@@ -235,56 +235,73 @@ if (importTriggerBtn && fileImportInput) {
 
 
 
-
-     // --- GESTION DE LA GRILLE VISUELLE ALIGNÉE SUR LES DIAMANDS (Bandes incluses, sans contour externe) ---
+    // --- GESTION DE LA GRILLE VISUELLE ALIGNÉE SUR LES DIAMANDS (Bandes incluses, sans contour externe) ---
     const gridOverlay = document.getElementById('grid-overlay');
     const chkToggleGrid = document.getElementById('chk-toggle-grid');
     const poolTable = document.getElementById('pool-table');
+    
+    // NOUVEAU : Récupération de la case à cocher pour la grille haute densité 16x8
+    const chkHighDensityGrid = document.getElementById('chk-high-density-grid'); 
 
     if (gridOverlay && chkToggleGrid && poolTable) {
-        const cols = 8;
-        const rows = 4;
         
-        // Configuration de l'overlay de la grille (Aucune bordure externe ici)
-        gridOverlay.style.position = 'absolute';
-        gridOverlay.style.left = '5px';
-        gridOverlay.style.top = '5px';
-        gridOverlay.style.width = '786px';
-        gridOverlay.style.height = '394px';
-        gridOverlay.style.border = 'none'; // Assure que le grand cadre extérieur est invisible
+        // Fonction isolée pour générer la grille dynamiquement
+        function genererGrille() {
+            // Si la case haute densité est cochée, on utilise 16x8, sinon la grille 8x4 par défaut
+            const mode16x8 = chkHighDensityGrid ? chkHighDensityGrid.checked : false;
+            const cols = mode16x8 ? 16 : 8;
+            const rows = mode16x8 ? 8 : 4;
+            
+            // Configuration de l'overlay de la grille (Aucune bordure externe ici)
+            gridOverlay.style.position = 'absolute';
+            gridOverlay.style.left = '5px';
+            gridOverlay.style.top = '5px';
+            gridOverlay.style.width = '786px';
+            gridOverlay.style.height = '393px';
+            gridOverlay.style.border = 'none'; // Assure que le grand cadre extérieur est invisible
 
-        // Répartition en 8x4 cases
-        gridOverlay.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-        gridOverlay.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+            // Répartition dynamique des colonnes et rangées
+            gridOverlay.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+            gridOverlay.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
 
-        // Nettoyage et injection des cases avec lignes intérieures uniquement
-        gridOverlay.innerHTML = '';
-        gridOverlay.style.pointerEvents = 'none'; 
-        
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                const cell = document.createElement('div');
-                cell.style.boxSizing = 'border-box';
-                
-                // On applique la ligne verticale SEULEMENT si ce n'est pas la dernière colonne à droite
-                if (c < cols - 1) {
-                    cell.style.borderRight = '1px dashed rgba(255, 255, 255, 0.25)';
+            // Nettoyage et injection des cases avec lignes intérieures uniquement
+            gridOverlay.innerHTML = '';
+            gridOverlay.style.pointerEvents = 'none'; 
+            
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const cell = document.createElement('div');
+                    cell.style.boxSizing = 'border-box';
+                    
+                    // On applique la ligne verticale SEULEMENT si ce n'est pas la dernière colonne à droite
+                    if (c < cols - 1) {
+                        cell.style.borderRight = '1px dashed rgba(255, 255, 255, 0.25)';
+                    }
+                    
+                    // On applique la ligne horizontale SEULEMENT si ce n'est pas la dernière rangée en bas
+                    if (r < rows - 1) {
+                        cell.style.borderBottom = '1px dashed rgba(255, 255, 255, 0.25)';
+                    }
+
+                    gridOverlay.appendChild(cell);
                 }
-                
-                // On applique la ligne horizontale SEULEMENT si ce n'est pas la dernière rangée en bas
-                if (r < rows - 1) {
-                    cell.style.borderBottom = '1px dashed rgba(255, 255, 255, 0.25)';
-                }
-
-                gridOverlay.appendChild(cell);
             }
         }
 
-        // Gestion de l'affichage (Toggle)
+        // Premier rendu au chargement initial
+        genererGrille();
+
+        // Gestion de l'affichage global (Afficher / Masquer)
         chkToggleGrid.addEventListener('change', () => {
             gridOverlay.style.display = chkToggleGrid.checked ? 'grid' : 'none';
         });
+
+        // NOUVEAU : Régénère instantanément la grille lors du clic sur la case 16x8
+        if (chkHighDensityGrid) {
+            chkHighDensityGrid.addEventListener('change', genererGrille);
+        }
     }
+
 
 
 
