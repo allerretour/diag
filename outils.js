@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function placerRackOfficiel(mode) {
         // Le CENTRE de la bille de tête doit être sur le Foot Spot (X: 600).
         // On soustrait le rayon de la bille (14px) + l'ajustement de 2px pour un alignement parfait.
-        const apexX = 587; 
+        const apexX = 572; 
         const apexY = 189; // Ajustement vertical également (186px - 14px de rayon)
         
         // Espacements géométriques standards basés sur le diamètre de la bille (28px)
@@ -93,7 +93,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Remettre la bille blanche à sa place de départ (Head Spot : 186 - 14 = 172 pour être centrée verticalement)
         const cueBall = activeBalls.find(b => b.getAttribute('data-id') === '0');
         if (cueBall) {
-            cueBall.style.left = '187px';
+            cueBall.style.left = '192px';
             cueBall.style.top = '188px';
         }
     }
@@ -254,10 +254,10 @@ if (importTriggerBtn && fileImportInput) {
             
             // Configuration de l'overlay de la grille (Aucune bordure externe ici)
             gridOverlay.style.position = 'absolute';
-            gridOverlay.style.left = '5px';
-            gridOverlay.style.top = '5px';
-            gridOverlay.style.width = '786px';
-            gridOverlay.style.height = '393px';
+            gridOverlay.style.left = '19px';
+            gridOverlay.style.top = '17px';
+            gridOverlay.style.width = '754px';
+            gridOverlay.style.height = '364px';
             gridOverlay.style.border = 'none'; // Assure que le grand cadre extérieur est invisible
 
             // Répartition dynamique des colonnes et rangées
