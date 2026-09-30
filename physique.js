@@ -137,10 +137,8 @@ function resolveCollisions(currentBall) {
 
 function makeDraggable(element) {
     let currentX, currentY, initialX, initialY;
+    // Supprimez les variables globales figées xOffset et yOffset d'ici
     let isDragging = false;
-    
-    // Récupération de la zone d'affichage HTML
-    const coordsDisplay = document.getElementById('ball-coordinates');
 
     element.addEventListener('mousedown', dragStart);
     element.addEventListener('touchstart', dragStart, { passive: true });
@@ -149,14 +147,10 @@ function makeDraggable(element) {
     document.addEventListener('mouseup', dragEnd);
     document.addEventListener('touchend', dragEnd);
 
-    function obtenirNomBille(el) {
-        const id = el.getAttribute('data-id');
-        return id === '0' ? 'Blanche (0)' : `N° ${id}`;
-    }
-
     function dragStart(e) {
         if (element.style.display === 'none') return;
 
+        // MISE À JOUR CRUCIALE : On récupère la position RÉELLE et actuelle de la bille au clic
         const xOffset = parseInt(element.style.left) || 0;
         const yOffset = parseInt(element.style.top) || 0;
 
@@ -170,24 +164,21 @@ function makeDraggable(element) {
         
         if (e.target === element || element.contains(e.target)) {
             isDragging = true;
-            // Événement d'affichage initial au clic
-            if (coordsDisplay) {
-                coordsDisplay.innerText = `Bille : ${obtenirNomBille(element)} | X: ${xOffset}px , Y: ${yOffset}px`;
-            }
         }
     }
 
-        function drag(e) {
+    function drag(e) {
         if (isDragging) {
             if (e.cancelable) e.preventDefault(); 
             if (e.type === 'touchmove') {
-                currentX = e.touches.clientX - initialX; 
-                currentY = e.touches.clientY - initialY;
+                currentX = e.touches[0].clientX - initialX; 
+                currentY = e.touches[0].clientY - initialY;
             } else {
                 currentX = e.clientX - initialX; 
                 currentY = e.clientY - initialY;
             }
 
+            // Calcul du magnétisme pendant le déplacement
             const gridSize = 7; 
             currentX = Math.round(currentX / gridSize) * gridSize;
             currentY = Math.round(currentY / gridSize) * gridSize;
@@ -196,45 +187,18 @@ function makeDraggable(element) {
             element.style.left = clamped.x + 'px';
             element.style.top = clamped.y + 'px';
             
-            // Résolution des collisions
-            const finalPos = resolveCollisions(element);
-
-            // 1. Calcul de la position du CENTRE de la bille relative à la zone utile (offset de 6px)
-            const relativeCentredX = finalPos.x + 14 - 6;
-            const relativeCentredY = finalPos.y + 14 - 6;
-
-            // 2. Conversion sur l'échelle 0-17 pour X et 0-9 pour Y
-            let echelleX = (relativeCentredX / 786) * 17;
-            
-            // INVERSION DE L'AXE Y : On soustrait la position du maximum (9) 
-            // pour que le bas soit égal à 0 et le haut égal à 9
-            let echelleY = 9 - ((relativeCentredY / 394) * 9);
-
-            // Sécurité pour bloquer les valeurs entre les bornes exactes
-            if (echelleX < 0) echelleX = 0;
-            if (echelleX > 17) echelleX = 17;
-            if (echelleY < 0) echelleY = 0;
-            if (echelleY > 9) echelleY = 9;
-
-            // 3. Affichage en temps réel avec une décimale pour la précision
-            if (coordsDisplay) {
-                coordsDisplay.innerText = `Bille : ${obtenirNomBille(element)} | X: ${echelleX.toFixed(1)} , Y: ${echelleY.toFixed(1)}`;
-            }
+            // On résout les collisions (la fonction applique déjà le style CSS)
+            resolveCollisions(element);
         }
     }
-
 
     function dragEnd() {
         if (isDragging) {
             resolveCollisions(element);
             isDragging = false;
-            // Optionnel : Vous pouvez choisir de laisser les dernières coordonnées affichées 
-            // ou de remettre à zéro l'indicateur lorsque la bille est relâchée :
-            // if (coordsDisplay) coordsDisplay.innerText = "Bille sélectionnée : Aucune";
         }
     }
 }
-
 
 // --- GESTION DE L'AFFICHAGE DU TITRE SUR LE TAPIS ---
 const chkShowTitle = document.getElementById('chk-show-title');
