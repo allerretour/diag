@@ -507,7 +507,7 @@
 		
 		<div id="ball-position-display">Position de la bille : Aucune sélectionnée</div>
 		
-		<button id="btn-export-text">TXT</button>
+		<button id="btn-export-text">Export position</button>
 
 		
         <span class="summary-chevron">▼</span>
@@ -518,10 +518,15 @@
     <!-- Champ Titre -->
     <div class="form-group">
         <label for="input-title" class="form-label">Titre de la configuration</label>
+		
         <div class="input-wrapper">
             <span class="input-icon">✏️</span>
             <input type="text" id="input-title" class="form-control" placeholder="Ex: Attaque en bande, Position de départ..." value="Ma configuration de billard">
+			
+			
+			
         </div>
+		
     </div>
 
     <!-- Champ Description -->
@@ -535,30 +540,42 @@
         <div class="control-group">
     <label for="select-balls-count">🎱 Billes sur la table :</label>
     <select id="select-balls-count">
-        <option value="0">⚪ Bille blanche uniquement</option>
-        <option value="1">🔴 Blanche + 1 bille</option>
-        <option value="2">🔴 Blanche + 2 billes</option>
-        <option value="3">🔴 Blanche + 3 billes</option>
-        <option value="4">🔴 Blanche + 4 billes</option>
-        <option value="5">🔴 Blanche + 5 billes</option>
-        <option value="6">🔴 Blanche + 6 billes</option>
-        <option value="7">🔴 Blanche + 7 billes</option>
-        <option value="8">🎱 Blanche + 8 billes</option>
-        <option value="9">🔴 Blanche + 9 billes (Jeu de la 9)</option>
-        <option value="10">🔴 Blanche + 10 billes (Jeu de la 10)</option>
-        <option value="11">🔴 Blanche + 11 billes</option>
-        <option value="12">🔴 Blanche + 12 billes</option>
-        <option value="13">🔴 Blanche + 13 billes</option>
-        <option value="14">🔴 Blanche + 14 billes</option>
-        <option value="15" selected>🏆 Blanche + 15 billes (Jeu de la 8)</option>
-    </select>
+    
+
+    <!-- Groupe 2 : Modifie juste le nombre de billes sans changer leur place -->
+    <optgroup label="Nombre de billes libre" data-placement="libre">
+        <option value="0">Bille blanche uniquement</option>
+        <option value="1">Blanche + 1 bille</option>
+        <option value="2">Blanche + 2 billes</option>
+        <option value="3">Blanche + 3 billes</option>
+        <option value="4">Blanche + 4 billes</option>
+        <option value="5">Blanche + 5 billes</option>
+        <option value="6">Blanche + 6 billes</option>
+        <option value="7">Blanche + 7 billes</option>
+        <option value="8">Blanche + 8 billes</option>
+        <option value="9-libre">Blanche + 9 billes</option>
+        <option value="10-libre">Blanche + 10 billes</option>
+        <option value="11">Blanche + 11 billes</option>
+        <option value="12">Blanche + 12 billes</option>
+        <option value="13">Blanche + 13 billes</option>
+        <option value="14">Blanche + 14 billes</option>
+        <option value="15-libre">Blanche + 15 billes</option>
+    </optgroup>
+	<!-- Groupe 1 : Déclenche le placement géométrique automatique -->
+    <optgroup label="Modes de Jeu Officiels (Placement auto)" data-placement="auto">
+        <option value="15">Jeu de la 8 (15 billes)</option>
+        <option value="9">Jeu de la 9 (9 billes)</option>
+        <option value="10">Jeu de la 10 (10 billes)</option>
+    </optgroup>
+</select>
+
             <label>
                 <input type="checkbox" id="chk-toggle-grid"> Afficher la grille
             </label>
 
             <label>
-	<input type="checkbox" id="chk-show-title"> Afficher le titre
-        </label>
+				<input type="checkbox" id="chk-show-title"> Afficher le titre
+			</label>
 
 			
         </div>
@@ -694,8 +711,6 @@
         </div>
     </div>
 	
-	
-
 
 
 

@@ -12,25 +12,45 @@ document.addEventListener("DOMContentLoaded", () => {
     const descInput = document.getElementById('input-desc');
 
     // Mettre à jour l'affichage et le placement selon le sélecteur (Jeu officiel du 8, 9 ou 10)
-    function updateVisibleBalls() {
-        if (!ballsCountSelect) return;
-        const maxBallsAllowed = parseInt(ballsCountSelect.value, 10);
+    // Mettre à jour l'affichage et le placement selon le sélecteur
+// Mettre à jour uniquement la visibilité selon le nombre de billes requis
+function updateVisibleBalls() {
+    if (!ballsCountSelect) return;
+    const maxBallsAllowed = parseInt(ballsCountSelect.value, 10);
 
-        // 1. Gérer la visibilité des billes
-        activeBalls.forEach(ball => {
-            const ballId = parseInt(ball.getAttribute('data-id'), 10);
-            if (ballId === 0) {
-                ball.style.display = 'flex'; // La blanche reste toujours là
-            } else {
-                ball.style.display = ballId <= maxBallsAllowed ? 'flex' : 'none';
-            }
-        });
-
-        // 2. Si le nombre correspond à un jeu officiel, appliquer le placement automatique
-        if ([9, 10, 15].includes(maxBallsAllowed)) {
-            placerRackOfficiel(maxBallsAllowed);
+    // Gérer la visibilité des billes sans modifier leur position x/y
+    activeBalls.forEach(ball => {
+        const ballId = parseInt(ball.getAttribute('data-id'), 10);
+        if (ballId === 0) {
+            ball.style.display = 'flex'; // La blanche reste toujours visible
+        } else {
+            ball.style.display = ballId <= maxBallsAllowed ? 'flex' : 'none';
         }
-    }
+    });
+}
+
+// Écouteur d'événement intelligent sur le changement du dropdown
+if (ballsCountSelect) {
+    ballsCountSelect.addEventListener('change', (event) => {
+        // 1. On ajuste d'abord la visibilité des billes sur le tapis
+        updateVisibleBalls();
+
+        // 2. On récupère l'élément <option> qui vient d'être cliqué
+        const optionSelectionnee = ballsCountSelect.options[ballsCountSelect.selectedIndex];
+        // On remonte au parent <optgroup> pour voir s'il s'agit du groupe officiel
+        const parentOptgroup = optionSelectionnee.parentNode;
+        
+        if (parentOptgroup && parentOptgroup.getAttribute('data-placement') === 'auto') {
+            const maxBallsAllowed = parseInt(ballsCountSelect.value, 10);
+            // On déclenche le placement géométrique automatique uniquement pour ce groupe
+            if ([9, 10, 15].includes(maxBallsAllowed)) {
+                placerRackOfficiel(maxBallsAllowed);
+            }
+        }
+    });
+}
+
+
 
        // Fonction technique de placement géométrique officiel corrigée
     function placerRackOfficiel(mode) {
@@ -132,10 +152,12 @@ document.addEventListener("DOMContentLoaded", () => {
 const donneesExport = {
     titre: configTitle,
     description: configDesc,
+    // AJUSTEMENT : On sauvegarde uniquement le nombre de billes (ex: "9-libre" devient 9)
     nombreBillesVisibles: ballsCountSelect ? parseInt(ballsCountSelect.value, 10) : 15,
     billes: listBilles,
-    lignesDessinees: window.dessinsSauvegardes || [] // AJOUT : capture des lignes
+    lignesDessinees: window.dessinsSauvegardes || [] 
 };
+
 
 
             // Nettoyage du titre pour en faire un nom de fichier système valide (enlève les caractères interdits)
