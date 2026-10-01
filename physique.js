@@ -7,15 +7,18 @@ const table = document.getElementById('pool-table');
 const ballDiameter = 24; 
 const activeBalls = [];
 
+// Éléments UI pour le magnétisme et la grille
+const chkMagnetism = document.getElementById('chk-magnetism');
+const chkHighDensityGrid = document.getElementById('chk-high-density-grid');
+
 function initialiserBilles() {
     if (!table) return;
     const ballsData = [];
 
-       // Position de départ exacte sur le Head Spot (X: 200px moins le rayon de la bille pour centrer, soit 200 - 14 = 186)
-    // Nous décalons légèrement à 180 pour des raisons esthétiques afin que l'ombre ne masque pas le point blanc.
+    // Position de départ sur le Head Spot
     ballsData.push({ id: 0, num: '', color: '#ffffff', isStriped: false, x: 186, y: 186 });
 
-    // Le rack de départ (le sommet du triangle) va maintenant s'aligner par rapport au Foot Spot (X: 600px)
+    // Le rack de départ
     for (let i = 1; i <= 15; i++) {
         const colorIndex = i <= 8 ? i : i - 8;
         const color = ballColors[colorIndex];
@@ -23,26 +26,21 @@ function initialiserBilles() {
         
         const row = Math.floor((i - 1) / 5);
         const col = (i - 1) % 5;
-        // Aligné pour démarrer juste après le Foot Spot à droite
         const startX = 560 + (col * 35);
         const startY = 110 + (row * 42);
 
         ballsData.push({ id: i, num: i, color: color, isStriped: isStriped, x: startX, y: startY });
     }
 
-
-       // Dans physique.js, localisez la boucle d'injection des billes et modifiez-la ainsi :
     ballsData.forEach(b => {
         const ballEl = document.createElement('div');
         ballEl.classList.add('ball');
-        
-        // AJOUT : On passe la couleur au CSS via une variable d'environnement locale
         ballEl.style.setProperty('--ball-color', b.color);
         
         if (b.isStriped) ballEl.classList.add('striped');
         
         ballEl.setAttribute('data-id', b.id);
-        ballEl.style.backgroundColor = b.color; // Reste utile pour les billes pleines
+        ballEl.style.backgroundColor = b.color;
         ballEl.style.left = b.x + 'px';
         ballEl.style.top = b.y + 'px';
 
@@ -57,7 +55,6 @@ function initialiserBilles() {
         activeBalls.push(ballEl);
         makeDraggable(ballEl);
     });
-
 }
 
 function clampPosition(x, y) {
@@ -92,10 +89,68 @@ function clampPosition(x, y) {
     return { x, y };
 }
 
-// Ajoutez cette référence au début du fichier avec vos autres sélecteurs
-const chkMagnetism = document.getElementById('chk-magnetism');
+/**
+ * Calcule la position magnétique alignée sur les lignes de la grille
+ * en centrant le milieu de la bille sur les intersections.
+ * Empêche le débordement sur les lignes de contour en repoussant la bille vers l'intérieur.
+ */
+function calculerSnapGrille(x, y, element) {
+    // Si la case de magnétisme existe et qu'elle est décochée, on n'applique aucun filtre
+    if (chkMagnetism && !chkMagnetism.checked) {
+        return { x, y };
+    }
 
-// ... (conservez vos fonctions initialiserBilles et clampPosition intactes) ...
+    // Configuration géométrique calquée sur gridOverlay (source 1)
+    const gridLeft = 19;
+    const gridTop = 17;
+    const gridWidth = 754;
+    const gridHeight = 364;
+
+    // Détermination dynamique des colonnes/rangées (source 1)
+    const modeHD = chkHighDensityGrid ? chkHighDensityGrid.checked : false;
+    const cols = modeHD ? 16 : 8;
+    const rows = modeHD ? 8 : 4;
+
+    const pasX = gridWidth / cols;  
+    const pasY = gridHeight / rows; 
+
+    // Calcul du rayon de la bille (utilise sa taille réelle ou 12px par défaut)
+    const rayonBille = element ? element.offsetWidth / 2 : 12;
+
+    // 1. Déterminer les coordonnées théoriques du CENTRE de la bille
+    const centreX = x + rayonBille;
+    const centreY = y + rayonBille;
+
+    // 2. Travailler en repère local (sans les bordures/offsets du meuble de billard)
+    const localCentreX = centreX - gridLeft;
+    const localCentreY = centreY - gridTop;
+
+    // 3. Magnétiser le CENTRE sur la ligne ou l'intersection la plus proche
+    let snappedLocalCentreX = Math.round(localCentreX / pasX) * pasX;
+    let snappedLocalCentreY = Math.round(localCentreY / pasY) * pasY;
+
+    // 4. AJOUT : Forcer le repli d'une demi-bille si le centre touche le contour extérieur
+    // Correction sur l'axe X (Gauche / Droite)
+    if (snappedLocalCentreX <= 0) {
+        snappedLocalCentreX = rayonBille; // Repousse vers la droite
+    } else if (snappedLocalCentreX >= gridWidth) {
+        snappedLocalCentreX = gridWidth - rayonBille; // Repousse vers la gauche
+    }
+
+    // Correction sur l'axe Y (Haut / Bas)
+    if (snappedLocalCentreY <= 0) {
+        snappedLocalCentreY = rayonBille; // Repousse vers le bas
+    } else if (snappedLocalCentreY >= gridHeight) {
+        snappedLocalCentreY = gridHeight - rayonBille; // Repousse vers le haut
+    }
+
+    // 5. Reconvertir le point magnétisé en coordonnées CSS Top/Left pour le coin de la bille
+    const finalX = (gridLeft + snappedLocalCentreX) - rayonBille;
+    const finalY = (gridTop + snappedLocalCentreY) - rayonBille;
+
+    return { x: finalX, y: finalY };
+}
+
 
 function resolveCollisions(currentBall) {
     let currentX = parseFloat(currentBall.style.left);
@@ -103,7 +158,7 @@ function resolveCollisions(currentBall) {
     let collisionDetected = true;
     let iterations = 0;
 
-    while (collisionDetected && iterations < 20) {
+    while (collisionDetected && iterations < 20) { 
         collisionDetected = false;
 
         for (let otherBall of activeBalls) {
@@ -129,20 +184,13 @@ function resolveCollisions(currentBall) {
 
     const clamped = clampPosition(currentX, currentY);
     
-    // MODIFICATION : Appliquer le magnétisme final seulement si la case est cochée
-    let finalX = clamped.x;
-    let finalY = clamped.y;
+    // Alignement magnétique basé sur le centre de la bille et la grille active
+    const finalPos = calculerSnapGrille(clamped.x, clamped.y, currentBall);
 
-    if (!chkMagnetism || chkMagnetism.checked) {
-        const gridSize = 3; 
-        finalX = Math.round(clamped.x / gridSize) * gridSize;
-        finalY = Math.round(clamped.y / gridSize) * gridSize;
-    }
-
-    currentBall.style.left = finalX + 'px';
-    currentBall.style.top = finalY + 'px';
+    currentBall.style.left = finalPos.x + 'px';
+    currentBall.style.top = finalPos.y + 'px';
     
-    return { x: finalX, y: finalY };
+    return finalPos;
 }
 
 function makeDraggable(element) {
@@ -186,16 +234,13 @@ function makeDraggable(element) {
                 currentY = e.clientY - initialY;
             }
 
-            // MODIFICATION : Calcul du magnétisme pendant le déplacement seulement si activé
-            if (!chkMagnetism || chkMagnetism.checked) {
-                const gridSize = 1; 
-                currentX = Math.round(currentX / gridSize) * gridSize;
-                currentY = Math.round(currentY / gridSize) * gridSize;
-            }
-
             const clamped = clampPosition(currentX, currentY);
-            element.style.left = clamped.x + 'px';
-            element.style.top = clamped.y + 'px';
+            
+            // Appliquer l'aimantation en temps réel sur la grille lors du déplacement
+            const finalPos = calculerSnapGrille(clamped.x, clamped.y, element);
+            
+            element.style.left = finalPos.x + 'px';
+            element.style.top = finalPos.y + 'px';
             
             resolveCollisions(element);
         }
@@ -209,20 +254,17 @@ function makeDraggable(element) {
     }
 }
 
-
 // --- GESTION DE L'AFFICHAGE DU TITRE SUR LE TAPIS ---
 const chkShowTitle = document.getElementById('chk-show-title');
 const tableTitleOverlay = document.getElementById('table-title-overlay');
-const titleInput = document.getElementById('input-title'); // Déjà présent dans votre code
+const titleInput = document.getElementById('input-title'); 
 
 function rafraichirTitreSurTapis() {
     if (!tableTitleOverlay) return;
     
-    // Récupère la valeur de l'input titre ou met une valeur par défaut
     const texteTitre = titleInput ? titleInput.value.trim() : "";
     tableTitleOverlay.innerText = texteTitre;
 
-    // Affiche ou masque selon la case à cocher et la présence d'un texte
     if (chkShowTitle && chkShowTitle.checked && texteTitre !== "") {
         tableTitleOverlay.style.display = 'block';
     } else {
@@ -231,15 +273,8 @@ function rafraichirTitreSurTapis() {
 }
 
 if (chkShowTitle && tableTitleOverlay) {
-    // Écoute le clic sur la case à cocher
     chkShowTitle.addEventListener('change', rafraichirTitreSurTapis);
-    
-    // Écoute la saisie en direct dans l'input pour mettre à jour le tapis instantanément
     if (titleInput) {
         titleInput.addEventListener('input', rafraichirTitreSurTapis);
     }
 }
-
-
-
-
