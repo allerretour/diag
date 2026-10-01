@@ -36,12 +36,12 @@ document.addEventListener("DOMContentLoaded", () => {
     function placerRackOfficiel(mode) {
         // Le CENTRE de la bille de tête doit être sur le Foot Spot (X: 600).
         // On soustrait le rayon de la bille (14px) + l'ajustement de 2px pour un alignement parfait.
-        const apexX = 572; 
+        const apexX = 573; 
         const apexY = 184; // Ajustement vertical également (186px - 14px de rayon)
         
         // Espacements géométriques standards basés sur le diamètre de la bille (28px)
-        const dx = 24.25; // Décalage horizontal par colonne (28 * cos(30°) ajusté pour l'imbrication)
-        const dy = 28;    // Décalage vertical entre deux billes d'une même colonne
+        const dx = 20.8; // Décalage horizontal par colonne (28 * cos(30°) ajusté pour l'imbrication)
+        const dy = 24;    // Décalage vertical entre deux billes d'une même colonne
 
         // Définition des coordonnées relatives par bille (colonne, rangée) selon le mode
         let schéma = {};
@@ -93,7 +93,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Remettre la bille blanche à sa place de départ (Head Spot : 186 - 14 = 172 pour être centrée verticalement)
         const cueBall = activeBalls.find(b => b.getAttribute('data-id') === '0');
         if (cueBall) {
-            cueBall.style.left = '192px';
+            cueBall.style.left = '195px';
             cueBall.style.top = '184px';
         }
     }

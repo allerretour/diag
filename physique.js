@@ -4,7 +4,7 @@ const ballColors = {
 };
 
 const table = document.getElementById('pool-table');
-const ballDiameter = 28; 
+const ballDiameter = 24; 
 const activeBalls = [];
 
 function initialiserBilles() {
@@ -61,7 +61,7 @@ function initialiserBilles() {
 }
 
 function clampPosition(x, y) {
-    let minX = 18, maxX = 754, minY = 18, maxY = 350;
+    let minX = 17.6, maxX = 749, minY = 17.6, maxY = 356;
     const pocketSize = 34; 
 
     if (x >= 364 && x <= 408) {
@@ -70,18 +70,18 @@ function clampPosition(x, y) {
     else if (x < pocketSize && y < pocketSize) {
         minX = -10; minY = -10;
     }
-    else if (x < pocketSize && y > 400 - pocketSize - 28) {
+    else if (x < pocketSize && y > 400 - pocketSize - 24) {
         minX = -10; maxY = 382;
     }
-    else if (x > 800 - pocketSize - 28 && y < pocketSize) {
+    else if (x > 800 - pocketSize - 24 && y < pocketSize) {
         maxX = 782; minY = -10;
     }
-    else if (x > 800 - pocketSize - 28 && y > 400 - pocketSize - 28) {
+    else if (x > 800 - pocketSize - 24 && y > 400 - pocketSize - 24) {
         maxX = 782; maxY = 382;
     }
     else {
-        minX = 18; maxX = 744; 
-        minY = 18; maxY = 350;
+        minX = 17.6; maxX = 749; 
+        minY = 17.6; maxY = 356;
     }
 
     if (x < minX) x = minX;
@@ -98,7 +98,7 @@ function resolveCollisions(currentBall) {
     let collisionDetected = true;
     let iterations = 0;
 
-    while (collisionDetected && iterations < 10) {
+    while (collisionDetected && iterations < 20) { // Augmenté à 15 itérations pour plus de précision à 25px
         collisionDetected = false;
 
         for (let otherBall of activeBalls) {
@@ -110,11 +110,13 @@ function resolveCollisions(currentBall) {
             let dy = currentY - otherY;
             let distance = Math.sqrt(dx * dx + dy * dy);
 
+            // Se base désormais sur la variable globale ballDiameter (25)
             if (distance < ballDiameter) {
                 collisionDetected = true;
                 if (distance === 0) { dx = 1; dy = 0; distance = 1; }
 
                 let overlap = ballDiameter - distance;
+                // Déplacement proportionnel pour repousser la bille
                 currentX += (dx / distance) * overlap;
                 currentY += (dy / distance) * overlap;
             }
@@ -124,8 +126,8 @@ function resolveCollisions(currentBall) {
 
     const clamped = clampPosition(currentX, currentY);
     
-    // --- NOUVEAU : Alignement final sur la grille de 7px ---
-    const gridSize = 7; 
+    // Alignement final sur votre grille magnétique de 7px
+    const gridSize = 3; 
     const snappedX = Math.round(clamped.x / gridSize) * gridSize;
     const snappedY = Math.round(clamped.y / gridSize) * gridSize;
 
@@ -134,6 +136,7 @@ function resolveCollisions(currentBall) {
     
     return { x: snappedX, y: snappedY };
 }
+
 
 function makeDraggable(element) {
     let currentX, currentY, initialX, initialY;
