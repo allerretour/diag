@@ -134,6 +134,53 @@ function dessinerCarre(x, y, couleur) {
     ctx.restore();
 }
 
+// Dessine un rectangle sans bordure avec des coins arrondis qui recouvre une zone de la grille
+function dessinerZoneGrille(zoneIndex, couleur) {
+    ctx.save();
+    ctx.setLineDash([]); // Réinitialisation par sécurité
+    
+    // Désactiver la bordure
+    ctx.strokeStyle = "transparent";
+    ctx.lineWidth = 0;
+
+    // Configuration géométrique de la table (source 1 et 2)
+    const gridLeft = 19;
+    const gridTop = 17;
+    const gridWidth = 754;
+    const gridHeight = 364;
+
+    // Grille : 4 horizontales par 2 verticales
+    const cols = 4;
+    const rows = 2;
+    const pasX = gridWidth / cols;  
+    const pasY = gridHeight / rows; 
+
+    // Convertir l'index (1 à 8) en index de tableau (0 à 7)
+    const idx = zoneIndex - 1;
+    const r = Math.floor(idx / cols);
+    const c = idx % cols;
+
+    // Calcul des positions physiques de la zone
+    const x = gridLeft + (c * pasX);
+    const y = gridTop + (r * pasY);
+    
+    // Paramètres de l'arrondi (ex: 12 pixels, ajustable selon vos préférences)
+    const rayonCoins = 12; 
+
+    // Configuration de la couleur et de l'opacité du fond (25%)
+    ctx.globalAlpha = 0.25; 
+    ctx.fillStyle = couleur;
+
+    ctx.beginPath();
+    // Utilisation de roundRect pour appliquer les coins arrondis proprement
+    ctx.roundRect(x, y, pasX, pasY, rayonCoins);
+    ctx.fill();
+
+    ctx.restore();
+}
+
+
+
 
 
     function resizeCanvas() {
@@ -160,13 +207,20 @@ function dessinerCarre(x, y, couleur) {
             }
 			
 			// AJOUT : Gestion exclusive des éléments de type Carré
-			if (dessin.estCarre) {
-				if (dessin.points && dessin.points.length > 0) {
-                const centre = dessin.points[0];
-                dessinerCarre(centre.x, centre.y, dessin.couleur);
-				}
-            return;
-			}
+if (dessin.estCarre) {
+    if (dessin.points && dessin.points.length > 0) {
+        const centre = dessin.points[0];
+        dessinerCarre(centre.x, centre.y, dessin.couleur);
+    }
+    return;
+}
+
+// === AJOUT ICI : Gestion exclusive des formes de Zone de Grille ===
+if (dessin.estZoneGrille) {
+    dessinerZoneGrille(dessin.zoneId, dessin.couleur);
+    return;
+}
+
 
             // Gestion des tracés standards et lignes droites
             if (dessin.points.length < 2) return;
@@ -251,16 +305,33 @@ function dessinerCarre(x, y, couleur) {
         }
 		
         // Le carré ne se déclenche QUE si CTRL n'est PAS enfoncé
-        if (e.key.toLowerCase() === 'z' && !e.ctrlKey && !e.metaKey) {
-            const couleurActive = colorSelect ? colorSelect.value : '#ffffff';
-            const nouveauCarre = {
-                couleur: couleurActive,
-                estCarre: true,
-                points: [{ x: mouseX, y: mouseY }]
-            };
-            window.dessinsSauvegardes.push(nouveauCarre);
-            window.redessinerToutesLesLignes();
-        }
+if (e.key.toLowerCase() === 'z' && !e.ctrlKey && !e.metaKey) {
+    const couleurActive = colorSelect ? colorSelect.value : '#ffffff';
+    const nouveauCarre = {
+        couleur: couleurActive,
+        estCarre: true,
+        points: [{ x: mouseX, y: mouseY }]
+    };
+    window.dessinsSauvegardes.push(nouveauCarre);
+    window.redessinerToutesLesLignes();
+}
+
+// === AJOUT ICI : Gestion des touches 1 à 8 pour recouvrir les zones ===
+if (e.key >= '1' && e.key <= '8') {
+    const couleurActive = colorSelect ? colorSelect.value : '#ffffff';
+    const zoneId = parseInt(e.key, 10);
+
+    const nouvelleZone = {
+        couleur: couleurActive,
+        estZoneGrille: true,
+        zoneId: zoneId,
+        points: [] // Non requis pour le calcul mais garde la structure uniforme
+    };
+
+    window.dessinsSauvegardes.push(nouvelleZone);
+    window.redessinerToutesLesLignes();
+}
+
     });
 
     document.addEventListener('keyup', (e) => {

@@ -236,83 +236,85 @@ if (importTriggerBtn && fileImportInput) {
     importTriggerBtn.addEventListener('click', () => fileImportInput.click());
 
     fileImportInput.addEventListener('change', (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
+    const file = event.target.files[0];
+    if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const donneesImportees = JSON.parse(e.target.result);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const donneesImportees = JSON.parse(e.target.result);
+            
+            let listeBilles = [];
+            let nbVisibles = 15;
+            let titreImported = "Configuration importée";
+            let descImported = "";
+
+            // Analyse du format de fichier et extraction des données
+            if (donneesImportees.billes && Array.isArray(donneesImportees.billes)) {
+                listeBilles = donneesImportees.billes;
+                nbVisibles = donneesImportees.nombreBillesVisibles;
+                titreImported = donneesImportees.titre || "Configuration sans titre";
+                descImported = donneesImportees.description || "";
                 
-                let listeBilles = [];
-                let nbVisibles = 15;
-                let titreImported = "Configuration importée";
-                let descImported = "";
-
-                // Analyse du format de fichier
-    if (donneesImportees.billes && Array.isArray(donneesImportees.billes)) {
-        listeBilles = donneesImportees.billes;
-        nbVisibles = donneesImportees.nombreBillesVisibles;
-        titreImported = donneesImportees.titre || "Configuration sans titre";
-        descImported = donneesImportees.description || "";
-        
-        // CORRECTION / AJOUT : On accepte et restaure les tracés contenant la propriété "estCarre"
-        if (donneesImportees.lignesDessinees && Array.isArray(donneesImportees.lignesDessinees)) {
-            window.dessinsSauvegardes = donneesImportees.lignesDessinees;
-        } else {
-            window.dessinsSauvegardes = [];
-        }
-    } else if (Array.isArray(donneesImportees)) {
-        listeBilles = donneesImportees;
-        nbVisibles = donneesImportees.filter(b => parseInt(b.id, 10) > 0).length;
-        window.dessinsSauvegardes = [];
-    } else {
-        throw new Error();
-    }
-
-                // 1. Ajuster le sélecteur numérique
-                if (ballsCountSelect) {
-                    ballsCountSelect.value = nbVisibles;
+                // Restauration de tous les tracés (lignes, flèches, cibles, carrés et zones de grille)
+                if (donneesImportees.lignesDessinees && Array.isArray(donneesImportees.lignesDessinees)) {
+                    window.dessinsSauvegardes = donneesImportees.lignesDessinees;
+                } else {
+                    window.dessinsSauvegardes = [];
                 }
-
-                // 2. Gérer uniquement la VISIBILITÉ des billes (sans appeler updateVisibleBalls qui écraserait tout)
-                activeBalls.forEach(ball => {
-                    const ballId = parseInt(ball.getAttribute('data-id'), 10);
-                    if (ballId === 0) {
-                        ball.style.display = 'flex';
-                    } else {
-                        ball.style.display = ballId <= nbVisibles ? 'flex' : 'none';
-                    }
-                });
-
-                // 3. Restaurer la position personnalisée de toutes les billes (APREÈS la visibilité)
-                listeBilles.forEach(savedBall => {
-                    const ballEl = activeBalls.find(b => b.getAttribute('data-id') === savedBall.id);
-                    if (ballEl) {
-                        ballEl.style.left = savedBall.x;
-                        ballEl.style.top = savedBall.y;
-                    }
-                });
-
-                // 4. Mettre à jour les champs de texte éditables du HTML
-                if (titleInput) titleInput.value = titreImported;
-                if (typeof rafraichirTitreSurTapis === "function") rafraichirTitreSurTapis();
-                if (descInput) descInput.value = descImported;
-
-                // 5. Forcer le canvas à redessiner les lignes chargées
-                if (typeof window.redessinerToutesLesLignes === "function") {
-                    window.redessinerToutesLesLignes();
-                }
-
-                alert(`Configuration "${titreImported}" restaurée avec succès !`);
-            } catch (error) {
-                alert("Erreur lors de la lecture du fichier JSON. Vérifiez sa structure.");
+            } else if (Array.isArray(donneesImportees)) {
+                listeBilles = donneesImportees;
+                nbVisibles = donneesImportees.filter(b => parseInt(b.id, 10) > 0).length;
+                window.dessinsSauvegardes = [];
+            } else {
+                throw new Error("Format JSON non reconnu");
             }
 
-            fileImportInput.value = "";
-        };
-        reader.readAsText(file);
-    });
+            // 1. Ajuster la valeur affichée dans le menu déroulant
+            if (ballsCountSelect) {
+                ballsCountSelect.value = nbVisibles;
+            }
+
+            // 2. Gérer uniquement la VISIBILITÉ des billes sans altérer leurs futures positions personnalisées
+            activeBalls.forEach(ball => {
+                const ballId = parseInt(ball.getAttribute('data-id'), 10);
+                if (ballId === 0) {
+                    ball.style.display = 'flex'; // La blanche reste toujours visible
+                } else {
+                    ball.style.display = ballId <= nbVisibles ? 'flex' : 'none';
+                }
+            });
+
+            // 3. Restaurer la position personnalisée (X, Y) de chaque bille présente dans le fichier
+            listeBilles.forEach(savedBall => {
+                const ballEl = activeBalls.find(b => b.getAttribute('data-id') === savedBall.id);
+                if (ballEl) {
+                    ballEl.style.left = savedBall.x;
+                    ballEl.style.top = savedBall.y;
+                }
+            });
+
+            // 4. Mettre à jour les champs de texte éditables du menu et du tapis de billard
+            if (titleInput) titleInput.value = titreImported;
+            if (typeof rafraichirTitreSurTapis === "function") rafraichirTitreSurTapis();
+            if (descInput) descInput.value = descImported;
+
+            // 5. Forcer le canvas à redessiner immédiatement toutes les formes géométriques et zones chargées
+            if (typeof window.redessinerToutesLesLignes === "function") {
+                window.redessinerToutesLesLignes();
+            }
+
+            alert(`Configuration "${titreImported}" restaurée avec succès !`);
+        } catch (error) {
+            alert("Erreur lors de la lecture du fichier JSON. Vérifiez sa structure.");
+        }
+
+        // Réinitialisation du champ de fichier pour autoriser une ré-importation immédiate du même fichier
+        fileImportInput.value = "";
+    };
+    reader.readAsText(file);
+});
+
 }
 
 
