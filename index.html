@@ -505,9 +505,9 @@
     <summary class="controls-summary">
         <span class="summary-title">⚙️ Options</span>
 		
-		<div id="ball-position-display">Position de la bille : Aucune sélectionnée</div>
+		<div id="ball-position-display" class="form-label" >Position de la bille : Aucune sélectionnée</div>
 		
-		<button id="btn-export-text">Export position</button>
+		
 
 		
         <span class="summary-chevron">▼</span>
@@ -544,25 +544,25 @@
 
     <!-- Groupe 2 : Modifie juste le nombre de billes sans changer leur place -->
     <optgroup label="Nombre de billes libre" data-placement="libre">
-        <option value="0">Bille blanche uniquement</option>
-        <option value="1">Blanche + 1 bille</option>
-        <option value="2">Blanche + 2 billes</option>
-        <option value="3">Blanche + 3 billes</option>
-        <option value="4">Blanche + 4 billes</option>
-        <option value="5">Blanche + 5 billes</option>
-        <option value="6">Blanche + 6 billes</option>
-        <option value="7">Blanche + 7 billes</option>
-        <option value="8">Blanche + 8 billes</option>
-        <option value="9-libre">Blanche + 9 billes</option>
-        <option value="10-libre">Blanche + 10 billes</option>
-        <option value="11">Blanche + 11 billes</option>
-        <option value="12">Blanche + 12 billes</option>
-        <option value="13">Blanche + 13 billes</option>
-        <option value="14">Blanche + 14 billes</option>
-        <option value="15-libre">Blanche + 15 billes</option>
+        <option value="0">Bille ⚪ uniquement</option>
+        <option value="1">⚪ + 1 bille</option>
+        <option value="2">⚪ + 2 billes</option>
+        <option value="3">⚪ + 3 billes</option>
+        <option value="4">⚪ + 4 billes</option>
+        <option value="5">⚪ + 5 billes</option>
+        <option value="6">⚪ + 6 billes</option>
+        <option value="7">⚪ + 7 billes</option>
+        <option value="8">⚪ + 8 billes</option>
+        <option value="9-libre">⚪ + 9 billes</option>
+        <option value="10-libre">⚪ + 10 billes</option>
+        <option value="11">⚪ + 11 billes</option>
+        <option value="12">⚪ + 12 billes</option>
+        <option value="13">⚪ + 13 billes</option>
+        <option value="14">⚪ + 14 billes</option>
+        <option value="15-libre">⚪ + 15 billes</option>
     </optgroup>
 	<!-- Groupe 1 : Déclenche le placement géométrique automatique -->
-    <optgroup label="Modes de Jeu Officiels (Placement auto)" data-placement="auto">
+    <optgroup label="Jeu Officiels (Placement auto)" data-placement="auto">
         <option value="15">Jeu de la 8 (15 billes)</option>
         <option value="9">Jeu de la 9 (9 billes)</option>
         <option value="10">Jeu de la 10 (10 billes)</option>
@@ -592,12 +592,15 @@
     <input type="file" id="file-import" accept=".json" style="display: none;">
 
     <button id="btn-undo-lines" class="btn btn-action">
-        <span class="btn-icon">↩️</span> Annuler tracé
+        <span class="btn-icon">↩️</span> Annuler
     </button>
 
     <button id="btn-clear-lines" class="btn btn-danger">
-        <span class="btn-icon">🗑️</span> Effacer tout
+        <span class="btn-icon">🗑️</span> Effacer
     </button>
+	
+	<button id="btn-export-text" class="btn btn-primary" >📄</span> Position</button>
+	
 </div>
 
 
@@ -691,7 +694,7 @@
             <!-- Head Spot (Point de choc pour la blanche) -->
             <div style="position: absolute; left: 208px; top: 200px; width: 6px; height: 6px; background-color: #fff; border-radius: 50%; transform: translate(-50%, -50%); opacity: 0.6; pointer-events: none; z-index: 0; box-shadow: 0 0 4px #000;"></div>
             <!-- Foot Spot (Point de replacement / Sommet du triangle à 3/4 de la table) -->
-            <div style="position: absolute; left: 587px; top: 200px; width: 6px; height: 6px; background-color: #fff; border-radius: 50%; transform: translate(-50%, -50%); opacity: 0.6; pointer-events: none; z-index: 0; box-shadow: 0 0 4px #000;"></div>
+            <div style="position: absolute; left: 585px; top: 200px; width: 6px; height: 6px; background-color: #fff; border-radius: 50%; transform: translate(-50%, -50%); opacity: 0.6; pointer-events: none; z-index: 0; box-shadow: 0 0 4px #000;"></div>
 
             <!-- Bandes physiques -->
             <div class="cushion top-left"></div>

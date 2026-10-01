@@ -16,7 +16,7 @@ function initialiserBilles() {
     const ballsData = [];
 
     // Position de départ sur le Head Spot
-    ballsData.push({ id: 0, num: '', color: '#ffffff', isStriped: false, x: 186, y: 186 });
+    ballsData.push({ id: 0, num: '', color: '#ffffff', isStriped: false, x: 196, y: 186 });
 
     // Le rack de départ
     for (let i = 1; i <= 15; i++) {
@@ -26,8 +26,8 @@ function initialiserBilles() {
         
         const row = Math.floor((i - 1) / 5);
         const col = (i - 1) % 5;
-        const startX = 560 + (col * 35);
-        const startY = 110 + (row * 42);
+        const startX = 500 + (col * 35);
+        const startY = 40 + (row * 42);
 
         ballsData.push({ id: i, num: i, color: color, isStriped: isStriped, x: startX, y: startY });
     }
