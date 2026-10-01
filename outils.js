@@ -115,6 +115,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     y: ball.style.top
                 });
             });
+			
+			
+			
+			
+			
+			
+			
 
             // Récupération des valeurs textuelles nettoyées
             const configTitle = titleInput ? titleInput.value.trim() : "configuration_billard";
@@ -146,6 +153,60 @@ const donneesExport = {
         });
     }
 
+    // EXPORTATION TEXTE : Sauvegarde la liste complète des billes visibles au format TXT
+    const exportTxtBtn = document.getElementById('btn-export-text');
+    if (exportTxtBtn) {
+        exportTxtBtn.addEventListener('click', () => {
+            const configTitle = titleInput ? titleInput.value.trim() : "Configuration Billard";
+            const configDesc = descInput ? descInput.value.trim() : "";
+            
+            let contenuTexte = `=== CONFIGURATION DE BILLARD ===\n`;
+            contenuTexte += `Titre : ${configTitle}\n`;
+            if (configDesc) contenuTexte += `Description : ${configDesc}\n`;
+            contenuTexte += `--------------------------------\n`;
+            contenuTexte += `Positions des billes (Grille 16x8, Origine Bas-Gauche) :\n\n`;
+
+            let compteurBilles = 0;
+            activeBalls.forEach(ball => {
+                if (ball.style.display !== 'none') {
+                    compteurBilles++;
+                    const ballId = ball.getAttribute('data-id');
+                    const numEl = ball.querySelector('.ball-num');
+                    
+                    let nomBille = "";
+                    if (ballId === '0') {
+                        nomBille = "Bille Blanche";
+                    } else {
+                        const numTexte = numEl ? numEl.innerText : ballId;
+                        const estRayee = ball.classList.contains('striped');
+                        nomBille = `Bille N°${numTexte} (${estRayee ? 'Rayée' : 'Pleine'})`;
+                    }
+
+                    const pixelX = parseFloat(ball.style.left) || 0;
+                    const pixelY = parseFloat(ball.style.top) || 0;
+                    const coordsGrille = obtenirCoordonneesGrille(pixelX, pixelY, ball);
+
+                    contenuTexte += `- ${nomBille.padEnd(25)} : X = ${coordsGrille.x.padStart(4)}, Y = ${coordsGrille.y.padStart(4)}\n`;
+                }
+            });
+
+            contenuTexte += `\nTotal : ${compteurBilles} billes présentes sur le tapis.\n`;
+            contenuTexte += `================================\n`;
+
+            const nomFichierSecurise = configTitle.replace(/[/\\?%*:|"<>]/g, '-').substring(0, 100) || "configuration_billard";
+            const blob = new Blob([contenuTexte], { type: "text/plain;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            
+            a.href = url;
+            a.download = `${nomFichierSecurise}_positions.txt`;
+            document.body.appendChild(a);
+            a.click();
+            
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    }
 
 
    // IMPORTATION : Lit et réinjecte le titre, la description et la table de billard

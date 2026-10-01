@@ -220,6 +220,9 @@ function makeDraggable(element) {
         
         if (e.target === element || element.contains(e.target)) {
             isDragging = true;
+            
+            // ÉTAPE A : Mettre à jour l'affichage dès la sélection / clic initial
+            mettreAJourAffichagePosition(element, xOffset, yOffset);
         }
     }
 
@@ -235,24 +238,29 @@ function makeDraggable(element) {
             }
 
             const clamped = clampPosition(currentX, currentY);
-            
-            // Appliquer l'aimantation en temps réel sur la grille lors du déplacement
             const finalPos = calculerSnapGrille(clamped.x, clamped.y, element);
             
             element.style.left = finalPos.x + 'px';
             element.style.top = finalPos.y + 'px';
             
             resolveCollisions(element);
+
+            // ÉTAPE B : Mettre à jour l'affichage en temps réel pendant le déplacement
+            mettreAJourAffichagePosition(element, finalPos.x, finalPos.y);
         }
     }
 
     function dragEnd() {
         if (isDragging) {
-            resolveCollisions(element);
+            const finalPos = resolveCollisions(element);
             isDragging = false;
+
+            // ÉTAPE C : Ajustement final de l'affichage une fois les collisions résolues
+            mettreAJourAffichagePosition(element, finalPos.x, finalPos.y);
         }
     }
 }
+
 
 // --- GESTION DE L'AFFICHAGE DU TITRE SUR LE TAPIS ---
 const chkShowTitle = document.getElementById('chk-show-title');
@@ -278,3 +286,67 @@ if (chkShowTitle && tableTitleOverlay) {
         titleInput.addEventListener('input', rafraichirTitreSurTapis);
     }
 }
+
+
+/**
+ * Convertit les coordonnées pixel CSS (left/top) d'une bille en coordonnées 
+ * sur une grille de 16x8 avec le point (0,0) en bas à gauche (avec 1 décimale).
+ */
+/**
+ * Convertit les coordonnées pixel CSS (left/top) d'une bille en coordonnées 
+ * sur une grille de 16x8 avec le point (0,0) en bas à gauche.
+ * Masque la décimale si le magnétisme est actif.
+ */
+function obtenirCoordonneesGrille(x, y, element) {
+    const minX = 17.6;
+    const maxX = 749;
+    const minY = 17.6;
+    const maxY = 356;
+
+    const cols = 16;
+    const rows = 8;
+
+    // 1. Calculer la position relative de la bille (de 0 à 1)
+    const ratioX = (x - minX) / (maxX - minX);
+    const ratioY = (y - minY) / (maxY - minY);
+
+    // 2. Multiplier par le nombre de colonnes/rangées
+    let grilleX = ratioX * cols;
+    let grilleY = (1 - ratioY) * rows;
+
+    // 3. Sécurisation stricte des limites (0 à 16 et 0 à 8)
+    grilleX = Math.max(0, Math.min(cols, grilleX));
+    grilleY = Math.max(0, Math.min(rows, grilleY));
+
+    // 4. Détermination dynamique du nombre de décimales selon le magnétisme
+    // Si chkMagnetism existe et est coché, on affiche 0 décimale (entier), sinon 1 décimale
+    const magnetismeActif = chkMagnetism ? chkMagnetism.checked : false;
+    const nbDecimales = magnetismeActif ? 0 : 1;
+
+    return { 
+        x: grilleX.toFixed(nbDecimales), 
+        y: grilleY.toFixed(nbDecimales) 
+    };
+}
+
+
+/**
+ * Met à jour l'affichage UI avec le nom/numéro de la bille et ses coordonnées à 1 décimale.
+ */
+function mettreAJourAffichagePosition(element, x, y) {
+    const displayEl = document.getElementById('ball-position-display');
+    if (!displayEl) return;
+
+    if (!element) {
+        displayEl.innerText = "Position de la bille : Aucune sélectionnée";
+        return;
+    }
+
+    const ballId = element.getAttribute('data-id');
+    const numEl = element.querySelector('.ball-num');
+    const nomBille = ballId === '0' ? "Blanche" : `N°${numEl ? numEl.innerText : ballId}`;
+
+    const coords = obtenirCoordonneesGrille(x, y, element);
+    displayEl.innerText = `Bille active : ${nomBille} | Position grille : X = ${coords.x}, Y = ${coords.y}`;
+}
+

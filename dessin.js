@@ -29,6 +29,11 @@ document.addEventListener("DOMContentLoaded", () => {
         mouseX = Math.round(e.clientX - rect.left);
         mouseY = Math.round(e.clientY - rect.top);
     });
+	
+	
+	
+	
+	
 
     // MODIFICATION : Ajout du paramètre "estPointille" pour configurer les pointillés
     function configurerStyleDessin(couleur, estPointille) {
