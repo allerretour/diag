@@ -92,13 +92,18 @@ function clampPosition(x, y) {
     return { x, y };
 }
 
+// Ajoutez cette référence au début du fichier avec vos autres sélecteurs
+const chkMagnetism = document.getElementById('chk-magnetism');
+
+// ... (conservez vos fonctions initialiserBilles et clampPosition intactes) ...
+
 function resolveCollisions(currentBall) {
     let currentX = parseFloat(currentBall.style.left);
     let currentY = parseFloat(currentBall.style.top);
     let collisionDetected = true;
     let iterations = 0;
 
-    while (collisionDetected && iterations < 20) { // Augmenté à 15 itérations pour plus de précision à 25px
+    while (collisionDetected && iterations < 20) {
         collisionDetected = false;
 
         for (let otherBall of activeBalls) {
@@ -110,13 +115,11 @@ function resolveCollisions(currentBall) {
             let dy = currentY - otherY;
             let distance = Math.sqrt(dx * dx + dy * dy);
 
-            // Se base désormais sur la variable globale ballDiameter (25)
             if (distance < ballDiameter) {
                 collisionDetected = true;
                 if (distance === 0) { dx = 1; dy = 0; distance = 1; }
 
                 let overlap = ballDiameter - distance;
-                // Déplacement proportionnel pour repousser la bille
                 currentX += (dx / distance) * overlap;
                 currentY += (dy / distance) * overlap;
             }
@@ -126,21 +129,24 @@ function resolveCollisions(currentBall) {
 
     const clamped = clampPosition(currentX, currentY);
     
-    // Alignement final sur votre grille magnétique de 7px
-    const gridSize = 3; 
-    const snappedX = Math.round(clamped.x / gridSize) * gridSize;
-    const snappedY = Math.round(clamped.y / gridSize) * gridSize;
+    // MODIFICATION : Appliquer le magnétisme final seulement si la case est cochée
+    let finalX = clamped.x;
+    let finalY = clamped.y;
 
-    currentBall.style.left = snappedX + 'px';
-    currentBall.style.top = snappedY + 'px';
+    if (!chkMagnetism || chkMagnetism.checked) {
+        const gridSize = 3; 
+        finalX = Math.round(clamped.x / gridSize) * gridSize;
+        finalY = Math.round(clamped.y / gridSize) * gridSize;
+    }
+
+    currentBall.style.left = finalX + 'px';
+    currentBall.style.top = finalY + 'px';
     
-    return { x: snappedX, y: snappedY };
+    return { x: finalX, y: finalY };
 }
-
 
 function makeDraggable(element) {
     let currentX, currentY, initialX, initialY;
-    // Supprimez les variables globales figées xOffset et yOffset d'ici
     let isDragging = false;
 
     element.addEventListener('mousedown', dragStart);
@@ -153,7 +159,6 @@ function makeDraggable(element) {
     function dragStart(e) {
         if (element.style.display === 'none') return;
 
-        // MISE À JOUR CRUCIALE : On récupère la position RÉELLE et actuelle de la bille au clic
         const xOffset = parseInt(element.style.left) || 0;
         const yOffset = parseInt(element.style.top) || 0;
 
@@ -181,16 +186,17 @@ function makeDraggable(element) {
                 currentY = e.clientY - initialY;
             }
 
-            // Calcul du magnétisme pendant le déplacement
-            const gridSize = 7; 
-            currentX = Math.round(currentX / gridSize) * gridSize;
-            currentY = Math.round(currentY / gridSize) * gridSize;
+            // MODIFICATION : Calcul du magnétisme pendant le déplacement seulement si activé
+            if (!chkMagnetism || chkMagnetism.checked) {
+                const gridSize = 1; 
+                currentX = Math.round(currentX / gridSize) * gridSize;
+                currentY = Math.round(currentY / gridSize) * gridSize;
+            }
 
             const clamped = clampPosition(currentX, currentY);
             element.style.left = clamped.x + 'px';
             element.style.top = clamped.y + 'px';
             
-            // On résout les collisions (la fonction applique déjà le style CSS)
             resolveCollisions(element);
         }
     }
@@ -202,6 +208,7 @@ function makeDraggable(element) {
         }
     }
 }
+
 
 // --- GESTION DE L'AFFICHAGE DU TITRE SUR LE TAPIS ---
 const chkShowTitle = document.getElementById('chk-show-title');
