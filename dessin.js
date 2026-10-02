@@ -242,11 +242,11 @@ function dessinerZoneGrille(zoneIndex, couleur) {
 
 
     // 2. AJOUT : DESSIN DU NUMÉRO DE LA ZONE (En haut à gauche avec petite marge)
-    ctx.globalAlpha = 0.4; // Augmenté légèrement car le texte est plus petit, ajustable
+    ctx.globalAlpha = 0.1; // Augmenté légèrement car le texte est plus petit, ajustable
     ctx.fillStyle = couleur;
     
     // Configuration du texte (Petit, gras, aligné en haut à gauche)
-    ctx.font = "bold 24px sans-serif"; 
+    ctx.font = "bold 72px sans-serif"; 
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
 
