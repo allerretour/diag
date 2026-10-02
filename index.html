@@ -570,36 +570,41 @@
 
 
         <div class="control-group">
-    <label for="select-balls-count">🎱 Billes sur la table :</label>
-    <select id="select-balls-count">
-    
+    <!-- Sélecteur de billes compact -->
+<div class="d-flex align-items-center gap-1 text-white bg-dark p-2 rounded">
+    <label for="select-balls-count" class="small mb-0">🎱</label>
+    <select id="select-balls-count" class="form-select form-select-sm w-auto py-0">
+        
+        <!-- Groupe 2 : Nombre libre -->
+        <optgroup label="Mode Libre" data-placement="libre">
+            <option value="0">⚪ Seule</option>
+            <option value="1">⚪ + 1</option>
+            <option value="2">⚪ + 2</option>
+            <option value="3">⚪ + 3</option>
+            <option value="4">⚪ + 4</option>
+            <option value="5">⚪ + 5</option>
+            <option value="6">⚪ + 6</option>
+            <option value="7">⚪ + 7</option>
+            <option value="8">⚪ + 8</option>
+            <option value="9-libre" selected>⚪ + 9</option>
+            <option value="10-libre">⚪ + 10</option>
+            <option value="11">⚪ + 11</option>
+            <option value="12">⚪ + 12</option>
+            <option value="13">⚪ + 13</option>
+            <option value="14">⚪ + 14</option>
+            <option value="15-libre">⚪ + 15</option>
+        </optgroup>
 
-    <!-- Groupe 2 : Modifie juste le nombre de billes sans changer leur place -->
-    <optgroup label="Nombre de billes libre" data-placement="libre">
-        <option value="0">Bille ⚪ uniquement</option>
-        <option value="1">⚪ + 1 bille</option>
-        <option value="2">⚪ + 2 billes</option>
-        <option value="3">⚪ + 3 billes</option>
-        <option value="4">⚪ + 4 billes</option>
-        <option value="5">⚪ + 5 billes</option>
-        <option value="6">⚪ + 6 billes</option>
-        <option value="7">⚪ + 7 billes</option>
-        <option value="8">⚪ + 8 billes</option>
-        <option value="9-libre">⚪ + 9 billes</option>
-        <option value="10-libre">⚪ + 10 billes</option>
-        <option value="11">⚪ + 11 billes</option>
-        <option value="12">⚪ + 12 billes</option>
-        <option value="13">⚪ + 13 billes</option>
-        <option value="14">⚪ + 14 billes</option>
-        <option value="15-libre">⚪ + 15 billes</option>
-    </optgroup>
-	<!-- Groupe 1 : Déclenche le placement géométrique automatique -->
-    <optgroup label="Jeu Officiels (Placement auto)" data-placement="auto">
-        <option value="15">Jeu de la 8 (15 billes)</option>
-        <option value="9">Jeu de la 9 (9 billes)</option>
-        <option value="10">Jeu de la 10 (10 billes)</option>
-    </optgroup>
-</select>
+        <!-- Groupe 1 : Placement auto -->
+        <optgroup label="Jeux Officiels (Auto)" data-placement="auto">
+            <option value="15">Jeu de la 8 (15)</option>
+            <option value="9">Jeu de la 9 (9)</option>
+            <option value="10">Jeu de la 10 (10)</option>
+        </optgroup>
+        
+    </select>
+
+
 
             <label>
                 <input type="checkbox" id="chk-toggle-grid"> Afficher la grille
@@ -617,34 +622,32 @@
 			
         </div>
 
-<!-- Barre d'actions horizontale unique -->
-<div class="actions-button-row">
-    <button id="btn-export" class="btn btn-primary">
+<!-- Barre d'actions horizontale compacte -->
+<div class="actions-button-row d-flex flex-wrap gap-1 align-items-center">
+    <button id="btn-export" class="btn btn-primary btn-sm">
         <span class="btn-icon">💾</span> Exporter
     </button>
     
-    <button id="btn-import-trigger" class="btn btn-secondary">
+    <button id="btn-import-trigger" class="btn btn-secondary btn-sm">
         <span class="btn-icon">📂</span> Importer
     </button>
     <input type="file" id="file-import" accept=".json" style="display: none;">
 
-    <button id="btn-undo-lines" class="btn btn-action">
+    <button id="btn-undo-lines" class="btn btn-action btn-sm">
         <span class="btn-icon">↩️</span> Annuler
     </button>
 
-    <button id="btn-clear-lines" class="btn btn-danger">
+    <button id="btn-clear-lines" class="btn btn-danger btn-sm">
         <span class="btn-icon">🗑️</span> Effacer
     </button>
-	
-	<button id="btn-export-text" class="btn btn-primary" >📄</span> Position</button>
+    
+    <button id="btn-export-text" class="btn btn-primary btn-sm">
+        <span class="btn-icon">📄</span> Position
+    </button>
 
-<button id="btn-random-hd" style="background-color: #e67e22; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; margin: 5px;">
-    🎲 Aléatoire HD
-</button>
-
-
-
-	
+    <button id="btn-random-hd" class="btn btn-sm" style="background-color: #e67e22; color: white; border: none; font-weight: bold;">
+        <span class="btn-icon">🎲</span> Aléatoire HD
+    </button>
 </div>
 
 
