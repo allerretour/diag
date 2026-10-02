@@ -54,6 +54,17 @@ function initialiserBilles() {
         table.appendChild(ballEl);
         activeBalls.push(ballEl);
         makeDraggable(ballEl);
+
+        // MODIFICATION : Toutes les billes (y compris la blanche) se cachent au double-clic
+        ballEl.addEventListener('dblclick', function() {
+            this.style.display = 'none';
+            
+            // Nettoie l'affichage textuel de la bille active
+            const displayEl = document.getElementById('ball-position-display');
+            if (displayEl) {
+                displayEl.innerText = "Position de la bille : Aucune sélectionnée";
+            }
+        });
     });
 }
 
@@ -95,18 +106,17 @@ function clampPosition(x, y) {
  * Empêche le débordement sur les lignes de contour en repoussant la bille vers l'intérieur.
  */
 function calculerSnapGrille(x, y, element) {
-    // Si la case de magnétisme existe et qu'elle est décochée, on n'applique aucun filtre
+    // Si le magnétisme existe et qu'elle est décochée, on n'applique aucun filtre
     if (chkMagnetism && !chkMagnetism.checked) {
         return { x, y };
     }
 
-    // Configuration géométrique calquée sur gridOverlay (source 1)
+    // Vraies dimensions du tapis de jeu (Source 1 & 2)
     const gridLeft = 19;
     const gridTop = 17;
     const gridWidth = 754;
     const gridHeight = 364;
 
-    // Détermination dynamique des colonnes/rangées (source 1)
     const modeHD = chkHighDensityGrid ? chkHighDensityGrid.checked : false;
     const cols = modeHD ? 16 : 8;
     const rows = modeHD ? 8 : 4;
@@ -117,40 +127,39 @@ function calculerSnapGrille(x, y, element) {
     // Calcul du rayon de la bille (utilise sa taille réelle ou 12px par défaut)
     const rayonBille = element ? element.offsetWidth / 2 : 12;
 
-    // 1. Déterminer les coordonnées théoriques du CENTRE de la bille
+    // 1. Coordonnées théoriques du CENTRE de la bille
     const centreX = x + rayonBille;
     const centreY = y + rayonBille;
 
-    // 2. Travailler en repère local (sans les bordures/offsets du meuble de billard)
+    // 2. Position locale par rapport à la grille de jeu
     const localCentreX = centreX - gridLeft;
     const localCentreY = centreY - gridTop;
 
-    // 3. Magnétiser le CENTRE sur la ligne ou l'intersection la plus proche
+    // 3. Magnétisme du CENTRE sur l'intersection la plus proche
     let snappedLocalCentreX = Math.round(localCentreX / pasX) * pasX;
     let snappedLocalCentreY = Math.round(localCentreY / pasY) * pasY;
 
-    // 4. AJOUT : Forcer le repli d'une demi-bille si le centre touche le contour extérieur
-    // Correction sur l'axe X (Gauche / Droite)
+    // 4. MODIFICATION : Empêcher le chevauchement sur les bandes extérieures
+    // Si le centre est aimanté sur le bord 0, on le repousse vers l'intérieur d'un rayon de bille.
+    // Si le centre est aimanté sur le bord maximum, on le ramène vers l'intérieur d'un rayon de bille.
     if (snappedLocalCentreX <= 0) {
-        snappedLocalCentreX = rayonBille; // Repousse vers la droite
+        snappedLocalCentreX = rayonBille;
     } else if (snappedLocalCentreX >= gridWidth) {
-        snappedLocalCentreX = gridWidth - rayonBille; // Repousse vers la gauche
+        snappedLocalCentreX = gridWidth - rayonBille;
     }
 
-    // Correction sur l'axe Y (Haut / Bas)
     if (snappedLocalCentreY <= 0) {
-        snappedLocalCentreY = rayonBille; // Repousse vers le bas
+        snappedLocalCentreY = rayonBille;
     } else if (snappedLocalCentreY >= gridHeight) {
-        snappedLocalCentreY = gridHeight - rayonBille; // Repousse vers le haut
+        snappedLocalCentreY = gridHeight - rayonBille;
     }
 
-    // 5. Reconvertir le point magnétisé en coordonnées CSS Top/Left pour le coin de la bille
+    // 5. Reconvertir en coordonnées CSS de positionnement (Top/Left de la bille)
     const finalX = (gridLeft + snappedLocalCentreX) - rayonBille;
     const finalY = (gridTop + snappedLocalCentreY) - rayonBille;
 
     return { x: finalX, y: finalY };
 }
-
 
 function resolveCollisions(currentBall) {
     let currentX = parseFloat(currentBall.style.left);
@@ -288,39 +297,41 @@ if (chkShowTitle && tableTitleOverlay) {
 }
 
 
-/**
- * Convertit les coordonnées pixel CSS (left/top) d'une bille en coordonnées 
- * sur une grille de 16x8 avec le point (0,0) en bas à gauche (avec 1 décimale).
- */
-/**
- * Convertit les coordonnées pixel CSS (left/top) d'une bille en coordonnées 
- * sur une grille de 16x8 avec le point (0,0) en bas à gauche.
- * Masque la décimale si le magnétisme est actif.
- */
 function obtenirCoordonneesGrille(x, y, element) {
-    const minX = 17.6;
-    const maxX = 749;
-    const minY = 17.6;
-    const maxY = 356;
+    // Repères géométriques identiques à la grille et au magnétisme
+    const gridLeft = 19;
+    const gridTop = 17;
+    const gridWidth = 754;
+    const gridHeight = 364;
 
     const cols = 16;
     const rows = 8;
 
-    // 1. Calculer la position relative de la bille (de 0 à 1)
-    const ratioX = (x - minX) / (maxX - minX);
-    const ratioY = (y - minY) / (maxY - minY);
+    const rayonBille = element ? element.offsetWidth / 2 : 12;
+    
+    // Position du CENTRE de la bille
+    const centreX = x + rayonBille;
+    const centreY = y + rayonBille;
 
-    // 2. Multiplier par le nombre de colonnes/rangées
+    // Calcul du ratio de position (0 à 1) à l'intérieur de la zone utile
+    const ratioX = (centreX - gridLeft) / gridWidth;
+    const ratioY = (centreY - gridTop) / gridHeight;
+
+    // Transformation en index de grille (0 à 16 et 0 à 8)
     let grilleX = ratioX * cols;
-    let grilleY = (1 - ratioY) * rows;
+    let grilleY = (1 - ratioY) * rows; // Inversion pour avoir l'origine (0,0) en bas à gauche
 
-    // 3. Sécurisation stricte des limites (0 à 16 et 0 à 8)
+    // Correction des arrondis JavaScript sur les intersections magnétisées
+    const magnetismeActif = chkMagnetism ? chkMagnetism.checked : false;
+    if (magnetismeActif) {
+        grilleX = Math.round(grilleX);
+        grilleY = Math.round(grilleY);
+    }
+
+    // Bornage strict pour rester dans la grille
     grilleX = Math.max(0, Math.min(cols, grilleX));
     grilleY = Math.max(0, Math.min(rows, grilleY));
 
-    // 4. Détermination dynamique du nombre de décimales selon le magnétisme
-    // Si chkMagnetism existe et est coché, on affiche 0 décimale (entier), sinon 1 décimale
-    const magnetismeActif = chkMagnetism ? chkMagnetism.checked : false;
     const nbDecimales = magnetismeActif ? 0 : 1;
 
     return { 

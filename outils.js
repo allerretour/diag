@@ -125,6 +125,7 @@ if (ballsCountSelect) {
     }
 
     // EXPORTATION : Sauvegarde positions, sélecteur, titre et description
+    // EXPORTATION JSON : Sauvegarde positions, état de visibilité, sélecteur, titre, description et tracés
     if (exportBtn) {
         exportBtn.addEventListener('click', () => {
             const listBilles = [];
@@ -132,48 +133,40 @@ if (ballsCountSelect) {
                 listBilles.push({
                     id: ball.getAttribute('data-id'),
                     x: ball.style.left,
-                    y: ball.style.top
+                    y: ball.style.top,
+                    // AJOUT : Sauvegarde de l'état de visibilité de la bille
+                    visible: ball.style.display !== 'none'
                 });
             });
-			
-			
-			
-			
-			
-			
-			
 
             // Récupération des valeurs textuelles nettoyées
             const configTitle = titleInput ? titleInput.value.trim() : "configuration_billard";
             const configDesc = descInput ? descInput.value : "";
 
-            // On crée l'objet global intégrant vos nouveaux champs éditables
-            // On intègre le tableau des dessins à l'objet global exporté
-const donneesExport = {
-    titre: configTitle,
-    description: configDesc,
-    // AJUSTEMENT : On sauvegarde uniquement le nombre de billes (ex: "9-libre" devient 9)
-    nombreBillesVisibles: ballsCountSelect ? parseInt(ballsCountSelect.value, 10) : 15,
-    billes: listBilles,
-    lignesDessinees: window.dessinsSauvegardes || [] 
-};
+            // On crée l'objet global intégrant le tableau des dessins
+            const donneesExport = {
+                titre: configTitle,
+                description: configDesc,
+                nombreBillesVisibles: ballsCountSelect ? parseInt(ballsCountSelect.value, 10) : 15,
+                billes: listBilles,
+                lignesDessinees: window.dessinsSauvegardes || [] 
+            };
 
-
-
-            // Nettoyage du titre pour en faire un nom de fichier système valide (enlève les caractères interdits)
+            // Nettoyage du titre pour le nom du fichier
             const nomFichierSecurise = configTitle.replace(/[/\\?%*:|"<>]/g, '-').substring(0, 100) || "configuration_billard";
 
             const blob = new Blob([JSON.stringify(donneesExport, null, 4)], { type: "application/json" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${nomFichierSecurise}.json`; // Le nom du fichier prend la valeur du titre
+            a.download = `${nomFichierSecurise}.json`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         });
     }
+
 
     // EXPORTATION TEXTE : Sauvegarde la liste complète des billes visibles au format TXT
     const exportTxtBtn = document.getElementById('btn-export-text');
@@ -270,27 +263,44 @@ if (importTriggerBtn && fileImportInput) {
                 throw new Error("Format JSON non reconnu");
             }
 
+                  // À remplacer à l'intérieur de reader.onload dans le Script 2 :
+
             // 1. Ajuster la valeur affichée dans le menu déroulant
             if (ballsCountSelect) {
                 ballsCountSelect.value = nbVisibles;
             }
 
-            // 2. Gérer uniquement la VISIBILITÉ des billes sans altérer leurs futures positions personnalisées
+            // 2 & 3. MODIFICATION : Restaurer la position ET la visibilité précise de chaque bille
             activeBalls.forEach(ball => {
-                const ballId = parseInt(ball.getAttribute('data-id'), 10);
-                if (ballId === 0) {
-                    ball.style.display = 'flex'; // La blanche reste toujours visible
-                } else {
-                    ball.style.display = ballId <= nbVisibles ? 'flex' : 'none';
-                }
-            });
+                const ballId = ball.getAttribute('data-id');
+                // Trouver si cette bille possède des données enregistrées dans le fichier
+                const savedBall = listeBilles.find(b => b.id === ballId);
 
-            // 3. Restaurer la position personnalisée (X, Y) de chaque bille présente dans le fichier
-            listeBilles.forEach(savedBall => {
-                const ballEl = activeBalls.find(b => b.getAttribute('data-id') === savedBall.id);
-                if (ballEl) {
-                    ballEl.style.left = savedBall.x;
-                    ballEl.style.top = savedBall.y;
+                if (savedBall) {
+                    // Restaure sa position personnalisée
+                    ball.style.left = savedBall.x;
+                    ball.style.top = savedBall.y;
+
+                    // Si le fichier contient l'état de visibilité explicite, on l'applique
+                    if (savedBall.hasOwnProperty('visible')) {
+                        ball.style.display = savedBall.visible ? 'flex' : 'none';
+                    } else {
+                        // Compatibilité avec vos anciens fichiers JSON qui n'avaient pas l'option
+                        const idNum = parseInt(ballId, 10);
+                        if (idNum === 0) {
+                            ball.style.display = 'flex';
+                        } else {
+                            ball.style.display = idNum <= nbVisibles ? 'flex' : 'none';
+                        }
+                    }
+                } else {
+                    // Si la bille n'est pas dans le fichier, comportement par défaut du menu déroulant
+                    const idNum = parseInt(ballId, 10);
+                    if (idNum === 0) {
+                        ball.style.display = 'flex';
+                    } else {
+                        ball.style.display = idNum <= nbVisibles ? 'flex' : 'none';
+                    }
                 }
             });
 
@@ -305,6 +315,7 @@ if (importTriggerBtn && fileImportInput) {
             }
 
             alert(`Configuration "${titreImported}" restaurée avec succès !`);
+
         } catch (error) {
             alert("Erreur lors de la lecture du fichier JSON. Vérifiez sa structure.");
         }
@@ -337,13 +348,15 @@ if (importTriggerBtn && fileImportInput) {
             const cols = mode16x8 ? 16 : 8;
             const rows = mode16x8 ? 8 : 4;
             
-            // Configuration de l'overlay de la grille (Aucune bordure externe ici)
-            gridOverlay.style.position = 'absolute';
-            gridOverlay.style.left = '19px';
-            gridOverlay.style.top = '17px';
-            gridOverlay.style.width = '754px';
-            gridOverlay.style.height = '364px';
-            gridOverlay.style.border = 'none'; // Assure que le grand cadre extérieur est invisible
+           // Dans la fonction genererGrille() du Script 2
+gridOverlay.style.position = 'absolute';
+gridOverlay.style.left = '19px';      // Bordure gauche d'origine
+gridOverlay.style.top = '17px';       // Bordure haute d'origine
+gridOverlay.style.width = '754px';    // Largeur totale de la zone de jeu
+gridOverlay.style.height = '364px';   // Hauteur totale de la zone de jeu
+gridOverlay.style.border = 'none';
+
+
 
             // Répartition dynamique des colonnes et rangées
             gridOverlay.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;

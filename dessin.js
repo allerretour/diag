@@ -135,6 +135,7 @@ function dessinerCarre(x, y, couleur) {
 }
 
 // Dessine un rectangle sans bordure avec des coins arrondis qui recouvre une zone de la grille
+// AJOUT : Affiche également le numéro de la zone en gros au centre
 function dessinerZoneGrille(zoneIndex, couleur) {
     ctx.save();
     ctx.setLineDash([]); // Réinitialisation par sécurité
@@ -143,7 +144,7 @@ function dessinerZoneGrille(zoneIndex, couleur) {
     ctx.strokeStyle = "transparent";
     ctx.lineWidth = 0;
 
-    // Configuration géométrique de la table (source 1 et 2)
+    // Configuration géométrique de la table (parfaitement alignée)
     const gridLeft = 19;
     const gridTop = 17;
     const gridWidth = 754;
@@ -160,21 +161,38 @@ function dessinerZoneGrille(zoneIndex, couleur) {
     const r = Math.floor(idx / cols);
     const c = idx % cols;
 
-    // Calcul des positions physiques de la zone
+    // Calcul des positions physiques du coin haut-gauche de la zone
     const x = gridLeft + (c * pasX);
     const y = gridTop + (r * pasY);
     
-    // Paramètres de l'arrondi (ex: 12 pixels, ajustable selon vos préférences)
-    const rayonCoins = 12; 
+    // Paramètres de l'arrondi (22 pixels pour épouser les bandes)
+    const rayonCoins = 22; 
 
-    // Configuration de la couleur et de l'opacité du fond (25%)
-    ctx.globalAlpha = 0.25; 
+    // 1. DESSIN DE LA ZONE COLORÉE (Fond à 20% d'opacité)
+    ctx.globalAlpha = 0.20; 
     ctx.fillStyle = couleur;
 
     ctx.beginPath();
     // Utilisation de roundRect pour appliquer les coins arrondis proprement
     ctx.roundRect(x, y, pasX, pasY, rayonCoins);
     ctx.fill();
+
+
+    // 2. AJOUT : DESSIN DU NUMÉRO DE LA ZONE (Au centre à 45% d'opacité pour le contraste)
+    ctx.globalAlpha = 0.2; 
+    ctx.fillStyle = couleur;
+    
+    // Configuration du texte (Gros, gras, centré horizontalement et verticalement)
+    ctx.font = "bold 72px sans-serif"; 
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    // Calcul du centre exact de la zone courante
+    const centreZoneX = x + (pasX / 2);
+    const centreZoneY = y + (pasY / 2);
+
+    // Dessin du texte sur le canvas
+    ctx.fillText(zoneIndex, centreZoneX, centreZoneY);
 
     ctx.restore();
 }
