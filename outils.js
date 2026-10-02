@@ -169,15 +169,31 @@ if (ballsCountSelect) {
 
 
     // EXPORTATION TEXTE : Sauvegarde la liste complète des billes visibles au format TXT
+        // EXPORTATION TEXTE MIS À JOUR : Sauvegarde avec la date et l'heure dans l'en-tête et le nom de fichier
     const exportTxtBtn = document.getElementById('btn-export-text');
     if (exportTxtBtn) {
         exportTxtBtn.addEventListener('click', () => {
             const configTitle = titleInput ? titleInput.value.trim() : "Configuration Billard";
             const configDesc = descInput ? descInput.value.trim() : "";
             
+            // 1. CALCULS DES DATES ET HEURES
+            const maintenant = new Date();
+            const annee = maintenant.getFullYear();
+            const mois = String(maintenant.getMonth() + 1).padStart(2, '0');
+            const jour = String(maintenant.getDate()).padStart(2, '0');
+            const heures = String(maintenant.getHours()).padStart(2, '0');
+            const minutes = String(maintenant.getMinutes()).padStart(2, '0');
+            
+            // Format pour le nom de fichier (Ex: 2026-10-02_14h35)
+            const horodatageFichier = `${annee}-${mois}-${jour}_${heures}h${minutes}`;
+            // Format pour l'en-tête lisible (Ex: 02/10/2026 à 14h35)
+            const horodatageEnTete = `${jour}/${mois}/${annee} à ${heures}h${minutes}`;
+
+            // 2. CONSTRUCTION DU CONTENU TEXTE
             let contenuTexte = `=== CONFIGURATION DE BILLARD ===\n`;
-            contenuTexte += `Titre : ${configTitle}\n`;
+            contenuTexte += `Titre       : ${configTitle}\n`;
             if (configDesc) contenuTexte += `Description : ${configDesc}\n`;
+            contenuTexte += `Généré le   : ${horodatageEnTete}\n`; // AJOUT DANS L'EN-TÊTE
             contenuTexte += `--------------------------------\n`;
             contenuTexte += `Positions des billes (Grille 16x8, Origine Bas-Gauche) :\n\n`;
 
@@ -208,13 +224,16 @@ if (ballsCountSelect) {
             contenuTexte += `\nTotal : ${compteurBilles} billes présentes sur le tapis.\n`;
             contenuTexte += `================================\n`;
 
+            // Sécurisation du nom de fichier
             const nomFichierSecurise = configTitle.replace(/[/\\?%*:|"<>]/g, '-').substring(0, 100) || "configuration_billard";
+            
             const blob = new Blob([contenuTexte], { type: "text/plain;charset=utf-8" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             
             a.href = url;
-            a.download = `${nomFichierSecurise}_positions.txt`;
+            // MODIFICATION : Nom de fichier incluant la date et l'heure pour éviter les doublons d'export
+            a.download = `${horodatageFichier}_${nomFichierSecurise}_positions.txt`;
             document.body.appendChild(a);
             a.click();
             
@@ -222,6 +241,7 @@ if (ballsCountSelect) {
             URL.revokeObjectURL(url);
         });
     }
+
 
 
    // IMPORTATION : Lit et réinjecte le titre, la description et la table de billard

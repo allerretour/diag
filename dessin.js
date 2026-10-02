@@ -146,7 +146,7 @@ function dessinerZoneGrille(zoneIndex, couleur) {
 
     // Configuration géométrique de la table (parfaitement alignée)
     const gridLeft = 19;
-    const gridTop = 17;
+    const gridTop = 18;
     const gridWidth = 754;
     const gridHeight = 364;
 
@@ -166,7 +166,7 @@ function dessinerZoneGrille(zoneIndex, couleur) {
     const y = gridTop + (r * pasY);
     
     // Paramètres de l'arrondi (22 pixels pour épouser les bandes)
-    const rayonCoins = 22; 
+    const rayonCoins = 20; 
 
     // 1. DESSIN DE LA ZONE COLORÉE (Fond à 20% d'opacité)
     ctx.globalAlpha = 0.20; 
@@ -178,21 +178,25 @@ function dessinerZoneGrille(zoneIndex, couleur) {
     ctx.fill();
 
 
-    // 2. AJOUT : DESSIN DU NUMÉRO DE LA ZONE (Au centre à 45% d'opacité pour le contraste)
-    ctx.globalAlpha = 0.2; 
+    // 2. AJOUT : DESSIN DU NUMÉRO DE LA ZONE (En haut à gauche avec petite marge)
+    ctx.globalAlpha = 0.4; // Augmenté légèrement car le texte est plus petit, ajustable
     ctx.fillStyle = couleur;
     
-    // Configuration du texte (Gros, gras, centré horizontalement et verticalement)
-    ctx.font = "bold 72px sans-serif"; 
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
+    // Configuration du texte (Petit, gras, aligné en haut à gauche)
+    ctx.font = "bold 24px sans-serif"; 
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
 
-    // Calcul du centre exact de la zone courante
-    const centreZoneX = x + (pasX / 2);
-    const centreZoneY = y + (pasY / 2);
+    // Définition de la petite marge (en pixels) depuis le bord de la zone
+    const marge = 20;
+
+    // Calcul de la position (coordonnées de la zone + la marge)
+    const positionX = x + marge;
+    const positionY = y + marge;
 
     // Dessin du texte sur le canvas
-    ctx.fillText(zoneIndex, centreZoneX, centreZoneY);
+    ctx.fillText(zoneIndex, positionX, positionY);
+
 
     ctx.restore();
 }
