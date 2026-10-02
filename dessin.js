@@ -76,46 +76,109 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.restore();
     }
 
-    // Dessine une cible de 100x100 pixels centrée sur (x, y)
-    function dessinerCible(x, y, couleur) {
-        ctx.save();
-        ctx.setLineDash([]); // Les cibles restent en lignes pleines
-        ctx.strokeStyle = couleur;
-        ctx.lineWidth = 2;
+// Dessine une cible carrée et la TRONQUE si elle dépasse sur les bandes de sécurité
+function dessinerCible(x, y, couleur) {
+    ctx.save(); // Sauvegarde l'état global du canvas
 
-        // 1. Cercle extérieur (Rayon 50 -> Diamètre 100)
-        ctx.beginPath();
-        ctx.arc(x, y, 50, 0, 2 * Math.PI);
-        ctx.stroke();
+    // --- 1. DÉFINITION DES BANDES DE SÉCURITÉ ---
+    // Ajustez ces valeurs en pixels selon la taille de vos bandes (ex: 30 pour une bande de 30px)
+    let bandeGauche = 18;
+    let bandeDroite = 18;
+    let bandeHaut = 18;
+    let bandeBas = 18;
 
-        // 2. Cercle intérieur (Rayon 25 -> Diamètre 50)
-        ctx.beginPath();
-        ctx.arc(x, y, 25, 0, 2 * Math.PI);
-        ctx.stroke();
+    // --- 2. CRÉATION DE LA ZONE DE DÉCOUPE (CLIP) ---
+    // Cette zone définit l'espace de jeu utile où le dessin est autorisé
+    let zoneUtileX = bandeGauche;
+    let zoneUtileY = bandeHaut;
+    let zoneUtileLargeur = ctx.canvas.width - bandeGauche - bandeDroite;
+    let zoneUtileHauteur = ctx.canvas.height - bandeHaut - bandeBas;
 
-        // 3. Ligne réticulaire horizontale (Déborde de 5px de chaque côté)
-        ctx.beginPath();
-        ctx.moveTo(x - 55, y);
-        ctx.lineTo(x + 55, y);
-        ctx.stroke();
+    ctx.beginPath();
+    ctx.rect(zoneUtileX, zoneUtileY, zoneUtileLargeur, zoneUtileHauteur);
+    ctx.clip(); // Tout ce qui sera dessiné après cette ligne sera tronqué en dehors de ce rectangle
 
-        // 4. Ligne réticulaire verticale (Déborde de 5px de chaque côté)
-        ctx.beginPath();
-        ctx.moveTo(x, y - 55);
-        ctx.lineTo(x, y + 55);
-        ctx.stroke();
+    // --- 3. DESSIN DE LA CIBLE (Le dessin se fera normalement mais sera coupé aux bords) ---
+    ctx.setLineDash([]); 
+    ctx.strokeStyle = couleur;
+    ctx.lineWidth = 2;
 
-        ctx.restore();
-    }
+    // Carré extérieur avec coins arrondis (Rayon de coin : 8px)
+    ctx.beginPath();
+    ctx.roundRect(x - 92.5, y - 92.5, 185, 185, 8);
+    ctx.stroke();
+
+    // Cercles de la cible
+    let r1 = 92.5;         // Grand cercle extérieur
+    let r2 = 92.5 * (2/3); // Premier cercle intérieur (~61.6)
+    let r3 = 92.5 * (1/3); // Deuxième cercle intérieur (~30.8)
+    let r4 = 4;            // Petit cercle central
+
+    ctx.beginPath(); ctx.arc(x, y, r1, 0, 2 * Math.PI); ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, y, r2, 0, 2 * Math.PI); ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, y, r3, 0, 2 * Math.PI); ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, y, r4, 0, 2 * Math.PI); ctx.stroke();
+
+    // Lignes réticulaires horizontales
+    ctx.beginPath();
+    ctx.moveTo(x - r1, y); ctx.lineTo(x - r4, y);
+    ctx.moveTo(x + r4, y); ctx.lineTo(x + r1, y);
+    ctx.stroke();
+
+    // Lignes réticulaires verticales
+    ctx.beginPath();
+    ctx.moveTo(x, y - r1); ctx.lineTo(x, y - r4);
+    ctx.moveTo(x, y + r4); ctx.lineTo(x, y + r1);
+    ctx.stroke();
+
+    // Configuration du texte pour les chiffres
+    ctx.fillStyle = couleur;
+    ctx.font = "bold 12px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    let cos45 = Math.cos(Math.PI / 4);
+    let distCoin = r1 * Math.sqrt(2); 
+
+    let dist1 = r1 + (distCoin - r1) / 2;
+    let dist2 = r2 + (r1 - r2) / 2;
+    let dist3 = r3 + (r2 - r3) / 2;
+    let dist5 = r4 + (r3 - r4) / 2;
+
+    // Affichage unique en diagonale bas-droite
+    ctx.fillText("1", x + dist1 * cos45, y + dist1 * cos45);
+    ctx.fillText("2", x + dist2 * cos45, y + dist2 * cos45);
+    ctx.fillText("3", x + dist3 * cos45, y + dist3 * cos45);
+    ctx.fillText("5", x + dist5 * cos45, y + dist5 * cos45);
+
+    ctx.restore(); // Annule le clip pour que le reste de votre jeu (les bandes elles-mêmes) puisse s'afficher correctement dehors
+}
+
+
 	
-// Dessine un carré de 120x120 pixels avec coins arrondis et un fond pâle
+// Dessine un carré de 95x95 pixels avec coins arrondis, un fond pâle, et le TRONQUE si besoin
 function dessinerCarre(x, y, couleur) {
-    ctx.save();
+    ctx.save(); // Sauvegarde l'état global du canvas
+
+    // --- 1. CONFIGURATION DES BANDES DE SÉCURITÉ (MARGE 20PX) ---
+    const marge = 18;
+
+    // --- 2. CRÉATION DE LA ZONE DE DÉCOUPE (CLIP) ---
+    let zoneUtileX = marge;
+    let zoneUtileY = marge;
+    let zoneUtileLargeur = ctx.canvas.width - (marge * 2);
+    let zoneUtileHauteur = ctx.canvas.height - (marge * 2);
+
+    ctx.beginPath();
+    ctx.rect(zoneUtileX, zoneUtileY, zoneUtileLargeur, zoneUtileHauteur);
+    ctx.clip(); // Tout ce qui dépasse de ce rectangle sera automatiquement tronqué
+
+    // --- 3. DESSIN DU CARRÉ ---
     ctx.setLineDash([]); // Les carrés restent en lignes pleines
     ctx.strokeStyle = couleur;
     ctx.lineWidth = 2;
 
-    const taille = 120;
+    const taille = 95;
     const demiTaille = taille / 2;
     const rayonCoins = 15; // Rayon de l'arrondi en pixels
     
@@ -123,7 +186,7 @@ function dessinerCarre(x, y, couleur) {
     // Utilisation de roundRect pour créer les coins arrondis automatiquement
     ctx.roundRect(x - demiTaille, y - demiTaille, taille, taille, rayonCoins);
 
-    // 1. Appliquer le contour
+    // 1. Appliquer le contour (décommenter si besoin d'un contour visible)
     // ctx.stroke();
 
     // 2. Configurer et appliquer le fond pâle (20% d'opacité)
@@ -131,7 +194,7 @@ function dessinerCarre(x, y, couleur) {
     ctx.fillStyle = couleur;
     ctx.fill();
 
-    ctx.restore();
+    ctx.restore(); // Annule le clip pour que le reste du jeu puisse s'afficher normalement
 }
 
 // Dessine un rectangle sans bordure avec des coins arrondis qui recouvre une zone de la grille
@@ -242,6 +305,8 @@ if (dessin.estZoneGrille) {
     dessinerZoneGrille(dessin.zoneId, dessin.couleur);
     return;
 }
+
+
 
 
             // Gestion des tracés standards et lignes droites
