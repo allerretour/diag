@@ -506,16 +506,23 @@
     top: 50%;
     transform: translate(-50%, -50%);
     
-    /* Opacité très faible (40%) */
-    opacity: 0.40; 
-    
-    /* Sécurité critique : empêche le logo de bloquer les clics/drag des billes ou les tracés */
+    /* Sécurité critique : empêche le logo de bloquer les clics/drag */
     pointer-events: none; 
-    
-    /* Optionnel : assure un rendu propre selon l'ordre des calques */
     z-index: 1; 
-}
 
+    /* ==========================================
+       SOLUTION UNIVERSELLE : L'effet Filigrane
+       ========================================== */
+    
+    /* 1. Rend le logo monochrome gris moyen (uniformise toutes les couleurs) */
+    filter: grayscale(1) brightness(1) contrast(1);
+    
+    /* 2. Fusionne doucement le gris avec le vert du tapis */
+    mix-blend-mode: luminosity;
+    
+    /* 3. Ajustement fin de l'opacité globale */
+    opacity: 0.22;
+}
 
 
     </style>
