@@ -401,6 +401,74 @@ gridOverlay.style.border = 'none';
     }
 
 
+const btnRandomHD = document.getElementById('btn-random-hd');
+
+if (btnRandomHD) {
+    btnRandomHD.addEventListener('click', () => {
+        // Dimensions géométriques de la table identiques au magnétisme
+        const gridLeft = 19;
+        const gridTop = 17;
+        const gridWidth = 754;
+        const gridHeight = 364;
+
+        // Grille haute densité 16x8
+        const cols = 16;
+        const rows = 8;
+        const pasX = gridWidth / cols;  
+        const pasY = gridHeight / rows; 
+
+        // 1. Générer la liste de toutes les intersections uniques disponibles sur la grille
+        const intersectionsDisponibles = [];
+        for (let c = 0; c <= cols; c++) {
+            for (let r = 0; r <= rows; r++) {
+                // Calcul de la position physique (x, y) en pixels pour le COIN haut-gauche d'une bille
+                // Les billes font 24px de diamètre (rayon 12px), on ajuste par rapport au centre de l'intersection
+                const centreX = gridLeft + (c * pasX);
+                const centreY = gridTop + (r * pasY);
+                
+                let localCentreX = c * pasX;
+                let localCentreY = r * pasY;
+
+                // Application de votre sécurité anti-chevauchement des bandes
+                if (c === 0) localCentreX = 12;
+                if (c === cols) localCentreX = gridWidth - 12;
+                if (r === 0) localCentreY = 12;
+                if (r === rows) localCentreY = gridHeight - 12;
+
+                const finalX = (gridLeft + localCentreX) - 12;
+                const finalY = (gridTop + localCentreY) - 12;
+
+                intersectionsDisponibles.push({ x: finalX, y: finalY });
+            }
+        }
+
+        // 2. Mélanger la liste des intersections (Algorithme de Fisher-Yates)
+        for (let i = intersectionsDisponibles.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [intersectionsDisponibles[i], intersectionsDisponibles[j]] = [intersectionsDisponibles[j], intersectionsDisponibles[i]];
+        }
+
+        // 3. Assigner une coordonnée unique à chaque bille visible
+        let indexIntersection = 0;
+        activeBalls.forEach(ball => {
+            // On ne déplace que les billes qui ne sont pas cachées
+            if (ball.style.display !== 'none' && indexIntersection < intersectionsDisponibles.length) {
+                const pos = intersectionsDisponibles[indexIntersection];
+                
+                ball.style.left = `${pos.x}px`;
+                ball.style.top = `${pos.y}px`;
+                
+                indexIntersection++;
+            }
+        });
+
+        // 4. Mettre à jour l'affichage de texte de la bille active si nécessaire
+        const displayEl = document.getElementById('ball-position-display');
+        if (displayEl) {
+            displayEl.innerText = "Position de la bille : Aléatoire appliquée";
+        }
+    });
+}
 
 
 
