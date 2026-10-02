@@ -1,0 +1,299 @@
+{
+    "titre": "Drill en L",
+    "description": "",
+    "nombreBillesVisibles": 10,
+    "billes": [
+        {
+            "id": "0",
+            "x": "713.875px",
+            "y": "278px",
+            "visible": true
+        },
+        {
+            "id": "1",
+            "x": "749px",
+            "y": "187px",
+            "visible": true
+        },
+        {
+            "id": "2",
+            "x": "713.875px",
+            "y": "187px",
+            "visible": true
+        },
+        {
+            "id": "3",
+            "x": "666.75px",
+            "y": "187px",
+            "visible": true
+        },
+        {
+            "id": "4",
+            "x": "619.625px",
+            "y": "187px",
+            "visible": true
+        },
+        {
+            "id": "5",
+            "x": "572.5px",
+            "y": "187px",
+            "visible": true
+        },
+        {
+            "id": "6",
+            "x": "572.5px",
+            "y": "141.5px",
+            "visible": true
+        },
+        {
+            "id": "7",
+            "x": "572.5px",
+            "y": "96px",
+            "visible": true
+        },
+        {
+            "id": "8",
+            "x": "572.5px",
+            "y": "50.5px",
+            "visible": true
+        },
+        {
+            "id": "9",
+            "x": "572.5px",
+            "y": "17px",
+            "visible": true
+        },
+        {
+            "id": "10",
+            "x": "22px",
+            "y": "188px",
+            "visible": true
+        },
+        {
+            "id": "11",
+            "x": "478.25px",
+            "y": "141.5px",
+            "visible": false
+        },
+        {
+            "id": "12",
+            "x": "525.375px",
+            "y": "141.5px",
+            "visible": false
+        },
+        {
+            "id": "13",
+            "x": "572.5px",
+            "y": "141.5px",
+            "visible": false
+        },
+        {
+            "id": "14",
+            "x": "619.625px",
+            "y": "141.5px",
+            "visible": false
+        },
+        {
+            "id": "15",
+            "x": "619.625px",
+            "y": "141.5px",
+            "visible": false
+        }
+    ],
+    "lignesDessinees": [
+        {
+            "couleur": "#ffffff",
+            "estZoneGrille": true,
+            "zoneId": 4,
+            "points": []
+        },
+        {
+            "couleur": "#ffffff",
+            "estDroite": false,
+            "avecFleche": false,
+            "estPointille": false,
+            "points": [
+                {
+                    "x": 777,
+                    "y": 4
+                },
+                {
+                    "x": 778,
+                    "y": 5
+                },
+                {
+                    "x": 780,
+                    "y": 7
+                },
+                {
+                    "x": 782,
+                    "y": 9
+                },
+                {
+                    "x": 783,
+                    "y": 9
+                },
+                {
+                    "x": 784,
+                    "y": 10
+                },
+                {
+                    "x": 785,
+                    "y": 10
+                },
+                {
+                    "x": 786,
+                    "y": 11
+                },
+                {
+                    "x": 787,
+                    "y": 12
+                },
+                {
+                    "x": 788,
+                    "y": 12
+                },
+                {
+                    "x": 788,
+                    "y": 13
+                },
+                {
+                    "x": 789,
+                    "y": 13
+                },
+                {
+                    "x": 790,
+                    "y": 13
+                },
+                {
+                    "x": 790,
+                    "y": 14
+                },
+                {
+                    "x": 791,
+                    "y": 14
+                },
+                {
+                    "x": 792,
+                    "y": 14
+                },
+                {
+                    "x": 792,
+                    "y": 15
+                },
+                {
+                    "x": 793,
+                    "y": 15
+                },
+                {
+                    "x": 793,
+                    "y": 16
+                }
+            ]
+        },
+        {
+            "couleur": "#ffffff",
+            "estDroite": false,
+            "avecFleche": false,
+            "estPointille": false,
+            "points": [
+                {
+                    "x": 792,
+                    "y": 1
+                },
+                {
+                    "x": 791,
+                    "y": 1
+                },
+                {
+                    "x": 790,
+                    "y": 2
+                },
+                {
+                    "x": 788,
+                    "y": 4
+                },
+                {
+                    "x": 787,
+                    "y": 4
+                },
+                {
+                    "x": 787,
+                    "y": 6
+                },
+                {
+                    "x": 786,
+                    "y": 6
+                },
+                {
+                    "x": 785,
+                    "y": 7
+                },
+                {
+                    "x": 784,
+                    "y": 7
+                },
+                {
+                    "x": 784,
+                    "y": 8
+                },
+                {
+                    "x": 783,
+                    "y": 8
+                },
+                {
+                    "x": 783,
+                    "y": 10
+                },
+                {
+                    "x": 782,
+                    "y": 10
+                },
+                {
+                    "x": 781,
+                    "y": 11
+                },
+                {
+                    "x": 780,
+                    "y": 12
+                },
+                {
+                    "x": 780,
+                    "y": 13
+                },
+                {
+                    "x": 779,
+                    "y": 14
+                },
+                {
+                    "x": 779,
+                    "y": 15
+                },
+                {
+                    "x": 778,
+                    "y": 15
+                },
+                {
+                    "x": 778,
+                    "y": 16
+                }
+            ]
+        },
+        {
+            "couleur": "#ffffff",
+            "estDroite": true,
+            "avecFleche": true,
+            "estPointille": false,
+            "points": [
+                {
+                    "x": 732,
+                    "y": 276
+                },
+                {
+                    "x": 761,
+                    "y": 219
+                }
+            ]
+        }
+    ]
+}

@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 
-   
+    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -49,6 +49,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            
         }
         #pool-table {
             position: relative;
@@ -56,6 +57,7 @@
             height: 400px;
             background: radial-gradient(circle, #0f7a44 40%, #0a522d 100%);
             box-shadow: inset 0 10px 20px rgba(0,0,0,0.5);
+            
         }
         /* Bandes physiques ajustées aux nouvelles positions de vos poches */
 .cushion { 
@@ -468,7 +470,7 @@
 
 #table-title-overlay {
     position: absolute;
-    top: 40%;
+    top: 15%;
     left: 50%;
     transform: translate(-50%, -50%);
     font-family: sans-serif;
@@ -491,6 +493,27 @@
     width: 100%;            /* Limite la largeur pour forcer le retour à la ligne avant les bords */
     max-width: 1200px;       /* Optionnel : empêche le conteneur de devenir trop large sur grand écran */
     user-select: none;
+}
+
+
+#table-logo-overlay {
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    
+    /* Centrage absolu par rapport au conteneur #pool-table */
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    
+    /* Opacité très faible (40%) */
+    opacity: 0.40; 
+    
+    /* Sécurité critique : empêche le logo de bloquer les clics/drag des billes ou les tracés */
+    pointer-events: none; 
+    
+    /* Optionnel : assure un rendu propre selon l'ordre des calques */
+    z-index: 1; 
 }
 
 
@@ -575,8 +598,13 @@
             </label>
 
             <label>
-				<input type="checkbox" id="chk-show-title"> Afficher le titre
+				<input type="checkbox" id="chk-show-title"> Titre
 			</label>
+
+            <label>
+    		<input type="checkbox" id="chk-show-logo" checked> Logo
+			</label>
+
 
 			
         </div>
@@ -605,6 +633,8 @@
 <button id="btn-random-hd" style="background-color: #e67e22; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; margin: 5px;">
     🎲 Aléatoire HD
 </button>
+
+
 
 	
 </div>
@@ -682,6 +712,10 @@
 
 
         <div id="pool-table">
+
+		<!-- Logo centré en arrière-plan sur le tapis -->
+<img id="table-logo-overlay" src="logo.png" alt="" onerror="this.style.display='none';">
+
 		
 		<div id="table-title-overlay" style="display: none;"></div>
 
@@ -720,8 +754,6 @@
         </div>
     </div>
 	
-
-
 
         <!-- Liaison avec vos deux scripts séparés -->
     <script src="physique.js"></script>

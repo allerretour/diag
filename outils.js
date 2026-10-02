@@ -29,6 +29,10 @@ function updateVisibleBalls() {
     });
 }
 
+
+
+
+
 // Écouteur d'événement intelligent sur le changement du dropdown
 if (ballsCountSelect) {
     ballsCountSelect.addEventListener('change', (event) => {
@@ -241,6 +245,25 @@ if (ballsCountSelect) {
             URL.revokeObjectURL(url);
         });
     }
+
+
+// --- GESTION DE L'AFFICHAGE DU LOGO SUR LE TAPIS ---
+const chkShowLogo = document.getElementById('chk-show-logo');
+const tableLogoOverlay = document.getElementById('table-logo-overlay');
+
+if (chkShowLogo && tableLogoOverlay) {
+    // Écouteur d'événement pour intercepter le clic sur la case à cocher
+    chkShowLogo.addEventListener('change', () => {
+        if (chkShowLogo.checked) {
+            // Si coché, on affiche l'élément (l'attribut HTML onerror prendra le relais si logo.png est absent)
+            tableLogoOverlay.style.visibility = 'visible';
+        } else {
+            // Si décoché, on masque le logo
+            tableLogoOverlay.style.visibility = 'hidden';
+        }
+    });
+}
+
 
 
 

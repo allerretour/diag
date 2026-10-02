@@ -300,6 +300,7 @@ if (dessin.estZoneGrille) {
             return; 
         }
 
+
         // 1. Gestion de l'annulation (on stoppe immédiatement l'exécution pour éviter les conflits)
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
             e.preventDefault(); 
