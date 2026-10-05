@@ -218,12 +218,9 @@ function dessinerRepereXGras(x, y, couleur) {
     ctx.save(); 
     ctx.setLineDash([]); 
     
-    // MODIFICATION : Utilise la bille active, sinon la couleur reçue, sinon le sélecteur
-    if (window.billeSelectionneeCourante) {
-        ctx.fillStyle = window.billeSelectionneeCourante.style.backgroundColor;
-    } else {
-        ctx.fillStyle = couleur || (colorSelect ? colorSelect.value : '#ffffff');
-    }
+    // CORRECTION : Utilise uniquement la couleur transmise par le tracé de la ligne,
+    // ou la valeur actuelle du sélecteur si aucune couleur n'est fournie.
+    ctx.fillStyle = couleur || (colorSelect ? colorSelect.value : '#ffffff');
     
     ctx.beginPath();
     ctx.moveTo(toX, toY);
@@ -239,6 +236,7 @@ function dessinerRepereXGras(x, y, couleur) {
     ctx.fill(); 
     ctx.restore();
 }
+
 
 
 // Dessine une cible carrée et la TRONQUE si elle dépasse sur les bandes de sécurité
