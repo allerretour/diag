@@ -244,14 +244,12 @@ function dessinerCible(x, y, couleur) {
     ctx.save(); // Sauvegarde l'état global du canvas
 
     // --- 1. DÉFINITION DES BANDES DE SÉCURITÉ ---
-    // Ajustez ces valeurs en pixels selon la taille de vos bandes (ex: 30 pour une bande de 30px)
     let bandeGauche = 18;
     let bandeDroite = 18;
     let bandeHaut = 18;
     let bandeBas = 18;
 
     // --- 2. CRÉATION DE LA ZONE DE DÉCOUPE (CLIP) ---
-    // Cette zone définit l'espace de jeu utile où le dessin est autorisé
     let zoneUtileX = bandeGauche;
     let zoneUtileY = bandeHaut;
     let zoneUtileLargeur = ctx.canvas.width - bandeGauche - bandeDroite;
@@ -259,10 +257,27 @@ function dessinerCible(x, y, couleur) {
 
     ctx.beginPath();
     ctx.rect(zoneUtileX, zoneUtileY, zoneUtileLargeur, zoneUtileHauteur);
-    ctx.clip(); // Tout ce qui sera dessiné après cette ligne sera tronqué en dehors de ce rectangle
+    ctx.clip(); 
 
-    // --- 3. DESSIN DE LA CIBLE (Le dessin se fera normalement mais sera coupé aux bords) ---
-    ctx.setLineDash([]); 
+    // --- 3. DESSIN DU FOND OPAQUE A 50% ---
+    ctx.save(); // Sauvegarde l'état pour l'opacité du fond
+    ctx.setLineDash([]);
+    ctx.fillStyle = couleur;
+    ctx.globalAlpha = 0.30; // Configuration de l'opacité à 50%
+
+    // Option A : Remplir le grand cercle extérieur (Recommandé pour une cible)
+    // ctx.beginPath();
+    // ctx.arc(x, y, 92.5, 0, 2 * Math.PI);
+    // ctx.fill();
+
+    // Option B : Si vous préférez remplir TOUT le carré extérieur, remplacez l'Option A par :
+    ctx.beginPath();
+    ctx.roundRect(x - 92.5, y - 92.5, 185, 185, 8);
+    ctx.fill();
+
+    ctx.restore(); // Restaure l'opacité à 1.0 pour les tracés et contours suivants
+
+    // --- 4. DESSIN DES CONTOURS DE LA CIBLE ---
     ctx.strokeStyle = couleur;
     ctx.lineWidth = 2;
 
@@ -314,7 +329,7 @@ function dessinerCible(x, y, couleur) {
     ctx.fillText("3", x + dist3 * cos45, y + dist3 * cos45);
     ctx.fillText("5", x + dist5 * cos45, y + dist5 * cos45);
 
-    ctx.restore(); // Annule le clip pour que le reste de votre jeu (les bandes elles-mêmes) puisse s'afficher correctement dehors
+    ctx.restore(); // Annule le clip global
 }
 
 
@@ -361,8 +376,8 @@ function dessinerCarre(x, y, couleur) {
 }
 
 // Dessine un rectangle sans bordure avec des coins arrondis qui recouvre une zone de la grille
-// AJOUT : Affiche également le numéro de la zone en gros au centre
-function dessinerZoneGrille(zoneIndex, couleur) {
+// MODIFICATION : ZD/ZA blancs, ZA hachures épaisses/pâles, textes harmonisés (20px, marge 18px)
+function dessinerZoneGrille(zoneIndex, couleur, mode) {
     ctx.save();
     ctx.setLineDash([]); // Réinitialisation par sécurité
     
@@ -391,38 +406,72 @@ function dessinerZoneGrille(zoneIndex, couleur) {
     const x = gridLeft + (c * pasX);
     const y = gridTop + (r * pasY);
     
-    // Paramètres de l'arrondi (22 pixels pour épouser les bandes)
+    // Paramètres de l'arrondi (20 pixels pour épouser les bandes)
     const rayonCoins = 20; 
 
-    // 1. DESSIN DE LA ZONE COLORÉE (Fond à 20% d'opacité)
-    ctx.globalAlpha = 0.20; 
-    ctx.fillStyle = couleur;
-
+    // Crée le chemin de la zone avec coins arrondis
     ctx.beginPath();
-    // Utilisation de roundRect pour appliquer les coins arrondis proprement
     ctx.roundRect(x, y, pasX, pasY, rayonCoins);
-    ctx.fill();
 
+    // --- FORCE LA COULEUR BLANCHE POUR TOUTES LES ZONES ---
+    const couleurBlanche = "#ffffff";
 
-    // 2. AJOUT : DESSIN DU NUMÉRO DE LA ZONE (En haut à gauche avec petite marge)
-    ctx.globalAlpha = 0.1; // Augmenté légèrement car le texte est plus petit, ajustable
-    ctx.fillStyle = couleur;
-    
-    // Configuration du texte (Petit, gras, aligné en haut à gauche)
-    ctx.font = "bold 72px sans-serif"; 
-    ctx.textAlign = "left";
+    if (mode === 'alternatif') {
+        // === CAS ZONE ARRIVÉE (ZA) : REMPLISSAGE HACHURES ÉPAISSES & LÉGÈRES ===
+        ctx.save();
+        const patternCanvas = document.createElement('canvas');
+        const pCtx = patternCanvas.getContext('2d');
+        
+        patternCanvas.width = 16;
+        patternCanvas.height = 16;
+        
+        pCtx.strokeStyle = couleurBlanche;
+        pCtx.lineWidth = 4; 
+        pCtx.beginPath();
+        pCtx.moveTo(0, 16);
+        pCtx.lineTo(16, 0);
+        pCtx.stroke();
+        
+        const pattern = ctx.createPattern(patternCanvas, 'repeat');
+        ctx.fillStyle = pattern;
+        ctx.globalAlpha = 0.18; 
+        ctx.fill();
+        ctx.restore();
+    } else {
+        // === CAS ZONE DÉPART (ZD) : REMPLISSAGE SOLIDE BLANC PÂLE ===
+        ctx.globalAlpha = 0.18; 
+        ctx.fillStyle = couleurBlanche;
+        ctx.fill();
+    }
+
+    // --- CONFIGURATION COMMUNE ET HARMONISÉE DU FILIGRANE BLANC ---
+    ctx.fillStyle = couleurBlanche;
+    ctx.font = "bold 20px sans-serif"; // Même taille pour tous les textes de la zone
+    const marge = 18;                  // Même marge pour les quatre coins
+    const opaciteTexte = 0.2;          // Même opacité pour une intensité égale
+
+    // 1. DESSIN DU TEXTE « ZD » OU « ZA » (PETIT, EN HAUT À DROITE)
+    ctx.save();
+    ctx.globalAlpha = opaciteTexte; 
+    ctx.textAlign = "right";
     ctx.textBaseline = "top";
+    
+    const textPrefixe = (mode === 'alternatif') ? "ZA" : "ZD";
+    ctx.fillText(textPrefixe, x + pasX - marge, y + marge);
+    ctx.restore();
 
-    // Définition de la petite marge (en pixels) depuis le bord de la zone
-    const marge = 20;
-
-    // Calcul de la position (coordonnées de la zone + la marge)
-    const positionX = x + marge;
-    const positionY = y + marge;
-
-    // Dessin du texte sur le canvas
-    ctx.fillText(zoneIndex, positionX, positionY);
-
+    // 2. MODIFICATION : DESSIN DU CHIFFRE UNIQUE IDENTIQUE (20px, EN BAS À GAUCHE)
+    ctx.save();
+    ctx.globalAlpha = opaciteTexte; 
+    ctx.textAlign = "left";        
+    ctx.textBaseline = "bottom";    
+    
+    // Même calcul d'alignement avec les proportions des lettres
+    const positionChiffreX = x + marge;
+    const positionChiffreY = y + pasY - marge;
+    
+    ctx.fillText(zoneIndex, positionChiffreX, positionChiffreY);
+    ctx.restore();
 
     ctx.restore();
 }
@@ -485,10 +534,9 @@ if (dessin.estRepereX) {
 
 // === AJOUT ICI : Gestion exclusive des formes de Zone de Grille ===
 if (dessin.estZoneGrille) {
-    dessinerZoneGrille(dessin.zoneId, dessin.couleur);
+    dessinerZoneGrille(dessin.zoneId, dessin.couleur, dessin.mode);
     return;
 }
-
 
 
 
@@ -634,19 +682,37 @@ if (e.key.toLowerCase() === 'e' || e.key === 'Delete') {
 
 
 
-// === AJOUT ICI : Gestion des touches 1 à 8 pour recouvrir les zones ===
+// === MODIFICATION : Rotation 3 modes (ZD -> ZA -> Effacer) ===
 if (e.key >= '1' && e.key <= '8') {
-    const couleurActive = colorSelect ? colorSelect.value : '#ffffff';
     const zoneId = parseInt(e.key, 10);
+    
+    // Trouver si la zone existe déjà
+    const indexZoneExistante = window.dessinsSauvegardes.findIndex(dessin => dessin.estZoneGrille && dessin.zoneId === zoneId);
 
-    const nouvelleZone = {
-        couleur: couleurActive,
-        estZoneGrille: true,
-        zoneId: zoneId,
-        points: [] // Non requis pour le calcul mais garde la structure uniforme
-    };
+    if (indexZoneExistante !== -1) {
+        const zoneActive = window.dessinsSauvegardes[indexZoneExistante];
+        
+        if (!zoneActive.mode || zoneActive.mode === 'standard') {
+            // PASSAGE AU MODE 2 : Zone Arrivée (ZA)
+            zoneActive.mode = 'alternatif';
+        } else {
+            // PASSAGE AU MODE 3 : Effacement
+            window.dessinsSauvegardes.splice(indexZoneExistante, 1);
+        }
+    } else {
+        // PASSAGE AU MODE 1 : Zone Départ (ZD) - Premier appui
+        const couleurActive = colorSelect ? colorSelect.value : '#ffffff';
+        const nouvelleZone = {
+            couleur: couleurActive,
+            estZoneGrille: true,
+            zoneId: zoneId,
+            mode: 'standard',
+            points: [] 
+        };
+        window.dessinsSauvegardes.push(nouvelleZone);
+    }
 
-    window.dessinsSauvegardes.push(nouvelleZone);
+    // Forcer la mise à jour visuelle immédiate
     window.redessinerToutesLesLignes();
 }
 

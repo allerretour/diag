@@ -172,79 +172,106 @@ if (ballsCountSelect) {
     }
 
 
-    // EXPORTATION TEXTE : Sauvegarde la liste complète des billes visibles au format TXT
-        // EXPORTATION TEXTE MIS À JOUR : Sauvegarde avec la date et l'heure dans l'en-tête et le nom de fichier
-    const exportTxtBtn = document.getElementById('btn-export-text');
-    if (exportTxtBtn) {
-        exportTxtBtn.addEventListener('click', () => {
-            const configTitle = titleInput ? titleInput.value.trim() : "Configuration Billard";
-            const configDesc = descInput ? descInput.value.trim() : "";
-            
-            // 1. CALCULS DES DATES ET HEURES
-            const maintenant = new Date();
-            const annee = maintenant.getFullYear();
-            const mois = String(maintenant.getMonth() + 1).padStart(2, '0');
-            const jour = String(maintenant.getDate()).padStart(2, '0');
-            const heures = String(maintenant.getHours()).padStart(2, '0');
-            const minutes = String(maintenant.getMinutes()).padStart(2, '0');
-            
-            // Format pour le nom de fichier (Ex: 2026-10-02_14h35)
-            const horodatageFichier = `${annee}-${mois}-${jour}_${heures}h${minutes}`;
-            // Format pour l'en-tête lisible (Ex: 02/10/2026 à 14h35)
-            const horodatageEnTete = `${jour}/${mois}/${annee} à ${heures}h${minutes}`;
+    // EXPORTATION TEXTE MIS À JOUR : Sauvegarde la liste complète des billes et des zones actives au format TXT
+const exportTxtBtn = document.getElementById('btn-export-text');
+if (exportTxtBtn) {
+    exportTxtBtn.addEventListener('click', () => {
+        const configTitle = titleInput ? titleInput.value.trim() : "Configuration Billard";
+        const configDesc = descInput ? descInput.value.trim() : "";
+        
+        // 1. CALCULS DES DATES ET HEURES
+        const maintenant = new Date();
+        const annee = maintenant.getFullYear();
+        const mois = String(maintenant.getMonth() + 1).padStart(2, '0');
+        const jour = String(maintenant.getDate()).padStart(2, '0');
+        const heures = String(maintenant.getHours()).padStart(2, '0');
+        const minutes = String(maintenant.getMinutes()).padStart(2, '0');
+        
+        // Format pour le nom de fichier (Ex: 2026-10-02_14h35)
+        const horodatageFichier = `${annee}-${mois}-${jour}_${heures}h${minutes}`;
+        // Format pour l'en-tête lisible (Ex: 02/10/2026 à 14h35)
+        const horodatageEnTete = `${jour}/${mois}/${annee} à ${heures}h${minutes}`;
 
-            // 2. CONSTRUCTION DU CONTENU TEXTE
-            let contenuTexte = `=== CONFIGURATION DE BILLARD ===\n`;
-            contenuTexte += `Titre       : ${configTitle}\n`;
-            if (configDesc) contenuTexte += `Description : ${configDesc}\n`;
-            contenuTexte += `Généré le   : ${horodatageEnTete}\n`; // AJOUT DANS L'EN-TÊTE
-            contenuTexte += `--------------------------------\n`;
-            contenuTexte += `Positions des billes (Grille 16x8, Origine Bas-Gauche) :\n\n`;
+        // 2. CONSTRUCTION DU CONTENU TEXTE
+        let contenuTexte = `=== CONFIGURATION DE BILLARD ===\n`;
+        contenuTexte += `Titre       : ${configTitle}\n`;
+        if (configDesc) contenuTexte += `Description : ${configDesc}\n`;
+        contenuTexte += `Généré le   : ${horodatageEnTete}\n`;
+        contenuTexte += `--------------------------------\n`;
+        contenuTexte += `Positions des billes (Grille 16x8, Origine Bas-Gauche) :\n\n`;
 
-            let compteurBilles = 0;
-            activeBalls.forEach(ball => {
-                if (ball.style.display !== 'none') {
-                    compteurBilles++;
-                    const ballId = ball.getAttribute('data-id');
-                    const numEl = ball.querySelector('.ball-num');
-                    
-                    let nomBille = "";
-                    if (ballId === '0') {
-                        nomBille = "Bille Blanche";
-                    } else {
-                        const numTexte = numEl ? numEl.innerText : ballId;
-                        const estRayee = ball.classList.contains('striped');
-                        nomBille = `Bille N°${numTexte} (${estRayee ? 'Rayée' : 'Pleine'})`;
-                    }
-
-                    const pixelX = parseFloat(ball.style.left) || 0;
-                    const pixelY = parseFloat(ball.style.top) || 0;
-                    const coordsGrille = obtenirCoordonneesGrille(pixelX, pixelY, ball);
-
-                    contenuTexte += `- ${nomBille.padEnd(25)} : X = ${coordsGrille.x.padStart(4)}, Y = ${coordsGrille.y.padStart(4)}\n`;
+        let compteurBilles = 0;
+        activeBalls.forEach(ball => {
+            if (ball.style.display !== 'none') {
+                compteurBilles++;
+                const ballId = ball.getAttribute('data-id');
+                const numEl = ball.querySelector('.ball-num');
+                
+                let nomBille = "";
+                if (ballId === '0') {
+                    nomBille = "Bille Blanche";
+                } else {
+                    const numTexte = numEl ? numEl.innerText : ballId;
+                    const estRayee = ball.classList.contains('striped');
+                    nomBille = `Bille N°${numTexte} (${estRayee ? 'Rayée' : 'Pleine'})`;
                 }
-            });
 
-            contenuTexte += `\nTotal : ${compteurBilles} billes présentes sur le tapis.\n`;
-            contenuTexte += `================================\n`;
+                const pixelX = parseFloat(ball.style.left) || 0;
+                const pixelY = parseFloat(ball.style.top) || 0;
+                const coordsGrille = obtenirCoordonneesGrille(pixelX, pixelY, ball);
 
-            // Sécurisation du nom de fichier
-            const nomFichierSecurise = configTitle.replace(/[/\\?%*:|"<>]/g, '-').substring(0, 100) || "configuration_billard";
-            
-            const blob = new Blob([contenuTexte], { type: "text/plain;charset=utf-8" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            
-            a.href = url;
-            // MODIFICATION : Nom de fichier incluant la date et l'heure pour éviter les doublons d'export
-            a.download = `${horodatageFichier}_${nomFichierSecurise}_positions.txt`;
-            document.body.appendChild(a);
-            a.click();
-            
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+                contenuTexte += `- ${nomBille.padEnd(25)} : X = ${coordsGrille.x.padStart(4)}, Y = ${coordsGrille.y.padStart(4)}\n`;
+            }
         });
-    }
+
+        contenuTexte += `\nTotal : ${compteurBilles} billes présentes sur le tapis.\n`;
+        
+        // === AJOUT : EXPORTATION DES ZONES DE LA GRILLE ACTIVÉES ===
+        contenuTexte += `--------------------------------\n`;
+        contenuTexte += `Zones de jeu actives (Filtres tactiques) :\n\n`;
+
+        let compteurZones = 0;
+        if (window.dessinsSauvegardes && window.dessinsSauvegardes.length > 0) {
+            // Filtrer uniquement les éléments qui sont des zones de grille
+            const zonesActives = window.dessinsSauvegardes.filter(dessin => dessin.estZoneGrille);
+            
+            // Trier les zones par ID numérique (1 à 8) pour une lecture propre dans le fichier texte
+            zonesActives.sort((a, b) => a.zoneId - b.zoneId);
+
+            zonesActives.forEach(zone => {
+                compteurZones++;
+                const typeZone = (zone.mode === 'alternatif') ? "Zone Arrivée" : "Zone Départ";
+                const codeZone = (zone.mode === 'alternatif') ? `ZA${zone.zoneId}` : `ZD${zone.zoneId}`;
+                
+                contenuTexte += `- Code : ${codeZone.padEnd(6)} | Type : ${typeZone.padEnd(15)}\n`;
+            });
+        }
+
+        if (compteurZones === 0) {
+            contenuTexte += `Aucune zone (ZD/ZA) affichée sur le tapis.\n`;
+        } else {
+            contenuTexte += `\nTotal : ${compteurZones} zone(s) affichée(s) sur la table.\n`;
+        }
+        
+        contenuTexte += `================================\n`;
+
+        // Sécurisation du nom de fichier
+        const nomFichierSecurise = configTitle.replace(/[/\\?%*:|"<>]/g, '-').substring(0, 100) || "configuration_billard";
+        
+        const blob = new Blob([contenuTexte], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        
+        a.href = url;
+        a.download = `${horodatageFichier}_${nomFichierSecurise}_positions.txt`;
+        document.body.appendChild(a);
+        a.click();
+        
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    });
+}
+
 
 
 // --- GESTION DE L'AFFICHAGE DU LOGO SUR LE TAPIS ---
@@ -465,7 +492,6 @@ if (btnRandomHD) {
         for (let c = 0; c <= cols; c++) {
             for (let r = 0; r <= rows; r++) {
                 // Calcul de la position physique (x, y) en pixels pour le COIN haut-gauche d'une bille
-                // Les billes font 24px de diamètre (rayon 12px), on ajuste par rapport au centre de l'intersection
                 const centreX = gridLeft + (c * pasX);
                 const centreY = gridTop + (r * pasY);
                 
@@ -491,11 +517,12 @@ if (btnRandomHD) {
             [intersectionsDisponibles[i], intersectionsDisponibles[j]] = [intersectionsDisponibles[j], intersectionsDisponibles[i]];
         }
 
-        // 3. Assigner une coordonnée unique à chaque bille visible
+        // 3. Assigner une coordonnée unique à chaque bille visible (Sauf la bille blanche)
         let indexIntersection = 0;
         activeBalls.forEach(ball => {
-            // On ne déplace que les billes qui ne sont pas cachées
-            if (ball.style.display !== 'none' && indexIntersection < intersectionsDisponibles.length) {
+            const ballId = ball.getAttribute('data-id');
+            // On ne déplace de manière totalement aléatoire que les billes de couleur visibles (id > 0)
+            if (ballId !== '0' && ball.style.display !== 'none' && indexIntersection < intersectionsDisponibles.length) {
                 const pos = intersectionsDisponibles[indexIntersection];
                 
                 ball.style.left = `${pos.x}px`;
@@ -505,10 +532,99 @@ if (btnRandomHD) {
             }
         });
 
-        // 4. Mettre à jour l'affichage de texte de la bille active si nécessaire
+        // ====================================================================
+        // GÉNERATION DES ZONES UNIQUE ZD ET ZA + PLACEMENT DE LA BLANCHE
+        // ====================================================================
+        
+        // 1. Nettoyer les anciennes zones déjà présentes pour éviter les duplicatas
+        window.dessinsSauvegardes = window.dessinsSauvegardes.filter(dessin => !dessin.estZoneGrille);
+
+        // 2. Initialisation dynamique de la liste pour les IDs de zone (1 à 8)
+        const listeIdsZones = Array.from({ length: 8 }, (v, k) => k + 1);
+        
+        // Mélange de la liste des IDs (Fisher-Yates)
+        for (let i = listeIdsZones.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [listeIdsZones[i], listeIdsZones[j]] = [listeIdsZones[j], listeIdsZones[i]];
+        }
+
+        const nbZD = 1; 
+        const nbZA = 1; 
+
+        // Couleur par défaut requise par la structure des objets
+        const couleurActive = (document.getElementById('marker-color')) ? document.getElementById('marker-color').value : '#ffffff';
+
+        // 4. Générer l'unique Zone de Départ (ZD)
+        let savedZdId = 1;
+        for (let i = 0; i < nbZD; i++) {
+            const zoneId = listeIdsZones.pop(); 
+            savedZdId = zoneId; // On mémorise l'ID de la ZD pour y téléporter la bille blanche
+            window.dessinsSauvegardes.push({
+                couleur: couleurActive,
+                estZoneGrille: true,
+                zoneId: zoneId,
+                mode: 'standard', // 'standard' = Zone Départ (ZD)
+                points: []
+            });
+        }
+
+        // 5. Générer l'unique Zone d'Arrivée (ZA)
+        for (let i = 0; i < nbZA; i++) {
+            const zoneId = listeIdsZones.pop(); 
+            window.dessinsSauvegardes.push({
+                couleur: couleurActive,
+                estZoneGrille: true,
+                zoneId: zoneId,
+                mode: 'alternatif', // 'alternatif' = Zone Arrivée (ZA)
+                points: []
+            });
+        }
+
+        // ====================================================================
+        // NOUVEAU : ALIGNEMENT AUTOMATIQUE DE LA BILLE BLANCHE AU CENTRE DE LA ZD
+        // ====================================================================
+        const cueBall = activeBalls.find(b => b.getAttribute('data-id') === '0');
+        if (cueBall) {
+            // Configuration de la grille à gros blocs (4 colonnes, 2 rangées)
+            const zoneCols = 4;
+            const zonePasX = 754 / zoneCols; // Largeur physique d'une zone (188.5px)
+            const zonePasY = 364 / 2;        // Hauteur physique d'une zone (182px)
+
+            // Convertir l'index mémorisé (1 à 8) en coordonnées de grille (0 à 3 et 0 à 1)
+            const idx = savedZdId - 1;
+            const r = Math.floor(idx / zoneCols);
+            const c = idx % zoneCols;
+
+            // Coordonnées physiques du coin haut-gauche de la zone sélectionnée (Marge haute incluse à 18px pour s'aligner sur la fonction de dessin)
+            const zoneX = 19 + (c * zonePasX);
+            const zoneY = 18 + (r * zonePasY);
+
+            // Calcul du milieu parfait de la zone en pixels
+            const centreZoneX = zoneX + (zonePasX / 2);
+            const centreZoneY = zoneY + (zonePasY / 2);
+
+            // Positionnement CSS (Top / Left) en retirant le rayon de la bille (12px) pour la centrer
+            const finalBlancheX = centreZoneX - 12;
+            const finalBlancheY = centreZoneY - 12;
+
+            cueBall.style.left = `${finalBlancheX}px`;
+            cueBall.style.top = `${finalBlancheY}px`;
+            
+            // Forcer la détection de collision finale pour s'assurer qu'aucune autre bille ne lui a été assignée dessus
+            if (typeof resolveCollisions === "function") {
+                resolveCollisions(cueBall);
+            }
+        }
+
+        // 6. Forcer le rafraîchissement immédiat du canvas pour dessiner les nouvelles zones
+        if (typeof window.redessinerToutesLesLignes === "function") {
+            window.redessinerToutesLesLignes();
+        }
+
+        // 7. Mettre à jour l'affichage de texte de la bille active
         const displayEl = document.getElementById('ball-position-display');
         if (displayEl) {
-            displayEl.innerText = "Position de la bille : Aléatoire appliquée";
+            displayEl.innerText = "Position : Aléatoire, Blanche centrée dans l'unique ZD";
         }
     });
 }
