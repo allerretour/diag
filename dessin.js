@@ -1,4 +1,4 @@
-// Variable globale pour stocker les lignes et les cibles tracées
+// Variable globale pour stocker les lignes et les cibles tracées.
 window.dessinsSauvegardes = [];
 
 document.addEventListener("DOMContentLoaded", () => {
