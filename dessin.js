@@ -19,16 +19,25 @@ document.addEventListener("DOMContentLoaded", () => {
     let isCtrlPressed = false;
     let isShiftPressed = false;
 
+// === AJOUT POUR L'APERÇU FANTÔME ===
+let outilActif = null; // Peut valoir: 'cible', 'carre', 'effetBlanche', 'repereX'
+
     // Variables pour suivre la position du curseur sur la table de billard
     let mouseX = 0;
     let mouseY = 0;
 
     // Suivi permanent de la souris pour positionner la cible au pixel près
     table.addEventListener('mousemove', (e) => {
-        const rect = table.getBoundingClientRect();
-        mouseX = Math.round(e.clientX - rect.left);
-        mouseY = Math.round(e.clientY - rect.top);
-    });
+    const rect = table.getBoundingClientRect();
+    mouseX = Math.round(e.clientX - rect.left);
+    mouseY = Math.round(e.clientY - rect.top);
+
+    // === AJOUT POUR L'APERÇU FANTÔME ===
+    if (outilActif) {
+        window.redessinerToutesLesLignes();
+    }
+});
+
 	
 	
 	
@@ -562,6 +571,26 @@ if (dessin.estZoneGrille) {
                 ctx.stroke();
             }
         });
+
+        // === AJOUT ICI : RENDU DE L'APERÇU FANTÔME ===
+    if (outilActif) {
+        ctx.save();
+        ctx.globalAlpha = 0.40; // Rapproche la forme d'un aspect "fantôme" translucide
+        
+        let couleurActive = colorSelect ? colorSelect.value : '#ffffff';
+        if (window.billeSelectionneeCourante) {
+            couleurActive = window.billeSelectionneeCourante.style.backgroundColor;
+        }
+
+        // Dessine la bonne forme en temps réel sous le curseur
+        if (outilActif === 'cible') dessinerCible(mouseX, mouseY, couleurActive);
+        if (outilActif === 'carre') dessinerCarre(mouseX, mouseY, couleurActive);
+        if (outilActif === 'repereX') dessinerRepereXGras(mouseX, mouseY, couleurActive);
+        if (outilActif === 'effetBlanche') dessinerEffetsBilleBlanche(mouseX, mouseY, couleurActive);
+        
+        ctx.restore();
+    }
+
         const modeDashed = dashedCheck ? dashedCheck.checked : false;
         configurerStyleDessin(null, modeDashed); 
     };
@@ -591,17 +620,17 @@ if (dessin.estZoneGrille) {
     }
 
     // --- LOGIQUE DE CLAVIER ET RACCOURCIS CORRIGÉE ---
+     // --- LOGIQUE DE CLAVIER ET RACCOURCIS CORRIGÉE ---
     document.addEventListener('keydown', (e) => {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
             return; 
         }
 
-
-        // 1. Gestion de l'annulation (on stoppe immédiatement l'exécution pour éviter les conflits)
+        // 1. Gestion de l'annulation
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
             e.preventDefault(); 
             annulerDernierTrace();
-            return; // TRÈS IMPORTANT : évite de passer à la suite et de dessiner un carré
+            return; 
         }
 
         if (e.key === 'Shift') {
@@ -612,111 +641,72 @@ if (dessin.estZoneGrille) {
             isCtrlPressed = true;
         }
 
+        // 2. Gestion des modes "Aperçu Fantôme" (Bascule ON/OFF)
         if (e.key.toLowerCase() === 't') {
-            const couleurActive = colorSelect ? colorSelect.value : '#ffffff';
-            const nouvelleCible = {
-                couleur: couleurActive,
-                estCible: true,
-                points: [{ x: mouseX, y: mouseY }]
-            };
-            window.dessinsSauvegardes.push(nouvelleCible);
+            e.preventDefault();
+            outilActif = (outilActif === 'cible') ? null : 'cible';
+            if (outilActif) canvas.style.pointerEvents = 'auto';
             window.redessinerToutesLesLignes();
         }
-		
-        // Le carré ne se déclenche QUE si CTRL n'est PAS enfoncé
-if (e.key.toLowerCase() === 'z' && !e.ctrlKey && !e.metaKey) {
-    const couleurActive = colorSelect ? colorSelect.value : '#ffffff';
-    const nouveauCarre = {
-        couleur: couleurActive,
-        estCarre: true,
-        points: [{ x: mouseX, y: mouseY }]
-    };
-    window.dessinsSauvegardes.push(nouveauCarre);
-    window.redessinerToutesLesLignes();
-}
 
-
-
-// === AJOUT : Gestion de la touche 9 pour faire apparaître le X gras ===
-if (e.key === '9') {
-    // Suit exactement la logique des lignes (Bille active > Couleur choisie)
-    let couleurActive = colorSelect ? colorSelect.value : '#ffffff';
-    if (window.billeSelectionneeCourante) {
-        couleurActive = window.billeSelectionneeCourante.style.backgroundColor;
-    }
-
-    const nouveauRepereX = {
-        couleur: couleurActive,
-        estRepereX: true,
-        points: [{ x: mouseX, y: mouseY }] // Enregistre la position sous la souris
-    };
-
-    window.dessinsSauvegardes.push(nouveauRepereX);
-    window.redessinerToutesLesLignes();
-}
-
-
-
-// === AJOUT ICI : Gestion de la touche 0 pour le diagramme d'effets de la blanche ===
-if (e.key === '0') {
-    // Détermination de la couleur (Bille active > Couleur choisie)
-    let couleurActive = colorSelect ? colorSelect.value : '#ffffff';
-    if (window.billeSelectionneeCourante) {
-        couleurActive = window.billeSelectionneeCourante.style.backgroundColor;
-    }
-
-    const nouvelEffetBlanche = {
-        couleur: couleurActive,
-        estEffetBlanche: true,
-        points: [{ x: mouseX, y: mouseY }]
-    };
-
-    window.dessinsSauvegardes.push(nouvelEffetBlanche);
-    window.redessinerToutesLesLignes();
-}
-
-if (e.key.toLowerCase() === 'e' || e.key === 'Delete') {
-    // Appelle la fonction d'effacement à la position actuelle de la souris
-    window.detecterEtEffacerDessin(mouseX, mouseY);
-}
-
-
-
-// === MODIFICATION : Rotation 3 modes (ZD -> ZA -> Effacer) ===
-if (e.key >= '1' && e.key <= '8') {
-    const zoneId = parseInt(e.key, 10);
-    
-    // Trouver si la zone existe déjà
-    const indexZoneExistante = window.dessinsSauvegardes.findIndex(dessin => dessin.estZoneGrille && dessin.zoneId === zoneId);
-
-    if (indexZoneExistante !== -1) {
-        const zoneActive = window.dessinsSauvegardes[indexZoneExistante];
-        
-        if (!zoneActive.mode || zoneActive.mode === 'standard') {
-            // PASSAGE AU MODE 2 : Zone Arrivée (ZA)
-            zoneActive.mode = 'alternatif';
-        } else {
-            // PASSAGE AU MODE 3 : Effacement
-            window.dessinsSauvegardes.splice(indexZoneExistante, 1);
+        if (e.key.toLowerCase() === 'z' && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            outilActif = (outilActif === 'carre') ? null : 'carre';
+            if (outilActif) canvas.style.pointerEvents = 'auto';
+            window.redessinerToutesLesLignes();
         }
-    } else {
-        // PASSAGE AU MODE 1 : Zone Départ (ZD) - Premier appui
-        const couleurActive = colorSelect ? colorSelect.value : '#ffffff';
-        const nouvelleZone = {
-            couleur: couleurActive,
-            estZoneGrille: true,
-            zoneId: zoneId,
-            mode: 'standard',
-            points: [] 
-        };
-        window.dessinsSauvegardes.push(nouvelleZone);
-    }
 
-    // Forcer la mise à jour visuelle immédiate
-    window.redessinerToutesLesLignes();
-}
+        if (e.key === '9') {
+            e.preventDefault();
+            outilActif = (outilActif === 'repereX') ? null : 'repereX';
+            if (outilActif) canvas.style.pointerEvents = 'auto';
+            window.redessinerToutesLesLignes();
+        }
 
+        if (e.key === '0') {
+            e.preventDefault();
+            outilActif = (outilActif === 'effetBlanche') ? null : 'effetBlanche';
+            if (outilActif) canvas.style.pointerEvents = 'auto';
+            window.redessinerToutesLesLignes();
+        }
+
+        // Touche Échap pour annuler l'aperçu en cours
+        if (e.key === 'Escape') {
+            outilActif = null;
+            window.redessinerToutesLesLignes();
+        }
+
+        if (e.key.toLowerCase() === 'e' || e.key === 'Delete') {
+            window.detecterEtEffacerDessin(mouseX, mouseY);
+        }
+
+        // 3. Gestion des zones de grille (1 à 8)
+        if (e.key >= '1' && e.key <= '8') {
+            const zoneId = parseInt(e.key, 10);
+            const indexZoneExistante = window.dessinsSauvegardes.findIndex(dessin => dessin.estZoneGrille && dessin.zoneId === zoneId);
+
+            if (indexZoneExistante !== -1) {
+                const zoneActive = window.dessinsSauvegardes[indexZoneExistante];
+                if (!zoneActive.mode || zoneActive.mode === 'standard') {
+                    zoneActive.mode = 'alternatif';
+                } else {
+                    window.dessinsSauvegardes.splice(indexZoneExistante, 1);
+                }
+            } else {
+                const couleurActive = colorSelect ? colorSelect.value : '#ffffff';
+                const nouvelleZone = {
+                    couleur: couleurActive,
+                    estZoneGrille: true,
+                    zoneId: zoneId,
+                    mode: 'standard',
+                    points: [] 
+                };
+                window.dessinsSauvegardes.push(nouvelleZone);
+            }
+            window.redessinerToutesLesLignes();
+        }
     });
+
 
     document.addEventListener('keyup', (e) => {
         if (e.key === 'Shift') {
@@ -745,6 +735,30 @@ if (e.key >= '1' && e.key <= '8') {
     });
 
 function commencerDessin(e) {
+
+    // === AJOUT : CLIC POUR PLACER LA FORME FANTÔME ===
+    if (outilActif && e.button === 0) { // Clic gauche
+        const couleurActive = window.billeSelectionneeCourante ? 
+            window.billeSelectionneeCourante.style.backgroundColor : 
+            (colorSelect ? colorSelect.value : '#ffffff');
+
+        let nouvelElement = {
+            couleur: couleurActive,
+            points: [{ x: mouseX, y: mouseY }]
+        };
+
+        // On assigne le bon drapeau selon l'outil actif
+        if (outilActif === 'cible') nouvelElement.estCible = true;
+        if (outilActif === 'carre') nouvelElement.estCarre = true;
+        if (outilActif === 'repereX') nouvelElement.estRepereX = true;
+        if (outilActif === 'effetBlanche') nouvelElement.estEffetBlanche = true;
+
+        window.dessinsSauvegardes.push(nouvelElement);
+        outilActif = null; // Désactive l'outil après la pose
+        window.redessinerToutesLesLignes();
+        return; // Évite de déclencher un tracé de ligne classique en même temps
+    }
+
     isDrawing = true;
     const rect = table.getBoundingClientRect();
     const x = Math.round(e.clientX - rect.left);
@@ -812,8 +826,16 @@ function commencerDessin(e) {
 
 
     canvas.addEventListener('mousedown', (e) => {
-        if (e.shiftKey || e.button === 2) commencerDessin(e);
-    });
+    // Si un outil fantôme est actif, on autorise le clic gauche pour valider
+    if (outilActif && e.button === 0) {
+        commencerDessin(e);
+    } 
+    // Garde votre comportement d'origine pour le dessin classique au clic droit ou Shift+Clic
+    else if (e.shiftKey || e.button === 2) {
+        commencerDessin(e);
+    }
+});
+
 
     document.addEventListener('mousemove', (e) => {
         if (!isDrawing || !currentLine) return;
