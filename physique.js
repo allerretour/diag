@@ -6,6 +6,7 @@ const ballColors = {
 const table = document.getElementById('pool-table');
 const ballDiameter = 24; 
 const activeBalls = [];
+window.billeSelectionneeCourante = null;
 
 // Éléments UI pour le magnétisme et la grille
 const chkMagnetism = document.getElementById('chk-magnetism');
@@ -214,26 +215,39 @@ function makeDraggable(element) {
     document.addEventListener('touchend', dragEnd);
 
     function dragStart(e) {
-        if (element.style.display === 'none') return;
+    if (element.style.display === 'none') return;
 
-        const xOffset = parseInt(element.style.left) || 0;
-        const yOffset = parseInt(element.style.top) || 0;
+    const xOffset = parseInt(element.style.left) || 0;
+    const yOffset = parseInt(element.style.top) || 0;
 
-        if (e.type === 'touchstart') {
-            initialX = e.touches[0].clientX - xOffset; 
-            initialY = e.touches[0].clientY - yOffset;
-        } else {
-            initialX = e.clientX - xOffset; 
-            initialY = e.clientY - yOffset;
+    if (e.type === 'touchstart') {
+        initialX = e.touches[0].clientX - xOffset; 
+        initialY = e.touches[0].clientY - yOffset;
+    } else {
+        initialX = e.clientX - xOffset; 
+        initialY = e.clientY - yOffset;
+    }
+    
+    if (e.target === element || element.contains(e.target)) {
+        isDragging = true;
+        
+        // MODIFICATION : On retire l'éventuel contour de l'ancienne bille sélectionnée
+        if (window.billeSelectionneeCourante) {
+            window.billeSelectionneeCourante.style.outline = 'none';
         }
         
-        if (e.target === element || element.contains(e.target)) {
-            isDragging = true;
-            
-            // ÉTAPE A : Mettre à jour l'affichage dès la sélection / clic initial
-            mettreAJourAffichagePosition(element, xOffset, yOffset);
-        }
+        // Mémorise la bille comme sélectionnée de façon permanente
+        window.billeSelectionneeCourante = element; 
+        
+        // OPTIONNEL : Ajoute un repère visuel (ex: un contour blanc de 2px) pour savoir quelle bille est active
+        element.style.outline = '2px solid #ffffff';
+        element.style.outlineOffset = '2px';
+
+        // ÉTAPE A : Mettre à jour l'affichage dès la sélection / clic initial
+        mettreAJourAffichagePosition(element, xOffset, yOffset);
     }
+}
+
 
     function drag(e) {
         if (isDragging) {
@@ -263,6 +277,9 @@ function makeDraggable(element) {
         if (isDragging) {
             const finalPos = resolveCollisions(element);
             isDragging = false;
+
+            
+
 
             // ÉTAPE C : Ajustement final de l'affichage une fois les collisions résolues
             mettreAJourAffichagePosition(element, finalPos.x, finalPos.y);
@@ -360,4 +377,85 @@ function mettreAJourAffichagePosition(element, x, y) {
     const coords = obtenirCoordonneesGrille(x, y, element);
     displayEl.innerText = `Bille active : ${nomBille} | Position grille : X = ${coords.x}, Y = ${coords.y}`;
 }
+
+
+// --- OUTILS DE SÉLECTION / COLLISION ---
+
+// Vérifie si le clic est proche d'un point (Cible, Carré, Effet, Repère)
+function estProchePoint(clicX, clicY, pointX, pointY, tolerance = 15) {
+    const dx = clicX - pointX;
+    const dy = clicY - pointY;
+    return Math.sqrt(dx * dx + dy * dy) <= tolerance;
+}
+
+// Vérifie si le clic est proche d'un segment de droite (Lignes et Flèches)
+function estProcheLigne(clicX, clicY, p1, p2, tolerance = 5) {
+    const A = clicX - p1.x;
+    const B = clicY - p1.y;
+    const C = p2.x - p1.x;
+    const D = p2.y - p1.y;
+
+    const dot = A * C + B * D;
+    const lenSq = C * C + D * D;
+    let param = -1;
+    
+    if (lenSq !== 0) param = dot / lenSq;
+
+    let xx, yy;
+
+    if (param < 0) {
+        xx = p1.x;
+        yy = p1.y;
+    } else if (param > 1) {
+        xx = p2.x;
+        yy = p2.y;
+    } else {
+        xx = p1.x + param * C;
+        yy = p1.y + param * D;
+    }
+
+    const dx = clicX - xx;
+    const dy = clicY - yy;
+    return Math.sqrt(dx * dx + dy * dy) <= tolerance;
+}
+
+// Fonction maîtresse pour trouver et effacer un dessin au clic
+window.detecterEtEffacerDessin = function(clicX, clicY) {
+    // On parcourt à l'envers (du plus récent au plus ancien)
+    for (let i = window.dessinsSauvegardes.length - 1; i >= 0; i--) {
+        const dessin = window.dessinsSauvegardes[i];
+
+        // 1. Cas des formes ponctuelles (Cible, Carré, Bille Blanche, Repère X)
+        if (dessin.estCible || dessin.estCarre || dessin.estEffetBlanche || dessin.estRepereX) {
+            if (dessin.points && dessin.points[0]) {
+                if (estProchePoint(clicX, clicY, dessin.points[0].x, dessin.points[0].y, 20)) {
+                    window.dessinsSauvegardes.splice(i, 1); // Supprime l'élément
+                    window.redessinerToutesLesLignes();     // Actualise le canvas
+                    return true; // Forme trouvée et effacée
+                }
+            }
+        }
+        
+        // 2. Cas des lignes droites ou flèches
+        else if (dessin.estDroite && dessin.points.length >= 2) {
+            if (estProcheLigne(clicX, clicY, dessin.points[0], dessin.points[dessin.points.length - 1], 6)) {
+                window.dessinsSauvegardes.splice(i, 1);
+                window.redessinerToutesLesLignes();
+                return true;
+            }
+        }
+
+        // 3. Cas du dessin libre (Tracé continu)
+        else if (dessin.points && dessin.points.length >= 2) {
+            for (let j = 0; j < dessin.points.length - 1; j++) {
+                if (estProcheLigne(clicX, clicY, dessin.points[j], dessin.points[j+1], 6)) {
+                    window.dessinsSauvegardes.splice(i, 1);
+                    window.redessinerToutesLesLignes();
+                    return true;
+                }
+            }
+        }
+    }
+    return false; // Rien n'était assez proche
+};
 
