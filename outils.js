@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-    // Initialise les éléments visuels de la table
+    // Initialise les éléments visuels de la table.
     initialiserBilles();
 
     const exportBtn = document.getElementById('btn-export');
