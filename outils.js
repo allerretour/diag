@@ -172,41 +172,46 @@ if (ballsCountSelect) {
     }
 
 
-    // EXPORTATION TEXTE MIS À JOUR : Sauvegarde la liste complète des billes et des zones actives au format TXT
+// EXPORTATION TEXTE MIS À JOUR : Sauvegarde la liste complète des billes et des zones actives au format TXT
 const exportTxtBtn = document.getElementById('btn-export-text');
 if (exportTxtBtn) {
     exportTxtBtn.addEventListener('click', () => {
         const configTitle = titleInput ? titleInput.value.trim() : "Configuration Billard";
         const configDesc = descInput ? descInput.value.trim() : "";
         
-        // 1. CALCULS DES DATES ET HEURES
+        // 1. GENERATION DU CODE UNIQUE AUX SECONDES ET DE L'HORODATAGE LISIBLE
+        const uniqueIdSec = Math.floor(Date.now() / 1000); // Code unique tronqué aux secondes (ex: 1791295940)
+        
         const maintenant = new Date();
         const annee = maintenant.getFullYear();
         const mois = String(maintenant.getMonth() + 1).padStart(2, '0');
         const jour = String(maintenant.getDate()).padStart(2, '0');
         const heures = String(maintenant.getHours()).padStart(2, '0');
         const minutes = String(maintenant.getMinutes()).padStart(2, '0');
-        
-        // Format pour le nom de fichier (Ex: 2026-10-02_14h35)
-        const horodatageFichier = `${annee}-${mois}-${jour}_${heures}h${minutes}`;
-        // Format pour l'en-tête lisible (Ex: 02/10/2026 à 14h35)
         const horodatageEnTete = `${jour}/${mois}/${annee} à ${heures}h${minutes}`;
 
         // 2. CONSTRUCTION DU CONTENU TEXTE
         let contenuTexte = `=== CONFIGURATION DE BILLARD ===\n`;
         contenuTexte += `Titre       : ${configTitle}\n`;
         if (configDesc) contenuTexte += `Description : ${configDesc}\n`;
-        contenuTexte += `Généré le   : ${horodatageEnTete}\n`;
+        contenuTexte += `Généré le   : ${horodatageEnTete} (Code : ${uniqueIdSec})\n`;
         contenuTexte += `--------------------------------\n`;
         contenuTexte += `Positions des billes (Grille 16x8, Origine Bas-Gauche) :\n\n`;
 
-        let compteurBilles = 0;
+        let compteurBillesTexte = 0;
+        let compteurBillesCouleur = 0; // Compteur excluant la blanche (id 0)
+
         activeBalls.forEach(ball => {
             if (ball.style.display !== 'none') {
-                compteurBilles++;
+                compteurBillesTexte++;
                 const ballId = ball.getAttribute('data-id');
                 const numEl = ball.querySelector('.ball-num');
                 
+                // Incrémente uniquement s'il ne s'agit pas de la bille blanche
+                if (ballId !== '0') {
+                    compteurBillesCouleur++;
+                }
+
                 let nomBille = "";
                 if (ballId === '0') {
                     nomBille = "Bille Blanche";
@@ -224,18 +229,15 @@ if (exportTxtBtn) {
             }
         });
 
-        contenuTexte += `\nTotal : ${compteurBilles} billes présentes sur le tapis.\n`;
+        contenuTexte += `\nTotal : ${compteurBillesTexte} billes présentes sur le tapis.\n`;
         
-        // === AJOUT : EXPORTATION DES ZONES DE LA GRILLE ACTIVÉES ===
+        // === EXPORTATION DES ZONES DE LA GRILLE ACTIVÉES ===
         contenuTexte += `--------------------------------\n`;
         contenuTexte += `Zones de jeu actives (Filtres tactiques) :\n\n`;
 
         let compteurZones = 0;
         if (window.dessinsSauvegardes && window.dessinsSauvegardes.length > 0) {
-            // Filtrer uniquement les éléments qui sont des zones de grille
             const zonesActives = window.dessinsSauvegardes.filter(dessin => dessin.estZoneGrille);
-            
-            // Trier les zones par ID numérique (1 à 8) pour une lecture propre dans le fichier texte
             zonesActives.sort((a, b) => a.zoneId - b.zoneId);
 
             zonesActives.forEach(zone => {
@@ -255,15 +257,13 @@ if (exportTxtBtn) {
         
         contenuTexte += `================================\n`;
 
-        // Sécurisation du nom de fichier
-        const nomFichierSecurise = configTitle.replace(/[/\\?%*:|"<>]/g, '-').substring(0, 100) || "configuration_billard";
-        
         const blob = new Blob([contenuTexte], { type: "text/plain;charset=utf-8" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         
         a.href = url;
-        a.download = `${horodatageFichier}_${nomFichierSecurise}_positions.txt`;
+        // MODIFICATION : Utilisation du code unique calibré à la seconde près
+        a.download = `${uniqueIdSec}_aleatoires_${compteurBillesCouleur}-billes.txt`;
         document.body.appendChild(a);
         a.click();
         
@@ -271,6 +271,7 @@ if (exportTxtBtn) {
         URL.revokeObjectURL(url);
     });
 }
+
 
 
 
