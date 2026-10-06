@@ -1,5 +1,15 @@
 // Variable globale pour stocker les lignes et les cibles tracées
 window.dessinsSauvegardes = [];
+// Variable globale pour suivre le nombre de pointes du repère X (ex: alterne entre 4, 6)
+window.nombreBranchesRepereX = 6; // Garde la mémoire des branches
+window.repereXEstUnCercle = false; // Permet de savoir si on bascule en mode cercle
+ 
+// Variable globale pour suivre la dimension actuelle du carré (3 tailles en pixels)
+window.tailleCarreCourante = 95; 
+// Variable globale pour suivre le quadrant d'affichage des chiffres (0: Bas-Droite, 1: Bas-Gauche, 2: Haut-Gauche, 3: Haut-Droite)
+window.quadrantCibleCourant = 0; 
+
+
 
 document.addEventListener("DOMContentLoaded", () => {
     const canvas = document.getElementById('drawing-canvas');
@@ -79,9 +89,35 @@ function dessinerEffetsBilleBlanche(x, y, couleur) {
     ctx.rect(zoneUtileX, zoneUtileY, zoneUtileLargeur, zoneUtileHauteur);
     // ctx.clip(); // Tronque si la forme déborde sur les bandes
 
-    // --- 2. DESSIN DU CORPS DE LA BILLE BLANCHE (EFFET BILLARD SANS CONTOUR + OMBRE) ---
-    const rayonBille = 60; // Forme agrandie à 60px de rayon
+    // ====================================================================
+    // AJOUT : CONTOUR RECTANGULAIRE GLOBAL (BOÎTE DE CONTENEUR DU BLOC)
+    // ====================================================================
+    ctx.save();
+    const rayonBille = 60;
     
+    // Dimensions calculées pour envelopper le texte supérieur ET la bille
+    const largeurCadre = 150;
+    const hauteurCadre = 175;
+    const demiLargeur = largeurCadre / 2;
+    
+    // Positionnement du coin haut-gauche pour que l'ensemble soit centré sur (x, y)
+    const cadreX = x - demiLargeur;
+    const cadreY = y - rayonBille - 32; // Incorpore l'espace du texte au-dessus
+    const arrondiCoins = 10;
+
+    // Tracé du fond de la boîte (Noir translucide pour détacher du tapis)
+    ctx.beginPath();
+    ctx.roundRect(cadreX, cadreY, largeurCadre, hauteurCadre, arrondiCoins);
+    ctx.fillStyle = "rgba(0, 0, 0, 0.15)"; 
+    ctx.fill();
+
+    // Tracé de la bordure extérieure de la boîte
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+
+    // --- 2. DESSIN DU CORPS DE LA BILLE BLANCHE (EFFET BILLARD SANS CONTOUR + OMBRE) ---
     // Configuration de l'ombre portée de la bille
     ctx.shadowColor = "rgba(0, 0, 0, 0.35)"; // Ombre douce noire transparente
     ctx.shadowBlur = 10;                     // Flou de l'ombre
@@ -94,9 +130,13 @@ function dessinerEffetsBilleBlanche(x, y, couleur) {
     ctx.arc(x, y, rayonBille, 0, 2 * Math.PI);
     ctx.fill(); // Remplissage uniquement (pas de stroke pour éviter le contour)
 
+    // Désactivation de l'ombre pour éviter qu'elle ne bave sur les tracés internes
+    ctx.shadowColor = "transparent";
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
 
     // --- 3. DESSIN DES LIGNES RÉTICULAIRES JUSQU'AU BORD ---
-    // FORCE LA COULEUR NOIRE INTERNE : Remplacement de "couleur" par "#000000"
     ctx.strokeStyle = "#e0e0e0"; 
     ctx.lineWidth = 1;
     ctx.setLineDash([2, 3]); // Petits pointillés fins alternés précis
@@ -138,36 +178,33 @@ function dessinerEffetsBilleBlanche(x, y, couleur) {
         { dx: diagPoint, dy: diagPoint, estCentre: false }        
     ];
 
+    // Remplissage des ronds blancs pour effacer les pointillés en dessous
+    ctx.fillStyle = "#ffffff"; 
     pointsEffets.forEach(pt => {
         const rayonActuel = pt.estCentre ? rayonPointCentral : rayonPointExterieur;
-
         ctx.beginPath();
         ctx.arc(x + pt.dx, y + pt.dy, rayonActuel, 0, 2 * Math.PI);
-        
-        // Tous les cercles sont "sans couleur" (remplis du blanc opaque de la bille)
-        ctx.fillStyle = "#ffffff"; 
         ctx.fill();
-        
-        // FORCE LA COULEUR NOIRE DU CONTOUR : Remplacement de "couleur" par "#000000"
-        ctx.strokeStyle = "#e0e0e0";
+    });
+
+    // Application des bordures grises internes sur les repères
+    ctx.strokeStyle = "#e0e0e0";
+    pointsEffets.forEach(pt => {
+        const rayonActuel = pt.estCentre ? rayonPointCentral : rayonPointExterieur;
         ctx.lineWidth = pt.estCentre ? 1.5 : 1.3;
+        ctx.beginPath();
+        ctx.arc(x + pt.dx, y + pt.dy, rayonActuel, 0, 2 * Math.PI);
         ctx.stroke();
     });
 
-    ctx.restore(); // Restaure le clip géométrique
+    ctx.restore(); // Restaure le clip géométrique initial
 	
 	// ====================================================================
-    // ÉTIQUETTE "POINT DE CONTACT" : TEXTE BLANC AVEC OMBRE NOIRE
+    // ÉTIQUETTE "POINT DE CONTACT" : TEXTE BLANC
     // ====================================================================
     ctx.save();
     
-    // Configuration de l'ombre portée noire pour détacher le texte du tapis
-    ctx.shadowColor = "#000000";
-    ctx.shadowBlur = 4;          // Flou de l'ombre pour la douceur
-    ctx.shadowOffsetX = 2;       // Décalage horizontal léger
-    ctx.shadowOffsetY = 2;       // Décalage vertical léger
-
-    // Style du texte : Blanc pur, gras et légèrement plus grand pour la lisibilité
+    // Le texte profite désormais du fond sombre du conteneur pour sa lisibilité
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 12px sans-serif";
     ctx.textAlign = "center";
@@ -178,6 +215,8 @@ function dessinerEffetsBilleBlanche(x, y, couleur) {
     
     ctx.restore();
 }
+
+
 
 // Dessine un repère en forme d'étoile stylisée, très grasse et opaque à 60% à la position (x, y)
 function dessinerRepereXGras(x, y, couleur) {
@@ -192,7 +231,6 @@ function dessinerRepereXGras(x, y, couleur) {
 
     ctx.beginPath();
     ctx.rect(zoneUtileX, zoneUtileY, zoneUtileLargeur, zoneUtileHauteur);
-    // ctx.clip(); // Tronque si l'étoile dépasse sur les bandes de sécurité
 
     // --- 2. CONFIGURATION DU STYLE EXTRA-GRAS ---
     const couleurTrace = couleur || (colorSelect ? colorSelect.value : '#ffffff');
@@ -202,42 +240,49 @@ function dessinerRepereXGras(x, y, couleur) {
     ctx.lineJoin = 'round';    // Angles adoucis
     ctx.setLineDash([]);       // Lignes pleines
 
-    // MODIFICATION : Dimensions de l'étoile augmentées de 20% (Diamètre total ~22px)
-    const branches = 8;
-    const rayonExterne = 13;   // Passage de 9 à 11 (Augmentation de ~22%)
-    const rayonInterne = 6.2;  // Passage de 3.5 à 4.2 pour garder les proportions cambrées
-
-
     ctx.beginPath();
-    
-    // Calcul géométrique des pointes et des creux de l'étoile
-    for (let i = 0; i < 2 * branches; i++) {
-        const rayon = (i % 2 === 0) ? rayonExterne : rayonInterne;
-        const angle = (i * Math.PI) / branches - (Math.PI / 2); // Pointe vers le haut
-        
-        const coordX = x + Math.cos(angle) * rayon;
-        const coordY = y + Math.sin(angle) * rayon;
 
-        if (i === 0) {
-            ctx.moveTo(coordX, coordY);
-        } else {
-            ctx.lineTo(coordX, coordY);
+    // === 3. CAS DU CERCLE (TAILLE RÉDUITE À 10PX) ===
+    if (window.repereXEstUnCercle) {
+        const rayonCercle = 8; // Réduit de 13px à 10px
+        ctx.arc(x, y, rayonCercle, 0, 2 * Math.PI);
+    } 
+    // === CAS DE L'ÉTOILE (TAILLE RÉDUITE) ===
+    else {
+        const branches = window.nombreBranchesRepereX || 8; 
+        const rayonExterne = 12;   // Réduit de 13px à 10px
+        const rayonInterne = 5;  // Réduit de 6.2px à 4.5px pour garder de belles proportions cambrées
+
+        // Calcul géométrique des pointes et des creux de l'étoile
+        for (let i = 0; i < 2 * branches; i++) {
+            const rayon = (i % 2 === 0) ? rayonExterne : rayonInterne;
+            const angle = (i * Math.PI) / branches - (Math.PI / 2); // Pointe vers le haut
+            
+            const coordX = x + Math.cos(angle) * rayon;
+            const coordY = y + Math.sin(angle) * rayon;
+
+            if (i === 0) {
+                ctx.moveTo(coordX, coordY);
+            } else {
+                ctx.lineTo(coordX, coordY);
+            }
         }
     }
 
     ctx.closePath();
     
-    // --- 3. RAPPORT D'OPACITÉ AJUSTÉ POUR LE REMPLISSAGE ---
-    ctx.globalAlpha = 0.80; // MODIFICATION : Intérieur opaque à 60%
+    // --- 4. RAPPORT D'OPACITÉ AJUSTÉ POUR LE REMPLISSAGE ---
+    ctx.globalAlpha = 0.80; // Remplissage opaque à 80%
     ctx.fillStyle = couleurTrace;
     ctx.fill();
     
-    // --- 4. CONTOUR ET NETTETÉ À 100% ---
+    // --- 5. CONTOUR ET NETTETÉ À 100% ---
     ctx.globalAlpha = 1.0;  // Le contour reste entièrement opaque pour la visibilité
     ctx.stroke();
     
     ctx.restore(); // Restaure l'état du canvas
 }
+
 
 
 
@@ -271,6 +316,8 @@ function dessinerRepereXGras(x, y, couleur) {
 
 
 // Dessine une cible carrée et la TRONQUE si elle dépasse sur les bandes de sécurité
+// Dessine une cible carrée et la TRONQUE si elle dépasse sur les bandes de sécurité
+// Dessine une cible carrée et la TRONQUE si elle dépasse sur les bandes de sécurité
 function dessinerCible(x, y, couleur) {
     ctx.save(); // Sauvegarde l'état global du canvas
 
@@ -290,89 +337,81 @@ function dessinerCible(x, y, couleur) {
     ctx.rect(zoneUtileX, zoneUtileY, zoneUtileLargeur, zoneUtileHauteur);
     ctx.clip(); 
 
-    // --- 3. DESSIN DU FOND OPAQUE A 50% ---
-    ctx.save(); // Sauvegarde l'état pour l'opacité du fond
+    // --- 3. DESSIN DU FOND OPAQUE A 30% ---
+    ctx.save(); 
     ctx.setLineDash([]);
     ctx.fillStyle = couleur;
-    ctx.globalAlpha = 0.30; // Configuration de l'opacité à 50%
+    ctx.globalAlpha = 0.30; 
 
-    // Option A : Remplir le grand cercle extérieur (Recommandé pour une cible)
-    // ctx.beginPath();
-    // ctx.arc(x, y, 92.5, 0, 2 * Math.PI);
-    // ctx.fill();
-
-    // Option B : Si vous préférez remplir TOUT le carré extérieur, remplacez l'Option A par :
     ctx.beginPath();
     ctx.roundRect(x - 92.5, y - 92.5, 185, 185, 8);
     ctx.fill();
-
-    ctx.restore(); // Restaure l'opacité à 1.0 pour les tracés et contours suivants
+    ctx.restore(); 
 
     // --- 4. DESSIN DES CONTOURS DE LA CIBLE ---
     ctx.strokeStyle = couleur;
     ctx.lineWidth = 2;
 
-    // Carré extérieur avec coins arrondis (Rayon de coin : 8px)
+    // Carré extérieur avec coins arrondis
     ctx.beginPath();
     ctx.roundRect(x - 92.5, y - 92.5, 185, 185, 8);
     ctx.stroke();
 
     // Cercles de la cible
-    let r1 = 92.5;         // Grand cercle extérieur
-    let r2 = 92.5 * (2/3); // Premier cercle intérieur (~61.6)
-    let r3 = 92.5 * (1/3); // Deuxième cercle intérieur (~30.8)
-    let r4 = 4;            // Petit cercle central
+    let r1 = 92.5;         
+    let r2 = 92.5 * (2/3); 
+    let r3 = 92.5 * (1/3); 
 
     ctx.beginPath(); ctx.arc(x, y, r1, 0, 2 * Math.PI); ctx.stroke();
     ctx.beginPath(); ctx.arc(x, y, r2, 0, 2 * Math.PI); ctx.stroke();
     ctx.beginPath(); ctx.arc(x, y, r3, 0, 2 * Math.PI); ctx.stroke();
-    ctx.beginPath(); ctx.arc(x, y, r4, 0, 2 * Math.PI); ctx.stroke();
 
-    // Lignes réticulaires horizontales
+    // Lignes réticulaires se croisant au centre
     ctx.beginPath();
-    ctx.moveTo(x - r1, y); ctx.lineTo(x - r4, y);
-    ctx.moveTo(x + r4, y); ctx.lineTo(x + r1, y);
+    ctx.moveTo(x - r1, y); ctx.lineTo(x + r1, y);
+    ctx.moveTo(x, y - r1); ctx.lineTo(x, y + r1);
     ctx.stroke();
 
-    // Lignes réticulaires verticales
-    ctx.beginPath();
-    ctx.moveTo(x, y - r1); ctx.lineTo(x, y - r4);
-    ctx.moveTo(x, y + r4); ctx.lineTo(x, y + r1);
-    ctx.stroke();
-
-    // Configuration du texte pour les chiffres
+    // --- 5. CONFIGURATION ET ROTATION DU CADRAN DES CHIFFRES ---
     ctx.fillStyle = couleur;
     ctx.font = "bold 14px sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
-    let cos45 = Math.cos(Math.PI / 4);
     let distCoin = r1 * Math.sqrt(2); 
-
     let dist1 = r1 + (distCoin - r1) / 2;
     let dist2 = r2 + (r1 - r2) / 2;
     let dist3 = r3 + (r2 - r3) / 2;
-    let dist5 = r4 + (r3 - r4) / 2;
+    let dist5 = r3 / 2; 
 
-    // Affichage unique en diagonale bas-droite
-    ctx.fillText("1", x + dist1 * cos45, y + dist1 * cos45);
-    ctx.fillText("2", x + dist2 * cos45, y + dist2 * cos45);
-    ctx.fillText("3", x + dist3 * cos45, y + dist3 * cos45);
-    ctx.fillText("5", x + dist5 * cos45, y + dist5 * cos45);
+    // MODIFICATION : Calcul de l'angle selon le quadrant courant (0, 1, 2 ou 3)
+    // Au repos (0), l'angle de départ est à 45° (Math.PI / 4) pour le quadrant Bas-Droite
+    const indexQuadrant = window.quadrantCibleCourant || 0;
+    const angleRotation = (Math.PI / 4) + (indexQuadrant * (Math.PI / 2));
+
+    const cosAngle = Math.cos(angleRotation);
+    const sinAngle = Math.sin(angleRotation);
+
+    // Affichage des chiffres projetés sur la diagonale active
+    ctx.fillText("1", x + dist1 * cosAngle, y + dist1 * sinAngle);
+    ctx.fillText("2", x + dist2 * cosAngle, y + dist2 * sinAngle);
+    ctx.fillText("3", x + dist3 * cosAngle, y + dist3 * sinAngle);
+    ctx.fillText("5", x + dist5 * cosAngle, y + dist5 * sinAngle);
 
     ctx.restore(); // Annule le clip global
 }
 
 
+
+
 	
 // Dessine un carré de 95x95 pixels avec coins arrondis, un fond pâle, et le TRONQUE si besoin
+// Dessine un carré avec coins arrondis, un fond pâle, et le TRONQUE si besoin
 function dessinerCarre(x, y, couleur) {
     ctx.save(); // Sauvegarde l'état global du canvas
 
-    // --- 1. CONFIGURATION DES BANDES DE SÉCURITÉ (MARGE 20PX) ---
+    // --- 1. CONFIGURATION DES BANDES DE SÉCURITÉ ---
     const marge = 18;
-
-    // --- 2. CRÉATION DE LA ZONE DE DÉCOUPE (CLIP) ---
     let zoneUtileX = marge;
     let zoneUtileY = marge;
     let zoneUtileLargeur = ctx.canvas.width - (marge * 2);
@@ -380,31 +419,29 @@ function dessinerCarre(x, y, couleur) {
 
     ctx.beginPath();
     ctx.rect(zoneUtileX, zoneUtileY, zoneUtileLargeur, zoneUtileHauteur);
-    ctx.clip(); // Tout ce qui dépasse de ce rectangle sera automatiquement tronqué
+    ctx.clip(); 
 
-    // --- 3. DESSIN DU CARRÉ ---
-    ctx.setLineDash([]); // Les carrés restent en lignes pleines
+    // --- 2. CONFIGURATION DU STYLE ---
+    ctx.setLineDash([]); 
     ctx.strokeStyle = couleur;
     ctx.lineWidth = 2;
 
-    const taille = 95;
+    // MODIFICATION : Utilisation de la dimension dynamique issue du cycle de rotation
+    const taille = window.tailleCarreCourante || 95;
     const demiTaille = taille / 2;
-    const rayonCoins = 15; // Rayon de l'arrondi en pixels
+    const rayonCoins = 15; 
     
     ctx.beginPath();
-    // Utilisation de roundRect pour créer les coins arrondis automatiquement
     ctx.roundRect(x - demiTaille, y - demiTaille, taille, taille, rayonCoins);
 
-    // 1. Appliquer le contour (décommenter si besoin d'un contour visible)
-    // ctx.stroke();
-
-    // 2. Configurer et appliquer le fond pâle (20% d'opacité)
+    // Configurer et appliquer le fond pâle (20% d'opacité)
     ctx.globalAlpha = 0.20; 
     ctx.fillStyle = couleur;
     ctx.fill();
 
-    ctx.restore(); // Annule le clip pour que le reste du jeu puisse s'afficher normalement
+    ctx.restore(); 
 }
+
 
 // Dessine un rectangle sans bordure avec des coins arrondis qui recouvre une zone de la grille
 // MODIFICATION : ZD/ZA blancs, ZA hachures épaisses/pâles, textes harmonisés (20px, marge 18px)
@@ -527,28 +564,43 @@ function dessinerZoneGrille(zoneIndex, couleur, mode) {
         
         window.dessinsSauvegardes.forEach(dessin => {
             
-			// === SÉCURITÉ : On s'assure que les formes fixes ne subissent pas les pointillés globaux ===
-			if (dessin.estCible || dessin.estCarre || dessin.estEffetBlanche || dessin.estRepereX || dessin.estZoneGrille) {
-				ctx.setLineDash([]); // Force les lignes pleines pour les cibles/formes posées
-			}
-			
-			// Gestion exclusive des éléments de type Cible
-            if (dessin.estCible) {
-                if (dessin.points && dessin.points.length > 0) {
-                    const centre = dessin.points[0];
-                    dessinerCible(centre.x, centre.y, dessin.couleur);
-                }
-                return;
-            }
-			
-			// AJOUT : Gestion exclusive des éléments de type Carré
-if (dessin.estCarre) {
+			if (dessin.estCible) {
     if (dessin.points && dessin.points.length > 0) {
         const centre = dessin.points[0];
-        dessinerCarre(centre.x, centre.y, dessin.couleur);
+        
+        // Sauvegarde temporaire de l'outil fantôme
+        const tempQuadrant = window.quadrantCibleCourant;
+        
+        // Application du quadrant enregistré pour cette cible précise
+        window.quadrantCibleCourant = dessin.hasOwnProperty('quadrant') ? dessin.quadrant : 0;
+        
+        dessinerCible(centre.x, centre.y, dessin.couleur);
+        
+        // Restauration pour l'aperçu dynamique sous le curseur
+        window.quadrantCibleCourant = tempQuadrant;
     }
     return;
 }
+
+			
+			if (dessin.estCarre) {
+    if (dessin.points && dessin.points.length > 0) {
+        const centre = dessin.points[0];
+        
+        // Sauvegarde temporaire de l'outil fantôme
+        const tempTaille = window.tailleCarreCourante;
+        
+        // Application de la taille enregistrée pour ce carré précis
+        window.tailleCarreCourante = dessin.taille || 95;
+        
+        dessinerCarre(centre.x, centre.y, dessin.couleur);
+        
+        // Restauration de la dimension pour l'aperçu sous le curseur
+        window.tailleCarreCourante = tempTaille;
+    }
+    return;
+}
+
 
 // === AJOUT ICI : Gestion exclusive de la forme d'effets bille blanche ===
 if (dessin.estEffetBlanche) {
@@ -559,14 +611,28 @@ if (dessin.estEffetBlanche) {
     return;
 }
 
-// === AJOUT : Gestion exclusive des formes de repère X gras ===
 if (dessin.estRepereX) {
-    if (dessin.points && dessin.points.length > 0) {
+    if (dessin.points && dessin.points[0]) {
         const centre = dessin.points[0];
+        
+        // Sauvegarde temporaire du mode actif pour l'aperçu fantôme
+        const tempCercle = window.repereXEstUnCercle;
+        const tempBranches = window.nombreBranchesRepereX;
+        
+        // Application des propriétés figées du dessin
+        window.repereXEstUnCercle = dessin.hasOwnProperty('estUnCercle') ? dessin.estUnCercle : false;
+        window.nombreBranchesRepereX = dessin.branches || 8;
+        
         dessinerRepereXGras(centre.x, centre.y, dessin.couleur);
+        
+        // Restauration pour l'aperçu sous la souris
+        window.repereXEstUnCercle = tempCercle;
+        window.nombreBranchesRepereX = tempBranches;
     }
     return;
 }
+
+
 
 
 
@@ -670,27 +736,62 @@ if (dessin.estZoneGrille) {
             isCtrlPressed = true;
         }
 
-        // 2. Gestion des modes "Aperçu Fantôme" (Bascule ON/OFF)
         if (e.key.toLowerCase() === 't') {
-            e.preventDefault();
-            outilActif = (outilActif === 'cible') ? null : 'cible';
-            if (outilActif) canvas.style.pointerEvents = 'auto';
-            window.redessinerToutesLesLignes();
-        }
+			e.preventDefault();
+    
+			if (outilActif === 'cible') {
+			// Si l'outil est déjà actif, on passe au quadrant suivant (0 ➔ 1 ➔ 2 ➔ 3 ➔ 0)
+			window.quadrantCibleCourant = (window.quadrantCibleCourant + 1) % 4;
+		} else {
+        // Si l'outil n'était pas actif, on l'active
+			outilActif = 'cible';
+    }
+
+    if (outilActif) canvas.style.pointerEvents = 'auto';
+    window.redessinerToutesLesLignes();
+}
+
 
         if (e.key.toLowerCase() === 'z' && !e.ctrlKey && !e.metaKey) {
-            e.preventDefault();
-            outilActif = (outilActif === 'carre') ? null : 'carre';
-            if (outilActif) canvas.style.pointerEvents = 'auto';
-            window.redessinerToutesLesLignes();
-        }
+    e.preventDefault();
+    
+    if (outilActif === 'carre') {
+        // Si l'outil est déjà actif, on fait tourner les dimensions (3 tailles)
+        if (window.tailleCarreCourante === 95) window.tailleCarreCourante = 135;
+        else if (window.tailleCarreCourante === 135) window.tailleCarreCourante = 180;
+        else window.tailleCarreCourante = 95; // Retour au début du cycle
+		} else {
+        // Si l'outil n'était pas actif, on l'active
+        outilActif = 'carre';
+		}
 
-        if (e.key === '9') {
-            e.preventDefault();
-            outilActif = (outilActif === 'repereX') ? null : 'repereX';
-            if (outilActif) canvas.style.pointerEvents = 'auto';
-            window.redessinerToutesLesLignes();
+		if (outilActif) canvas.style.pointerEvents = 'auto';
+		window.redessinerToutesLesLignes();
+	}
+
+
+       if (e.key === '9') {
+    e.preventDefault();
+    
+    if (outilActif === 'repereX') {
+        if (window.repereXEstUnCercle) {
+            // Si c'était un cercle, on repasse sur une étoile à 4 branches
+            window.repereXEstUnCercle = false;
+            window.nombreBranchesRepereX = 4;
+        } else if (window.nombreBranchesRepereX === 4) window.nombreBranchesRepereX = 6;
+        else {
+            // Après l'étoile à 6 branches, on bascule sur le mode cercle
+            window.repereXEstUnCercle = true;
         }
+    } else {
+        outilActif = 'repereX';
+    }
+
+    if (outilActif) canvas.style.pointerEvents = 'auto';
+    window.redessinerToutesLesLignes();
+}
+
+
 
         if (e.key === '0') {
             e.preventDefault();
@@ -777,9 +878,25 @@ function commencerDessin(e) {
         };
 
         // On assigne le bon drapeau selon l'outil actif
-        if (outilActif === 'cible') nouvelElement.estCible = true;
-        if (outilActif === 'carre') nouvelElement.estCarre = true;
-        if (outilActif === 'repereX') nouvelElement.estRepereX = true;
+        if (outilActif === 'cible') {
+    nouvelElement.estCible = true;
+    // On fige l'index de quadrant sélectionné au moment précis du clic
+    nouvelElement.quadrant = window.quadrantCibleCourant || 0; 
+}
+
+        if (outilActif === 'carre') {
+			nouvelElement.estCarre = true;
+		// On fige la taille sélectionnée au moment précis du clic
+			nouvelElement.taille = window.tailleCarreCourante || 95; 
+		}
+
+        if (outilActif === 'repereX') {
+			nouvelElement.estRepereX = true;
+		// On sauvegarde l'état exact (étoile ou cercle) pour ce dessin
+			nouvelElement.estUnCercle = window.repereXEstUnCercle;
+			nouvelElement.branches = window.nombreBranchesRepereX;
+		}
+
         if (outilActif === 'effetBlanche') nouvelElement.estEffetBlanche = true;
 
         window.dessinsSauvegardes.push(nouvelElement);

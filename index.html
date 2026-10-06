@@ -205,6 +205,7 @@
             justify-content: center; 
             color: black; 
             font-family: 'Arial Black', sans-serif; 
+			font-weight: bold; /* Force l'affichage en gras */ 
             font-size: 8px; 
             box-shadow: inset 1px 1px 2px rgba(0,0,0,0.4);
             z-index: 2; /* Passe sous le reflet brillant, mais sur la rayure */
@@ -500,11 +501,11 @@
 
 #table-title-overlay {
     position: absolute;
-    top: 15%;
+    top: 10%;
     left: 50%;
     transform: translate(-50%, -50%);
     font-family: sans-serif;
-    font-size: 34px;
+    font-size: 28px;
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 2px;
@@ -514,9 +515,7 @@
     /* Couleur très discrète : blanc avec une très forte transparence */
     color: rgba(255, 255, 255, 0.08); 
     
-    /* Optionnel : si votre tapis est vert standard, vous pouvez aussi utiliser un vert discret comme : 
-    color: rgba(20, 100, 40, 0.4); */
-    
+        
     /* MODIFICATIONS POUR LE RETOUR À LA LIGNE */
     white-space: normal;    /* Autorise le changement de ligne */
     text-align: center;     /* Centre le texte sur les nouvelles lignes */
@@ -555,6 +554,34 @@
     opacity: 0.22;
 }
 
+.table-controls {
+    display: flex;
+    align-items: center;      /* Aligne verticalement les cases et le texte au centre */
+    gap: 16px;                /* Espace de 20px entre chaque bloc sur la ligne */
+    margin-top: 15px;         /* Espace le tout du bas de la table de billard */
+    font-family: sans-serif;
+    font-size: 12px;
+}
+
+/* Style spécifique pour le texte de position de la bille */
+#ball-position-display {
+    color: #999999;           /* Font Dark Grey */
+	margin-left: auto;
+    font-weight: 500;
+    
+}
+
+/* Style optionnel pour harmoniser la couleur des labels des cases à cocher */
+.control-item {
+    color: #555555;           /* Harmonise également les textes "Titre" et "Logo" en gris foncé */
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;                 /* Espace entre la case elle-même et son texte */
+}
+
+
+
 
     </style>
 </head>
@@ -567,7 +594,7 @@
     <summary class="controls-summary">
         <span class="summary-title">⚙️ Options</span>
 		
-		<div id="ball-position-display" class="form-label" >Position de la bille : Aucune sélectionnée</div>
+		
 		
 		
 
@@ -636,17 +663,9 @@
 
 
 
-            <label>
-                <input type="checkbox" id="chk-toggle-grid"> Afficher la grille
-            </label>
+            
 
-            <label>
-				<input type="checkbox" id="chk-show-title"> Titre
-			</label>
-
-            <label>
-    		<input type="checkbox" id="chk-show-logo" checked> Logo
-			</label>
+            
 
 
 			
@@ -794,7 +813,27 @@
             <div class="pocket bc"></div>
             <div class="pocket br"></div>
         </div>
+		
+			
     </div>
+	
+	<div class="table-controls">
+	
+	<label class="control-item">
+                <input type="checkbox" id="chk-toggle-grid"> Afficher la grille
+            </label>
+	
+    <label class="control-item">
+        <input type="checkbox" id="chk-show-title"> Titre
+    </label>
+    
+    <label class="control-item">
+        <input type="checkbox" id="chk-show-logo" checked> Logo
+    </label>
+    
+    <div id="ball-position-display" class="form-label">Position de la bille : Aucune sélectionnée</div>
+</div>
+
 	
 
         <!-- Liaison avec vos deux scripts séparés -->
