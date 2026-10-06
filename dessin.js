@@ -155,6 +155,28 @@ function dessinerEffetsBilleBlanche(x, y, couleur) {
     });
 
     ctx.restore(); // Restaure le clip géométrique
+	
+	// ====================================================================
+    // ÉTIQUETTE "POINT DE CONTACT" : TEXTE BLANC AVEC OMBRE NOIRE
+    // ====================================================================
+    ctx.save();
+    
+    // Configuration de l'ombre portée noire pour détacher le texte du tapis
+    ctx.shadowColor = "#000000";
+    ctx.shadowBlur = 4;          // Flou de l'ombre pour la douceur
+    ctx.shadowOffsetX = 2;       // Décalage horizontal léger
+    ctx.shadowOffsetY = 2;       // Décalage vertical léger
+
+    // Style du texte : Blanc pur, gras et légèrement plus grand pour la lisibilité
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 12px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    
+    // Positionné à 12 pixels au-dessus du sommet de la bille blanche
+    ctx.fillText("POINT DE CONTACT", x, y - rayonBille - 12);
+    
+    ctx.restore();
 }
 
 // Dessine un repère en forme d'étoile stylisée, très grasse et opaque à 60% à la position (x, y)
