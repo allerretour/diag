@@ -84,9 +84,9 @@ function dessinerEffetsBilleBlanche(x, y, couleur) {
     
     // Configuration de l'ombre portée de la bille
     ctx.shadowColor = "rgba(0, 0, 0, 0.35)"; // Ombre douce noire transparente
-    ctx.shadowBlur = 12;                     // Flou de l'ombre
-    ctx.shadowOffsetX = 5;                   // Décalage horizontal (lumière venant du haut/gauche)
-    ctx.shadowOffsetY = 5;                   // Décalage vertical
+    ctx.shadowBlur = 10;                     // Flou de l'ombre
+    ctx.shadowOffsetX = 3;                   // Décalage horizontal (lumière venant du haut/gauche)
+    ctx.shadowOffsetY = 3;                   // Décalage vertical
 
     ctx.fillStyle = "#ffffff"; // Fond blanc opaque de la bille
     
@@ -97,7 +97,7 @@ function dessinerEffetsBilleBlanche(x, y, couleur) {
 
     // --- 3. DESSIN DES LIGNES RÉTICULAIRES JUSQU'AU BORD ---
     // FORCE LA COULEUR NOIRE INTERNE : Remplacement de "couleur" par "#000000"
-    ctx.strokeStyle = "#000000"; 
+    ctx.strokeStyle = "#e0e0e0"; 
     ctx.lineWidth = 1;
     ctx.setLineDash([2, 3]); // Petits pointillés fins alternés précis
     
@@ -149,7 +149,7 @@ function dessinerEffetsBilleBlanche(x, y, couleur) {
         ctx.fill();
         
         // FORCE LA COULEUR NOIRE DU CONTOUR : Remplacement de "couleur" par "#000000"
-        ctx.strokeStyle = "#000000";
+        ctx.strokeStyle = "#e0e0e0";
         ctx.lineWidth = pt.estCentre ? 1.5 : 1.3;
         ctx.stroke();
     });
@@ -181,7 +181,7 @@ function dessinerRepereXGras(x, y, couleur) {
     ctx.setLineDash([]);       // Lignes pleines
 
     // MODIFICATION : Dimensions de l'étoile augmentées de 20% (Diamètre total ~22px)
-    const branches = 10;
+    const branches = 8;
     const rayonExterne = 13;   // Passage de 9 à 11 (Augmentation de ~22%)
     const rayonInterne = 6.2;  // Passage de 3.5 à 4.2 pour garder les proportions cambrées
 
