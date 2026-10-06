@@ -8,7 +8,7 @@ const ballDiameter = 24;
 const activeBalls = [];
 window.billeSelectionneeCourante = null;
 
-// Éléments UI pour le magnétisme et la grille.
+// Éléments UI pour le magnétisme et la grille
 const chkMagnetism = document.getElementById('chk-magnetism');
 const chkHighDensityGrid = document.getElementById('chk-high-density-grid');
 

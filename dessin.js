@@ -1,4 +1,4 @@
-// Variable globale pour stocker les lignes et les cibles tracées.
+// Variable globale pour stocker les lignes et les cibles tracées
 window.dessinsSauvegardes = [];
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -906,50 +906,6 @@ table.addEventListener('mousedown', (e) => {
         }
     }
 });
-
-
-// Écouteur global ultra-prioritaire placé en dehors des fonctions DOM
-window.addEventListener('keydown', function(e) {
-    // Sécurité champs de texte
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
-        return; 
-    }
-
-    if (e.key.toLowerCase() === 's') {
-        e.preventDefault();
-        console.log("Touche S détectée ! Tentative de capture...");
-
-        // Vérification de la présence de la bibliothèque
-        if (typeof html2canvas === "undefined") {
-            alert("Erreur : La bibliothèque html2canvas n'est pas chargée dans votre fichier HTML.");
-            return;
-        }
-
-        const tableElement = document.getElementById('pool-table');
-        if (!tableElement) {
-            alert("Erreur : Impossible de trouver l'élément HTML avec l'ID 'pool-table'.");
-            return;
-        }
-
-        html2canvas(tableElement, {
-            logging: true, // Active les logs dans la console pour voir ce qui bloque
-            useCORS: true
-        }).then(canvasResultat => {
-            const titleInput = document.getElementById('input-title');
-            const configTitle = titleInput ? titleInput.value.trim() : "configuration_billard";
-            const nomFichierSecurise = configTitle.replace(/[/\\?%*:|"<>]/g, '-').substring(0, 100) || "configuration_billard";
-
-            const lien = document.createElement('a');
-            lien.download = `${nomFichierSecurise}.png`;
-            lien.href = canvasResultat.toDataURL('image/png');
-            lien.click();
-            console.log("Capture d'écran réussie !");
-        }).catch(err => {
-            console.error("Erreur html2canvas :", err);
-        });
-    }
-}, true); // Le paramètre 'true' force cette écoute à être prioritaire sur l'application
-
 
 
 });
