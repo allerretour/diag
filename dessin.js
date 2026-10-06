@@ -220,7 +220,7 @@ function dessinerRepereXGras(x, y, couleur) {
 
 
  function dessinerPointeFleche(fromX, fromY, toX, toY, couleur) {
-    const arrowLength = 12; 
+    const arrowLength = 14; 
     const arrowAngle = Math.PI / 6; 
     const angle = Math.atan2(toY - fromY, toX - fromX);
 
@@ -320,7 +320,7 @@ function dessinerCible(x, y, couleur) {
 
     // Configuration du texte pour les chiffres
     ctx.fillStyle = couleur;
-    ctx.font = "bold 12px sans-serif";
+    ctx.font = "bold 14px sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
@@ -496,6 +496,7 @@ function dessinerZoneGrille(zoneIndex, couleur, mode) {
         configurerStyleDessin(null, modeDashed);
         window.redessinerToutesLesLignes(); 
     }
+
     window.addEventListener('resize', resizeCanvas);
 
     // Redessine l'ensemble des calques de dessin (lignes, flèches et cibles)
@@ -503,7 +504,13 @@ function dessinerZoneGrille(zoneIndex, couleur, mode) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
         window.dessinsSauvegardes.forEach(dessin => {
-            // Gestion exclusive des éléments de type Cible
+            
+			// === SÉCURITÉ : On s'assure que les formes fixes ne subissent pas les pointillés globaux ===
+			if (dessin.estCible || dessin.estCarre || dessin.estEffetBlanche || dessin.estRepereX || dessin.estZoneGrille) {
+				ctx.setLineDash([]); // Force les lignes pleines pour les cibles/formes posées
+			}
+			
+			// Gestion exclusive des éléments de type Cible
             if (dessin.estCible) {
                 if (dessin.points && dessin.points.length > 0) {
                     const centre = dessin.points[0];
