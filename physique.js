@@ -1,6 +1,12 @@
 const ballColors = {
-    1: '#f1c40f', 2: '#2980b9', 3: '#e74c3c', 4: '#8e44ad',
-    5: '#e67e22', 6: '#27ae60', 7: '#7f8c8d', 8: '#000000'
+    1: '#f1c40f', // Jaune
+    2: '#2980b9', // Bleu
+    3: '#e74c3c', // Rouge
+    4: '#8e44ad', // Violet
+    5: '#e67e22', // Orange
+    6: '#27ae60', // Vert
+    7: '#a0522d', // Marron (Sienna / Marron officiel)
+    8: '#000000'  // Noir
 };
 
 const table = document.getElementById('pool-table');
