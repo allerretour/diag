@@ -60,11 +60,38 @@
             
         }
         /* Bandes physiques ajustées aux nouvelles positions de vos poches */
+/* 1. Base commune pour toutes les bandes */
 .cushion { 
   position: absolute; 
-  background-color: #0a7e43; /* Vert tapis de billard traditionnel (uni et uniforme) */
-  z-index: 2; 
+  background-color: #0a7e43; /* Votre vert d'origine en secours */
+  z-index: 2;
+  
+  /* Ombre interne globale pour simuler l'arrondi du tissu et le biseau */
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.4);
 }
+
+/* 2. Bandes Horizontales (Haut et Bas) - Dégradé du haut vers le bas */
+.cushion.horizontal, 
+.cushion[style*="width: 7"], .cushion[style*="width: 3"] /* Cible vos bandes selon vos styles en ligne si nécessaire */ {
+  background-image: linear-gradient(
+    to bottom,
+    #064d29 0%,    /* Extérieur : ombre du cadre en bois */
+    #0a7e43 30%,   /* Dessus de la bande : votre vert lumineux */
+    #054424 100%   /* Intérieur : ombre plongeante vers le tapis */
+  );
+}
+
+/* 3. Bandes Verticales (Gauche et Droite) - Dégradé de la gauche vers la droite */
+.cushion.vertical,
+.cushion[style*="height: 3"] /* Ajustez selon les classes ou attributs réels de vos bandes verticales */ {
+  background-image: linear-gradient(
+    to right,
+    #064d29 0%,    /* Extérieur */
+    #0a7e43 30%,   /* Dessus de la bande */
+    #054424 100%   /* Intérieur vers le tapis */
+  );
+}
+
 
 /* --- BANDES SUPÉRIEURES (Rallongées à 352px pour rétrécir la poche centrale) --- */
 /* Gauche : 45° à gauche (poche coin), 75° à droite (poche centre) */
@@ -93,6 +120,9 @@
   height: 18px; 
   clip-path: polygon(18px 0, calc(100% - 5px) 0, 100% 100%, 0 100%);
 }
+
+
+
 /* Droite : 45° à droite (poche coin), 75° à gauche (poche centre) */
 .cushion.bottom-right { 
   bottom: 0; 
@@ -386,7 +416,7 @@
 /* Conteneur de la ligne de boutons */
 .actions-button-row {
     display: flex;
-    gap: 12px; /* Espace uniforme entre chaque bouton */
+    gap: 10px; /* Espace uniforme entre chaque bouton */
     width: 100%;
     margin-top: 8px;
     box-sizing: border-box;
@@ -695,31 +725,31 @@
     <div id="table-frame">
     <!-- Les 18 Diamants (Mouches) sur la structure en bois -->
         <!-- Bande Haut -->
-        <div class="diamond th-1" style="position: absolute; top: 11px; left: 136px;"></div>
+        <div class="diamond th-1" style="position: absolute; top: 11px; left: 138px;"></div>
         <div class="diamond th-2" style="position: absolute; top: 11px; left: 234px;"></div>
         <div class="diamond th-3" style="position: absolute; top: 11px; left: 327px;"></div>
         <div class="diamond th-4" style="position: absolute; top: 11px; left: 420px;"></div> <!-- Diamant Central -->
-        <div class="diamond th-5" style="position: absolute; top: 11px; left: 518px;"></div>
-        <div class="diamond th-6" style="position: absolute; top: 11px; left: 612px;"></div>
+        <div class="diamond th-5" style="position: absolute; top: 11px; left: 517px;"></div>
+        <div class="diamond th-6" style="position: absolute; top: 11px; left: 611px;"></div>
         <div class="diamond th-7" style="position: absolute; top: 11px; left: 705px;"></div>
 
         <!-- Bande Bas -->
-        <div class="diamond bh-1" style="position: absolute; bottom: 11px; left: 136px;"></div>
+        <div class="diamond bh-1" style="position: absolute; bottom: 11px; left: 138px;"></div>
         <div class="diamond bh-2" style="position: absolute; bottom: 11px; left: 234px;"></div>
         <div class="diamond bh-3" style="position: absolute; bottom: 11px; left: 327px;"></div>
         <div class="diamond bh-4" style="position: absolute; bottom: 11px; left: 420px;"></div> <!-- Diamant Central -->
-        <div class="diamond bh-5" style="position: absolute; bottom: 11px; left: 518px;"></div>
-        <div class="diamond bh-6" style="position: absolute; bottom: 11px; left: 612px;"></div>
+        <div class="diamond bh-5" style="position: absolute; bottom: 11px; left: 517px;"></div>
+        <div class="diamond bh-6" style="position: absolute; bottom: 11px; left: 611px;"></div>
         <div class="diamond bh-7" style="position: absolute; bottom: 11px; left: 705px;"></div>
 
         <!-- Bande Gauche -->
         <div class="diamond lv-1" style="position: absolute; left: 11px; top: 128px;"></div>
-        <div class="diamond lv-2" style="position: absolute; left: 11px; top: 224px;"></div>
+        <div class="diamond lv-2" style="position: absolute; left: 11px; top: 223px;"></div>
         <div class="diamond lv-3" style="position: absolute; left: 11px; top: 316px;"></div>
 
         <!-- Bande Droite -->
         <div class="diamond rv-1" style="position: absolute; right: 11px; top: 128px;"></div>
-        <div class="diamond rv-2" style="position: absolute; right: 11px; top: 224px;"></div>
+        <div class="diamond rv-2" style="position: absolute; right: 11px; top: 223px;"></div>
         <div class="diamond rv-3" style="position: absolute; right: 11px; top: 316px;"></div>
 
 
