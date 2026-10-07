@@ -331,16 +331,19 @@ function dessinerCible(x, y, couleur) {
     let bandeHaut = 18;
     let bandeBas = 18;
 
-    // --- 2. CRÉATION DE LA ZONE DE DÉCOUPE (CLIP) ---
+    // --- 2. CRÉATION DE LA ZONE DE DÉCOUPE AVEC DIMENSIONS LOGIQUES (CORRIGÉ POUR LE ZOOM) ---
+    const dpr = window.devicePixelRatio || 1;
+    const canvasLogicalWidth = ctx.canvas.width / dpr;
+    const canvasLogicalHeight = ctx.canvas.height / dpr;
+
     let zoneUtileX = bandeGauche;
     let zoneUtileY = bandeHaut;
-    let zoneUtileLargeur = ctx.canvas.width - bandeGauche - bandeDroite;
-    let zoneUtileHauteur = ctx.canvas.height - bandeHaut - bandeBas;
+    let zoneUtileLargeur = canvasLogicalWidth - bandeGauche - bandeDroite;
+    let zoneUtileHauteur = canvasLogicalHeight - bandeHaut - bandeBas;
 
     ctx.beginPath();
     ctx.rect(zoneUtileX, zoneUtileY, zoneUtileLargeur, zoneUtileHauteur);
-    ctx.clip(); 
-
+    ctx.clip(); // Tronque parfaitement si la forme déborde au zoom
     // --- 3. DESSIN DU FOND OPAQUE A 30% ---
     ctx.save(); 
     ctx.setLineDash([]);
@@ -412,19 +415,22 @@ function dessinerCible(x, y, couleur) {
 // Dessine un carré de 95x95 pixels avec coins arrondis, un fond pâle, et le TRONQUE si besoin
 // Dessine un carré avec coins arrondis, un fond pâle, et le TRONQUE si besoin
 function dessinerCarre(x, y, couleur) {
-    ctx.save(); // Sauvegarde l'état global du canvas
+    ctx.save(); 
 
-    // --- 1. CONFIGURATION DES BANDES DE SÉCURITÉ ---
+    // --- 1. CONFIGURATION DES BANDES DE SÉCURITÉ (CORRIGÉ POUR LE ZOOM) ---
     const marge = 18;
+    const dpr = window.devicePixelRatio || 1;
+    const canvasLogicalWidth = ctx.canvas.width / dpr;
+    const canvasLogicalHeight = ctx.canvas.height / dpr;
+
     let zoneUtileX = marge;
     let zoneUtileY = marge;
-    let zoneUtileLargeur = ctx.canvas.width - (marge * 2);
-    let zoneUtileHauteur = ctx.canvas.height - (marge * 2);
+    let zoneUtileLargeur = canvasLogicalWidth - (marge * 2);
+    let zoneUtileHauteur = canvasLogicalHeight - (marge * 2);
 
     ctx.beginPath();
     ctx.rect(zoneUtileX, zoneUtileY, zoneUtileLargeur, zoneUtileHauteur);
     ctx.clip(); 
-
     // --- 2. CONFIGURATION DU STYLE ---
     ctx.setLineDash([]); 
     ctx.strokeStyle = couleur;
