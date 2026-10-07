@@ -627,7 +627,44 @@
 </div>
 
 
-        <div class="control-group">
+       
+
+<!-- Barre d'actions horizontale compacte -->
+<div class="actions-button-row d-flex flex-wrap gap-1 align-items-center">
+    <button id="btn-export" class="btn btn-primary btn-sm">
+        <span class="btn-icon">💾</span> Exporter
+    </button>
+    
+    <button id="btn-import-trigger" class="btn btn-secondary btn-sm">
+        <span class="btn-icon">📂</span> Importer
+    </button>
+    <input type="file" id="file-import" accept=".json" style="display: none;">
+
+    <button id="btn-undo-lines" class="btn btn-action btn-sm">
+        <span class="btn-icon">↩️</span> Annuler
+    </button>
+
+    <button id="btn-clear-lines" class="btn btn-danger btn-sm">
+        <span class="btn-icon">🗑️</span> Effacer
+    </button>
+    
+    <button id="btn-export-text" class="btn btn-primary btn-sm">
+        <span class="btn-icon">📄</span> Position
+    </button>
+
+    <button id="btn-random-hd" class="btn btn-sm" style="background-color: #e67e22; color: white; border: none; font-weight: bold;">
+        <span class="btn-icon">🎲</span> Aléatoire HD
+    </button>
+
+</div>
+
+			
+	<label for="chk-dashed-lines" style="color: white; margin-left: 10px;">
+             <input type="checkbox" id="chk-dashed-lines"> Pointillés
+	</label>
+
+        
+ <div class="control-group">
     <!-- Sélecteur de billes compact -->
 <div class="d-flex align-items-center gap-1 text-white bg-dark p-2 rounded">
     <label for="select-balls-count" class="small mb-0">🎱</label>
@@ -663,49 +700,7 @@
     </select>
 
 
-
-            
-
-            
-
-
-			
-        </div>
-
-<!-- Barre d'actions horizontale compacte -->
-<div class="actions-button-row d-flex flex-wrap gap-1 align-items-center">
-    <button id="btn-export" class="btn btn-primary btn-sm">
-        <span class="btn-icon">💾</span> Exporter
-    </button>
-    
-    <button id="btn-import-trigger" class="btn btn-secondary btn-sm">
-        <span class="btn-icon">📂</span> Importer
-    </button>
-    <input type="file" id="file-import" accept=".json" style="display: none;">
-
-    <button id="btn-undo-lines" class="btn btn-action btn-sm">
-        <span class="btn-icon">↩️</span> Annuler
-    </button>
-
-    <button id="btn-clear-lines" class="btn btn-danger btn-sm">
-        <span class="btn-icon">🗑️</span> Effacer
-    </button>
-    
-    <button id="btn-export-text" class="btn btn-primary btn-sm">
-        <span class="btn-icon">📄</span> Position
-    </button>
-
-    <button id="btn-random-hd" class="btn btn-sm" style="background-color: #e67e22; color: white; border: none; font-weight: bold;">
-        <span class="btn-icon">🎲</span> Aléatoire HD
-    </button>
-
-</div>
-
-
-        
-        
-
-        <div class="drawing-controls">
+ <div class="drawing-controls">
             <label for="marker-color">🎨 Couleur du tracé :</label>
 <select id="marker-color">
     <!-- Couleurs d'origine -->
@@ -720,20 +715,14 @@
     <option value="#e84393">💗 Rose</option>
     <option value="#2c3e50">⚫ Noir</option>
 </select>
+            
+
+            
+
 
 			
-	<label for="chk-dashed-lines" style="color: white; margin-left: 10px;">
-             <input type="checkbox" id="chk-dashed-lines"> Pointillés
-	</label>
-
-        <label>
-            <input type="checkbox" id="chk-high-density-grid"> Grille HD
-            </label>
+        </div>			
 			
-			<label>
-    <input type="checkbox" id="chk-magnetism" >
-    Magnétisme
-</label>
             
         </div>
 
@@ -823,6 +812,15 @@
 	<label class="control-item">
                 <input type="checkbox" id="chk-toggle-grid"> Grille
             </label>
+
+    <label class="control-item">
+            <input type="checkbox" id="chk-high-density-grid"> HD 16x8
+            </label>
+
+<label class="control-item">
+    <input type="checkbox" id="chk-magnetism" >
+    Magnétisme
+</label>
 	
     <label class="control-item">
         <input type="checkbox" id="chk-show-title"> Titre
