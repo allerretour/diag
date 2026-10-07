@@ -36,6 +36,50 @@
         }
 
 
+@media print {
+    /* 1. Configuration de la page d'impression sans marges parasites */
+    @page {
+        size: auto;
+        margin: 0;
+    }
+
+    /* 2. Forcer le fond de la page entière en blanc pur et fixer les limites */
+    html, body {
+        background: #ffffff !important;
+        background-color: #ffffff !important;
+        background-image: none !important;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+    }
+
+    /* 3. Masquer l'intégralité de l'interface utilisateur */
+    body * {
+        visibility: hidden;
+    }
+
+    /* 4. Réactiver uniquement la table et tout ce qu'elle contient */
+    #table-frame, #table-frame * {
+        visibility: visible;
+    }
+
+    /* 5. Centrage horizontal ET vertical absolu au pixel près sur la feuille */
+    #table-frame {
+        position: absolute !important;
+        left: 50% !important;
+        top: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        margin: 0 !important;
+        
+        /* Assure que l'imprimante applique le tapis vert, le bois et les billes */
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact; 
+    }
+}
+
+
         
         #table-frame {
             position: relative;
