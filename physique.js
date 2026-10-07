@@ -367,9 +367,18 @@ function obtenirCoordonneesGrille(x, y, element) {
 /**
  * Met à jour l'affichage UI avec le nom/numéro de la bille et ses coordonnées à 1 décimale.
  */
+/**
+ * Met à jour l'affichage UI avec le visuel de la bille active et ses coordonnées.
+ */
 function mettreAJourAffichagePosition(element, x, y) {
     const displayEl = document.getElementById('ball-position-display');
     if (!displayEl) return;
+
+    // Vider le conteneur textuel pour insérer des éléments HTML
+    displayEl.innerHTML = "";
+    displayEl.style.display = "flex";
+    displayEl.style.alignItems = "center";
+    displayEl.style.gap = "10px"; // Espace entre la bille visuelle et le texte
 
     if (!element) {
         displayEl.innerText = "Position de la bille : Aucune sélectionnée";
@@ -378,10 +387,46 @@ function mettreAJourAffichagePosition(element, x, y) {
 
     const ballId = element.getAttribute('data-id');
     const numEl = element.querySelector('.ball-num');
-    const nomBille = ballId === '0' ? "Blanche" : `N°${numEl ? numEl.innerText : ballId}`;
+    const estRayee = element.classList.contains('striped');
+    const couleurBille = element.style.backgroundColor;
 
+    // --- CRÉATION DE LA BILLE MINIATURE ---
+    const miniBall = document.createElement('div');
+    miniBall.classList.add('ball'); // Réutilise vos styles CSS existants (.ball)
+    
+    // Ajustements pour l'affichage en ligne (miniature)
+    miniBall.style.position = 'relative';
+    miniBall.style.left = '0';
+    miniBall.style.top = '0';
+    miniBall.style.display = 'flex';
+    miniBall.style.cursor = 'default';
+    miniBall.style.backgroundColor = couleurBille;
+    miniBall.style.setProperty('--ball-color', couleurBille);
+
+    if (estRayee) {
+        miniBall.classList.add('striped');
+    }
+
+    // Réinjection du numéro s'il existe (Bille de couleur)
+    if (ballId !== '0' && numEl) {
+        const miniNum = document.createElement('div');
+        miniNum.classList.add('ball-num');
+        miniNum.innerText = numEl.innerText;
+        miniBall.appendChild(miniNum);
+    }
+
+    // --- CRÉATION DU TEXTE DES COORDONNÉES ---
     const coords = obtenirCoordonneesGrille(x, y, element);
-    displayEl.innerText = `Bille active : ${nomBille} | Position grille : X = ${coords.x}, Y = ${coords.y}`;
+    const textLabel = document.createElement('span');
+    textLabel.style.fontWeight = "bold";
+    textLabel.style.color = "#ffffff";
+    
+    const nomBille = ballId === '0' ? "Blanche" : `N°${numEl ? numEl.innerText : ballId}`;
+    textLabel.innerText = `Bille active : ${nomBille} | Position grille : X = ${coords.x}, Y = ${coords.y}`;
+
+    // --- INJECTION DANS L'INTERFACE ---
+    displayEl.appendChild(miniBall);
+    displayEl.appendChild(textLabel);
 }
 
 
