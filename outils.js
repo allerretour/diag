@@ -492,15 +492,15 @@ function genererGrille() {
 
             // Label Bas
             const labelBas = document.createElement('div');
-            labelBas.style.cssText = styleChiffreCommun + `top: 364px; left: ${posX}px; margin-top: 34px;`;
+            labelBas.style.cssText = styleChiffreCommun + `top: 364px; left: ${posX}px; margin-top: 32px;`;
             labelBas.innerText = valeursX[index];
             gridOverlay.appendChild(labelBas);
 
             // Label Haut
-            const labelHaut = document.createElement('div');
-            labelHaut.style.cssText = styleChiffreCommun + `top: 0px; left: ${posX}px; margin-top: -31px;`;
-            labelHaut.innerText = valeursX[index];
-            gridOverlay.appendChild(labelHaut);
+          //  const labelHaut = document.createElement('div');
+          //  labelHaut.style.cssText = styleChiffreCommun + `top: 0px; left: ${posX}px; margin-top: -31px;`;
+          //  labelHaut.innerText = valeursX[index];
+          //  gridOverlay.appendChild(labelHaut);
         });
 
         // --- AXE VERTICAL (Bandes de gauche et de droite) ---
@@ -518,10 +518,10 @@ function genererGrille() {
             gridOverlay.appendChild(labelGauche);
 
             // Label Droite
-            const labelDroite = document.createElement('div');
-            labelDroite.style.cssText = styleChiffreCommun + `top: ${posY}px; left: 754px; margin-left: 34px;`;
-            labelDroite.innerText = valeursY[index];
-            gridOverlay.appendChild(labelDroite);
+         //   const labelDroite = document.createElement('div');
+         //   labelDroite.style.cssText = styleChiffreCommun + `top: ${posY}px; left: 754px; margin-left: 34px;`;
+         //   labelDroite.innerText = valeursY[index];
+         //   gridOverlay.appendChild(labelDroite);
         });
     }
 }
