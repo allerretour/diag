@@ -437,10 +437,10 @@ function genererGrille() {
     gridOverlay.innerHTML = '';
     gridOverlay.style.pointerEvents = 'none'; 
     
-    // Masquage / affichage des diamants d'origine (Sélection sur tout le document pour les trouver)
+    // === MODIFICATION : ON LAISSE LES DIAMANTS TOUJOURS VISIBLES ===
     const anciensDiamants = document.querySelectorAll('.diamond, .repere, [class*="diamond"]');
     anciensDiamants.forEach(d => {
-        d.style.visibility = mode16x8 ? 'hidden' : 'visible';
+        d.style.visibility = 'visible'; // Forcé à toujours visible, peu importe le mode de grille
     });
 
     // 1. Génération des lignes de repère intérieures uniquement
@@ -464,7 +464,7 @@ function genererGrille() {
     }
 
     // ====================================================================
-    // 2. CORRECTION : GENERATION DES CHIFFRES SUR L'OVERLAY GLOBAL (PREMIÈRE LAYER)
+    // 2. GENERATION DES CHIFFRES SUR L'OVERLAY GLOBAL (PREMIÈRE LAYER)
     // ====================================================================
     if (mode16x8) {
         const styleChiffreCommun = `
@@ -504,7 +504,7 @@ function genererGrille() {
         });
 
         // --- AXE VERTICAL (Bandes de gauche et de droite) ---
-        const valeursY = { 0: "0",1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8" };
+        const valeursY = { 0: "0", 1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8" };
         
         Object.keys(valeursY).forEach(index => {
             const indexGrilleY = parseInt(index, 10);

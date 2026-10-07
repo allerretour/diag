@@ -112,9 +112,9 @@ function dessinerEffetsBilleBlanche(x, y, couleur) {
     ctx.fill();
 
     // Tracé de la bordure extérieure de la boîte
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
+    // ctx.strokeStyle = "#ffffff";
+    // ctx.lineWidth = 1.5;
+    // ctx.stroke();
     ctx.restore();
 
     // --- 2. DESSIN DU CORPS DE LA BILLE BLANCHE (EFFET BILLARD SANS CONTOUR + OMBRE) ---
