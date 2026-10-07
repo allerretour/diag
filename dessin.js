@@ -549,14 +549,34 @@ function dessinerZoneGrille(zoneIndex, couleur, mode) {
 
 
     function resizeCanvas() {
-        canvas.width = table.clientWidth;
-        canvas.height = table.clientHeight;
-        const modeDashed = dashedCheck ? dashedCheck.checked : false;
-        configurerStyleDessin(null, modeDashed);
-        window.redessinerToutesLesLignes(); 
-    }
+    // 1. Récupérer le facteur de zoom (pixel ratio) du navigateur
+    const dpr = window.devicePixelRatio || 1;
+    
+    // 2. Définir la taille d'affichage CSS (ce que l'utilisateur voit)
+    canvas.style.width = table.clientWidth + 'px';
+    canvas.style.height = table.clientHeight + 'px';
+    
+    // 3. Multiplier la résolution interne du canvas par le DPR pour éviter le flou
+    canvas.width = table.clientWidth * dpr;
+    canvas.height = table.clientHeight * dpr;
+    
+    // 4. Normaliser le contexte de dessin pour ne pas avoir à réécrire vos fonctions
+    ctx.scale(dpr, dpr);
+    
+    // 5. Appliquer les styles et redessiner
+    const modeDashed = dashedCheck ? dashedCheck.checked : false;
+    configurerStyleDessin(null, modeDashed);
+    window.redessinerToutesLesLignes(); 
+}
+
 
     window.addEventListener('resize', resizeCanvas);
+
+    // Écoute de manière agressive les changements de pixel ratio (Zoom navigateur)
+matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`).addEventListener('change', function () {
+    resizeCanvas();
+}, { once: true });
+
 
     // Redessine l'ensemble des calques de dessin (lignes, flèches et cibles)
     window.redessinerToutesLesLignes = function() {
