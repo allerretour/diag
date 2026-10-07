@@ -782,6 +782,18 @@ if (dessin.estZoneGrille) {
 }
 
 
+// Raccourci pour masquer / afficher le canvas (Touche H)
+if (e.key.toLowerCase() === 'h') {
+    e.preventDefault();
+    if (canvas.style.visibility === 'hidden') {
+        canvas.style.visibility = 'visible';
+    } else {
+        canvas.style.visibility = 'hidden';
+    }
+}
+
+
+
         if (e.key.toLowerCase() === 'z' && !e.ctrlKey && !e.metaKey) {
     e.preventDefault();
     
