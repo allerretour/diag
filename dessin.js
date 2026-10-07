@@ -286,27 +286,31 @@ function dessinerRepereXGras(x, y, couleur) {
 
 
 
- function dessinerPointeFleche(fromX, fromY, toX, toY, couleur) {
+function dessinerPointeFleche(fromX, fromY, toX, toY, couleur) {
     const arrowLength = 14; 
     const arrowAngle = Math.PI / 6; 
     const angle = Math.atan2(toY - fromY, toX - fromX);
 
+    // Ajustement : Augmentez cette valeur pour avancer la pointe (ex: 2 ou 3 pixels, ou ctx.lineWidth / 2)
+    const offset = 4; 
+    const tipX = toX + offset * Math.cos(angle);
+    const tipY = toY + offset * Math.sin(angle);
+
     ctx.save(); 
     ctx.setLineDash([]); 
     
-    // CORRECTION : Utilise uniquement la couleur transmise par le tracé de la ligne,
-    // ou la valeur actuelle du sélecteur si aucune couleur n'est fournie.
     ctx.fillStyle = couleur || (colorSelect ? colorSelect.value : '#ffffff');
     
     ctx.beginPath();
-    ctx.moveTo(toX, toY);
+    // On part du nouveau point ajusté (tipX, tipY) au lieu de (toX, toY)
+    ctx.moveTo(tipX, tipY);
     ctx.lineTo(
-        toX - arrowLength * Math.cos(angle - arrowAngle),
-        toY - arrowLength * Math.sin(angle - arrowAngle)
+        tipX - arrowLength * Math.cos(angle - arrowAngle),
+        tipY - arrowLength * Math.sin(angle - arrowAngle)
     );
     ctx.lineTo(
-        toX - arrowLength * Math.cos(angle + arrowAngle),
-        toY - arrowLength * Math.sin(angle + arrowAngle)
+        tipX - arrowLength * Math.cos(angle + arrowAngle),
+        tipY - arrowLength * Math.sin(angle + arrowAngle)
     );
     ctx.closePath();
     ctx.fill(); 
