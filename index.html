@@ -537,6 +537,20 @@
     box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.25);
 }
 
+/* Classes d'ajustement pour le mode ultra-compact */
+.btn-xs {
+    padding: 0.2rem 0.4rem !important; /* Réduit le rembourrage interne du bouton */
+    font-size: 0.75rem !important;      /* Diminue la taille globale du texte */
+    line-height: 1.2;
+}
+.actions-button-row .btn span {
+    font-size: 0.85rem; /* Ajuste la taille des émojis */
+}
+
+
+
+
+
 /* Gestion de la réactivité si l'écran devient trop petit */
 @media (max-width: 600px) {
     .actions-button-row {
@@ -765,42 +779,42 @@
 
        
 
-<!-- Barre d'actions horizontale compacte -->
+<!-- Barre d'actions horizontale ultra-compacte -->
 <div class="actions-button-row d-flex flex-wrap gap-1 align-items-center">
-    <button id="btn-export" class="btn btn-primary btn-sm">
-        <span class="btn-icon">💾</span> Exporter
+    <!-- Actions Principales (Fichiers) -->
+    <button id="btn-export" class="btn btn-primary btn-xs py-1 px-2 font-size-xs" title="Exporter le JSON">
+        <span>💾</span> Exp.
     </button>
     
-    <button id="btn-import-trigger" class="btn btn-secondary btn-sm">
-        <span class="btn-icon">📂</span> Importer
+    <button id="btn-import-trigger" class="btn btn-secondary btn-xs py-1 px-2 font-size-xs" title="Importer un JSON">
+        <span>📂</span> Imp.
     </button>
     <input type="file" id="file-import" accept=".json" style="display: none;">
 
-    <button id="btn-undo-lines" class="btn btn-action btn-sm">
-        <span class="btn-icon">↩️</span> Annuler
+    <button id="btn-export-text" class="btn btn-primary btn-xs py-1 px-2 font-size-xs" title="Exporter les positions en texte">
+        <span>📄</span> Pos.
     </button>
 
-    <button id="btn-clear-lines" class="btn btn-danger btn-sm">
-        <span class="btn-icon">🗑️</span> Effacer
+    <!-- Actions d'édition (Historique) -->
+    <button id="btn-undo-lines" class="btn btn-action btn-xs py-1 px-2" title="Annuler le dernier tracé">
+        <span>↩️</span>
+    </button>
+
+    <button id="btn-clear-lines" class="btn btn-danger btn-xs py-1 px-2" title="Tout effacer">
+        <span>🗑️</span>
     </button>
     
-    <button id="btn-export-text" class="btn btn-primary btn-sm">
-        <span class="btn-icon">📄</span> Position
-    </button>
-
-    <button id="btn-random-hd" class="btn btn-sm" style="background-color: #e67e22; color: white; border: none; font-weight: bold;">
-        <span class="btn-icon">🎲</span> Aléatoire HD
+    <!-- Outils Aléatoires / Générateurs -->
+    <button id="btn-random-hd" class="btn btn-xs text-white fw-bold py-1 px-2 font-size-xs" style="background-color: #e67e22; border: none;" title="Générer un tapis Aléatoire HD">
+        <span>🎲</span> Rand
     </button>
 	
-	<button id="btn-export-serie-aleatoire" class="btn">🎲 prog10</button>
-
-
+    <button id="btn-export-serie-aleatoire" class="btn btn-xs text-white fw-bold py-1 px-2 font-size-xs" style="background-color: #d35400; border: none;" title="Générer une série progressive de 10 fichiers">
+        <span>🎲</span> prog10
+    </button>
 </div>
 
-			
-	<label for="chk-dashed-lines" style="color: white; margin-left: 10px;">
-             <input type="checkbox" id="chk-dashed-lines"> Pointillés
-	</label>
+
 
         
  <div class="control-group">
@@ -820,13 +834,13 @@
             <option value="6">⚪ + 6</option>
             <option value="7">⚪ + 7</option>
             <option value="8">⚪ + 8</option>
-            <option value="9-libre" selected>⚪ + 9</option>
+            <option value="9-libre" >⚪ + 9</option>
             <option value="10-libre">⚪ + 10</option>
             <option value="11">⚪ + 11</option>
             <option value="12">⚪ + 12</option>
             <option value="13">⚪ + 13</option>
             <option value="14">⚪ + 14</option>
-            <option value="15-libre">⚪ + 15</option>
+            <option value="15-libre" selected >⚪ + 15</option>
         </optgroup>
 
         <!-- Groupe 1 : Placement auto -->
@@ -988,6 +1002,10 @@
     <label class="control-item">
         <input type="checkbox" id="chk-show-logo" checked> Logo
     </label>
+	
+	<label class="control-item" for="chk-dashed-lines" >
+             <input type="checkbox" id="chk-dashed-lines"> Pointillés
+	</label>
     
     
 </div>
