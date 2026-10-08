@@ -1085,6 +1085,11 @@ table.addEventListener('mousedown', (e) => {
         if (window.billeSelectionneeCourante) {
             window.billeSelectionneeCourante.style.outline = 'none';
             window.billeSelectionneeCourante = null;
+			
+			// === AJOUT ICI : Met à jour la liste pour enlever la surbrillance ===
+            if (typeof rafraichirListeLateraleBilles === "function") {
+                rafraichirListeLateraleBilles();
+            }
             
             // Réinitialise l'affichage textuel
             const displayEl = document.getElementById('ball-position-display');

@@ -51,6 +51,7 @@ if (ballsCountSelect) {
                 placerRackOfficiel(maxBallsAllowed);
             }
         }
+		rafraichirListeLateraleBilles();
     });
 }
 
@@ -374,6 +375,13 @@ if (importTriggerBtn && fileImportInput) {
                     }
                 }
             });
+			
+			// ==========================================
+            // AJOUT ICI : FORCER LA MISE À JOUR DE LA LISTE
+            // ==========================================
+            if (typeof rafraichirListeLateraleBilles === "function") {
+                rafraichirListeLateraleBilles();
+            }
 
             // 4. Mettre à jour les champs de texte éditables du menu et du tapis de billard
             if (titleInput) titleInput.value = titreImported;
@@ -698,10 +706,11 @@ if (btnRandomHD) {
         if (displayEl) {
             displayEl.innerText = "Position : Aléatoire, Blanche centrée dans l'unique ZD";
         }
+		rafraichirListeLateraleBilles();
     });
 }
 
-
+rafraichirListeLateraleBilles();
 
 
 });

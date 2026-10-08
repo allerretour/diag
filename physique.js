@@ -71,6 +71,7 @@ function initialiserBilles() {
             if (displayEl) {
                 displayEl.innerText = "Position de la bille : Aucune sélectionnée";
             }
+			rafraichirListeLateraleBilles();
         });
     });
 }
@@ -276,6 +277,7 @@ function makeDraggable(element) {
 
             // ÉTAPE B : Mettre à jour l'affichage en temps réel pendant le déplacement
             mettreAJourAffichagePosition(element, finalPos.x, finalPos.y);
+			rafraichirListeLateraleBilles();
         }
     }
 
@@ -289,6 +291,7 @@ function makeDraggable(element) {
 
             // ÉTAPE C : Ajustement final de l'affichage une fois les collisions résolues
             mettreAJourAffichagePosition(element, finalPos.x, finalPos.y);
+			rafraichirListeLateraleBilles();
         }
     }
 }
@@ -318,6 +321,96 @@ if (chkShowTitle && tableTitleOverlay) {
         titleInput.addEventListener('input', rafraichirTitreSurTapis);
     }
 }
+
+
+function rafraichirListeLateraleBilles() {
+    const sidebarList = document.getElementById('visible-balls-list');
+    if (!sidebarList) return;
+
+    // Vider la liste précédente
+    sidebarList.innerHTML = "";
+
+    // Parcourir toutes les billes actives
+    activeBalls.forEach(ball => {
+        // Ignorer les billes masquées (style.display === 'none')
+        if (ball.style.display === 'none') return;
+
+        const ballId = ball.getAttribute('data-id');
+        const numEl = ball.querySelector('.ball-num');
+        const estRayee = ball.classList.contains('striped');
+        const couleurBille = ball.style.backgroundColor;
+
+        // 1. Création de la ligne d'item
+        const itemRow = document.createElement('div');
+        itemRow.classList.add('sidebar-ball-item');
+        itemRow.style.cursor = 'pointer'; // Indique visuellement que la ligne est cliquable
+
+        // Ajouter la surbrillance si c'est la bille sélectionnée
+        if (window.billeSelectionneeCourante === ball) {
+            itemRow.classList.add('active-highlight');
+        }
+
+        // ====================================================================
+        // AJOUT : ÉCOUTEUR DE CLIC POUR RE-SÉLECTIONNER LA BILLE DEPUIS LA LISTE
+        // ====================================================================
+        itemRow.addEventListener('click', (e) => {
+            // Empêche le clic de se propager de manière indésirable
+            e.stopPropagation(); 
+
+            // Retirer l'éventuel contour de l'ancienne bille sélectionnée sur le tapis
+            if (window.billeSelectionneeCourante) {
+                window.billeSelectionneeCourante.style.outline = 'none';
+            }
+
+            // Mémoriser cette bille comme sélectionnée de façon permanente
+            window.billeSelectionneeCourante = ball;
+
+            // Ajouter le repère visuel (contour blanc) sur la bille du tapis
+            ball.style.outline = '2px solid #ffffff';
+            ball.style.outlineOffset = '2px';
+
+            // Relancer le rafraîchissement pour déplacer la surbrillance verte instantanément
+            rafraichirListeLateraleBilles();
+        });
+
+        // 2. Duplication et dessin de la bille miniature
+        const miniBall = document.createElement('div');
+        miniBall.classList.add('ball');
+        miniBall.style.backgroundColor = couleurBille;
+        miniBall.style.setProperty('--ball-color', couleurBille);
+
+        if (estRayee) {
+            miniBall.classList.add('striped');
+        }
+
+        // Ajout du numéro si ce n'est pas la blanche
+        if (ballId !== '0' && numEl) {
+            const miniNum = document.createElement('div');
+            miniNum.classList.add('ball-num');
+            miniNum.innerText = numEl.innerText;
+            miniBall.appendChild(miniNum);
+        }
+
+        // 3. Récupération des coordonnées courantes de la grille
+        const pixelX = parseFloat(ball.style.left) || 0;
+        const pixelY = parseFloat(ball.style.top) || 0;
+        const coords = obtenirCoordonneesGrille(pixelX, pixelY, ball);
+
+        // 4. Création du texte descriptif (Uniquement les coordonnées)
+        const coordsText = document.createElement('div');
+        coordsText.classList.add('sidebar-ball-coords');
+        coordsText.innerHTML = `X = ${coords.x}, Y = ${coords.y}`;
+
+        // Assemblage
+        itemRow.appendChild(miniBall);
+        itemRow.appendChild(coordsText);
+        sidebarList.appendChild(itemRow);
+    });
+}
+
+
+
+
 
 
 function obtenirCoordonneesGrille(x, y, element) {
@@ -374,59 +467,9 @@ function mettreAJourAffichagePosition(element, x, y) {
     const displayEl = document.getElementById('ball-position-display');
     if (!displayEl) return;
 
-    // Vider le conteneur textuel pour insérer des éléments HTML
+    // Suppression complète du texte et masquage du bloc sous la table
     displayEl.innerHTML = "";
-    displayEl.style.display = "flex";
-    displayEl.style.alignItems = "center";
-    displayEl.style.gap = "10px"; // Espace entre la bille visuelle et le texte
-
-    if (!element) {
-        displayEl.innerText = "Position de la bille : Aucune sélectionnée";
-        return;
-    }
-
-    const ballId = element.getAttribute('data-id');
-    const numEl = element.querySelector('.ball-num');
-    const estRayee = element.classList.contains('striped');
-    const couleurBille = element.style.backgroundColor;
-
-    // --- CRÉATION DE LA BILLE MINIATURE ---
-    const miniBall = document.createElement('div');
-    miniBall.classList.add('ball'); // Réutilise vos styles CSS existants (.ball)
-    
-    // Ajustements pour l'affichage en ligne (miniature)
-    miniBall.style.position = 'relative';
-    miniBall.style.left = '0';
-    miniBall.style.top = '0';
-    miniBall.style.display = 'flex';
-    miniBall.style.cursor = 'default';
-    miniBall.style.backgroundColor = couleurBille;
-    miniBall.style.setProperty('--ball-color', couleurBille);
-
-    if (estRayee) {
-        miniBall.classList.add('striped');
-    }
-
-    // Réinjection du numéro s'il existe (Bille de couleur)
-    if (ballId !== '0' && numEl) {
-        const miniNum = document.createElement('div');
-        miniNum.classList.add('ball-num');
-        miniNum.innerText = numEl.innerText;
-        miniBall.appendChild(miniNum);
-    }
-
-    // --- CRÉATION DU TEXTE DES COORDONNÉES ---
-    const coords = obtenirCoordonneesGrille(x, y, element);
-    const textLabel = document.createElement('span');
-    textLabel.style.fontWeight = "bold";
-    textLabel.style.color = "#ffffff";
-    
-    const nomBille = ballId === '0' ? "Blanche" : `N°${numEl ? numEl.innerText : ballId}`;
-    textLabel.innerText = `Bille active : ${nomBille} | Position grille : X = ${coords.x}, Y = ${coords.y}`;
-
-    // --- INJECTION DANS L'INTERFACE ---
-    displayEl.appendChild(miniBall);
-    displayEl.appendChild(textLabel);
+    displayEl.style.display = "none";
 }
 
 
