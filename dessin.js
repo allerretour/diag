@@ -38,8 +38,8 @@ if (chkMagnetism) {
     });
 }
 
-	
-	
+
+
 
 // === AJOUT POUR L'APERÇU FANTÔME ===
 let outilActif = null; // Peut valoir: 'cible', 'carre', 'effetBlanche', 'repereX'

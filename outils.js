@@ -795,6 +795,170 @@ if (btnRandomHD) {
     });
 }
 
+
+// ====================================================================
+// GÉNÉRATION D'UNE SÉRIE DE 10 FICHIERS ALÉATOIRES PROGRESSIFS
+// ====================================================================
+const btnExportSerieAleatoire = document.getElementById('btn-export-serie-aleatoire');
+
+if (btnExportSerieAleatoire) {
+    btnExportSerieAleatoire.addEventListener('click', () => {
+        // Le titre par défaut devient "Aleatoire progressif" si le champ input est vide
+        const configTitle = "Aleatoire progressif";
+        
+        // Récupération de la description existante
+        const baseDesc = descInput ? descInput.value.trim() : "Série progressive générée aléatoirement.";
+
+        // --- GÉNÉRATION DE L'HORODATAGE LISIBLE ---
+        const maintenant = new Date();
+        const annee = maintenant.getFullYear();
+        const mois = String(maintenant.getMonth() + 1).padStart(2, '0');
+        const jour = String(maintenant.getDate()).padStart(2, '0');
+        const heures = String(maintenant.getHours()).padStart(2, '0');
+        const minutes = String(maintenant.getMinutes()).padStart(2, '0');
+        const horodatage = `${jour}/${mois}/${annee} à ${heures}h${minutes}`;
+        
+        // MODIFICATION : Ajout de la mention demandée dans la description
+        const configDesc = `${baseDesc}\nCréé le : ${horodatage}`;
+
+        const chkToggleGrid = document.getElementById('chk-toggle-grid');
+        const chkHighDensityGrid = document.getElementById('chk-high-density-grid');
+        const chkShowTitle = document.getElementById('chk-show-title');
+
+        const gridLeft = 19;
+        const gridTop = 17;
+        const gridWidth = 754;
+        const gridHeight = 364;
+        const cols = 16;
+        const rows = 8;
+        const pasX = gridWidth / cols;  
+        const pasY = gridHeight / rows; 
+
+        // i représente le nombre TOTAL de billes sur la table (de 2 à 11)
+        for (let i = 2; i <= 11; i++) {
+            const nbBillesCouleurRequises = i - 1; // Le nombre de billes de couleur réelles (1 à 10)
+
+            // 1. Générer les intersections de la grille HD 16x8
+            const intersectionsDisponibles = [];
+            for (let c = 0; c <= cols; c++) {
+                for (let r = 0; r <= rows; r++) {
+                    let localCentreX = c * pasX;
+                    let localCentreY = r * pasY;
+
+                    if (c === 0) localCentreX = 12;
+                    if (c === cols) localCentreX = gridWidth - 12;
+                    if (r === 0) localCentreY = 12;
+                    if (r === rows) localCentreY = gridHeight - 12;
+
+                    const finalX = (gridLeft + localCentreX) - 12;
+                    const finalY = (gridTop + localCentreY) - 12;
+
+                    intersectionsDisponibles.push({ x: `${finalX}px`, y: `${finalY}px` });
+                }
+            }
+
+            // 2. Mélanger les intersections (Fisher-Yates)
+            for (let m = intersectionsDisponibles.length - 1; m > 0; m--) {
+                const j = Math.floor(Math.random() * (m + 1));
+                [intersectionsDisponibles[m], intersectionsDisponibles[j]] = [intersectionsDisponibles[j], intersectionsDisponibles[m]];
+            }
+
+            // 3. Choix des Zones ZD et ZA
+            const listeIdsZones = Array.from({ length: 8 }, (v, k) => k + 1);
+            for (let m = listeIdsZones.length - 1; m > 0; m--) {
+                const j = Math.floor(Math.random() * (m + 1));
+                [listeIdsZones[m], listeIdsZones[j]] = [listeIdsZones[j], listeIdsZones[m]];
+            }
+
+            const savedZdId = listeIdsZones.pop(); 
+            const savedZaId = listeIdsZones.pop(); 
+
+            const zonesDessinees = [
+                { couleur: "#ffffff", estZoneGrille: true, zoneId: savedZdId, mode: 'standard', points: [] },
+                { couleur: "#ffffff", estZoneGrille: true, zoneId: savedZaId, mode: 'alternatif', points: [] }
+            ];
+
+            // 4. Centrage de la bille Blanche dans la ZD
+            const zoneCols = 4;
+            const zonePasX = 754 / zoneCols; 
+            const zonePasY = 364 / 2;        
+
+            const idxZd = savedZdId - 1;
+            const rZd = Math.floor(idxZd / zoneCols);
+            const cZd = idxZd % zoneCols;
+
+            const centreZoneX = (19 + (cZd * zonePasX)) + (zonePasX / 2);
+            const centreZoneY = (18 + (rZd * zonePasY)) + (zonePasY / 2);
+
+            const cueX = `${centreZoneX - 12}px`;
+            const cueY = `${centreZoneY - 12}px`;
+
+            // 5. Remplissage des données de configuration des billes
+            const listBillesExport = [];
+            listBillesExport.push({ id: "0", x: cueX, y: cueY, visible: true });
+
+            let intersectionIdx = 0;
+            activeBalls.forEach(ball => {
+                const ballId = parseInt(ball.getAttribute('data-id'), 10);
+                
+                if (ballId > 0) {
+                    if (ballId <= nbBillesCouleurRequises) {
+                        const posAleatoire = intersectionsDisponibles[intersectionIdx];
+                        listBillesExport.push({
+                            id: String(ballId),
+                            x: posAleatoire.x,
+                            y: posAleatoire.y,
+                            visible: true
+                        });
+                        intersectionIdx++;
+                    } else {
+                        listBillesExport.push({
+                            id: String(ballId),
+                            x: ball.style.left || "0px",
+                            y: ball.style.top || "0px",
+                            visible: false
+                        });
+                    }
+                }
+            });
+
+            // 6. Objet JSON final
+            const donneesExport = {
+                titre: `${configTitle}_${nbBillesCouleurRequises}_billes`,
+                description: configDesc,
+                nombreBillesVisibles: String(i), 
+                billes: listBillesExport,
+                lignesDessinees: zonesDessinees,
+                optionsVisuelles: {
+                    grille: chkToggleGrid ? chkToggleGrid.checked : true,
+                    hd: chkHighDensityGrid ? chkHighDensityGrid.checked : true,
+                    magnetisme: true,
+                    logo: true,
+                    titreVisible: chkShowTitle ? chkShowTitle.checked : false
+                }
+            };
+
+            // 7. Formatage du nom de fichier avec le nombre de billes de COULEUR (i - 1)
+            const indexFichier = String(nbBillesCouleurRequises).padStart(2, '0');
+            const nomFichierSecurise = configTitle.replace(/[/\\?%*:|"<>]/g, '-').substring(0, 80);
+            const nomFinal = `${nomFichierSecurise}_serie_${indexFichier}_billes.json`;
+
+            const blob = new Blob([JSON.stringify(donneesExport, null, 4)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = nomFinal;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    });
+}
+
+
+
+
 rafraichirListeLateraleBilles();
 
 
