@@ -77,6 +77,8 @@
         print-color-adjust: exact;
         -webkit-print-color-adjust: exact; 
     }
+	
+	
 }
 
 
@@ -545,11 +547,11 @@
 
 #table-title-overlay {
     position: absolute;
-    top: 10%;
+    top: 12%;
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translate(-70%, -30%);
     font-family: sans-serif;
-    font-size: 28px;
+    font-size: 20px;
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 2px;
@@ -623,6 +625,7 @@
     cursor: pointer;
     display: inline-flex;
     align-items: center;
+	
     gap: 5px;                 /* Espace entre la case elle-même et son texte */
 }
 
@@ -825,9 +828,13 @@
 
         <!-- Groupe 1 : Placement auto -->
         <optgroup label="Jeux Officiels (Auto)" data-placement="auto">
-            <option value="15">Jeu de la 8 (15)</option>
-            <option value="9">Jeu de la 9 (9)</option>
-            <option value="10">Jeu de la 10 (10)</option>
+            
+        <option value="15">Jeu de la 8 (15)</option>
+        <option value="14.1">Jeu du 14.1 (Re-rack 14+1)</option>
+        <option value="9">Jeu de la 9 (9)</option>
+		<option value="9-matchroom">Jeu de la 9 (Matchroom - 9 sur l'Apex)</option>
+        <option value="10">Jeu de la 10 (10)</option>
+    </optgroup>
         </optgroup>
         
     </select>
@@ -945,7 +952,7 @@
 	
 	<!-- La liste latérale déplacée à droite (à l'intérieur du conteneur principal) -->
     <div id="balls-sidebar">
-        <h3>Billes visibles</h3>
+        <h3>Billes sur la table</h3>
         <div id="visible-balls-list"></div>
     </div>
 	
@@ -968,7 +975,7 @@
 
 <label class="control-item">
     <input type="checkbox" id="chk-magnetism" >
-    Magnétisme
+    Mag / bandes
 </label>
 	
     <label class="control-item">

@@ -28,6 +28,18 @@ document.addEventListener("DOMContentLoaded", () => {
     let startPoint = null; 
     let isCtrlPressed = false;
     let isShiftPressed = false;
+	
+	// Rafraîchir instantanément les coordonnées de la liste latérale au changement du magnétisme
+if (chkMagnetism) {
+    chkMagnetism.addEventListener('change', () => {
+        if (typeof rafraichirListeLateraleBilles === "function") {
+            rafraichirListeLateraleBilles();
+        }
+    });
+}
+
+	
+	
 
 // === AJOUT POUR L'APERÇU FANTÔME ===
 let outilActif = null; // Peut valoir: 'cible', 'carre', 'effetBlanche', 'repereX'

@@ -22,23 +22,59 @@ function initialiserBilles() {
     if (!table) return;
     const ballsData = [];
 
-    // Position de départ sur le Head Spot
-    ballsData.push({ id: 0, num: '', color: '#ffffff', isStriped: false, x: 196, y: 186 });
+    // Paramètres géométriques de la grille haute densité 16x8
+    const gridLeft = 19;
+    const gridTop = 17;
+    const gridWidth = 754;
+    const gridHeight = 364;
+    const cols = 16;
+    const rows = 8;
 
-    // Le rack de départ
+    const pasX = gridWidth / cols;  // Espacement horizontal d'une cellule (~47.12px)
+    const pasY = gridHeight / rows; // Espacement vertical d'une cellule (~45.5px)
+    const rayonBille = 12;          // Rayon pour le centrage CSS (24px / 2)
+
+    // ====================================================================
+    // 1. GÉNÉRATION DES COORDONNÉES SUR 2 LIGNES (A partir de X=1, Y=1)
+    // ====================================================================
+    // Nous avons 16 billes au total à placer (la blanche + 15 de couleur)
+    // Elles occuperont les intersections de X=1 à X=8 sur les lignes Y=1 et Y=2
+    const positionsGrille = [];
+    
+    for (let y = 1; y <= 2; y++) {       // Ligne 1 puis Ligne 2
+        for (let x = 1; x <= 8; x++) {   // Colonnes de 1 à 8
+            positionsGrille.push({ gridX: x, gridY: y });
+        }
+    }
+
+    // ====================================================================
+    // 2. ASSIGNATION DES POSITIONS AUX BILLES
+    // ====================================================================
+    // Index 0 : Bille Blanche
+    const posBlanche = positionsGrille[0];
+    const cuePixelX = gridLeft + (posBlanche.gridX * pasX) - rayonBille;
+    const cuePixelY = gridTop + ((rows - posBlanche.gridY) * pasY) - rayonBille;
+    ballsData.push({ id: 0, num: '', color: '#ffffff', isStriped: false, x: cuePixelX, y: cuePixelY });
+
+    // Index 1 à 15 : Billes de couleur
     for (let i = 1; i <= 15; i++) {
         const colorIndex = i <= 8 ? i : i - 8;
         const color = ballColors[colorIndex];
         const isStriped = i > 8;
         
-        const row = Math.floor((i - 1) / 5);
-        const col = (i - 1) % 5;
-        const startX = 500 + (col * 35);
-        const startY = 40 + (row * 42);
+        // Récupération de la position pré-calculée suivante (index i)
+        const pos = positionsGrille[i];
 
-        ballsData.push({ id: i, num: i, color: color, isStriped: isStriped, x: startX, y: startY });
+        // Conversion en pixels Top/Left (Origine inversée pour Y pour correspondre au bas-gauche)
+        const ballPixelX = gridLeft + (pos.gridX * pasX) - rayonBille;
+        const ballPixelY = gridTop + ((rows - pos.gridY) * pasY) - rayonBille;
+
+        ballsData.push({ id: i, num: i, color: color, isStriped: isStriped, x: ballPixelX, y: ballPixelY });
     }
 
+    // ====================================================================
+    // 3. INJECTION ET CRÉATION DES ÉLÉMENTS HTML
+    // ====================================================================
     ballsData.forEach(b => {
         const ballEl = document.createElement('div');
         ballEl.classList.add('ball');
@@ -62,19 +98,18 @@ function initialiserBilles() {
         activeBalls.push(ballEl);
         makeDraggable(ballEl);
 
-        // MODIFICATION : Toutes les billes (y compris la blanche) se cachent au double-clic
         ballEl.addEventListener('dblclick', function() {
             this.style.display = 'none';
-            
-            // Nettoie l'affichage textuel de la bille active
             const displayEl = document.getElementById('ball-position-display');
             if (displayEl) {
                 displayEl.innerText = "Position de la bille : Aucune sélectionnée";
             }
-			rafraichirListeLateraleBilles();
+            rafraichirListeLateraleBilles();
         });
     });
 }
+
+
 
 function clampPosition(x, y) {
     let minX = 17.6, maxX = 749, minY = 17.6, maxY = 356;
@@ -433,28 +468,51 @@ function obtenirCoordonneesGrille(x, y, element) {
     const ratioX = (centreX - gridLeft) / gridWidth;
     const ratioY = (centreY - gridTop) / gridHeight;
 
-    // Transformation en index de grille (0 à 16 et 0 à 8)
+    // Transformation en index de grille brut
     let grilleX = ratioX * cols;
     let grilleY = (1 - ratioY) * rows; // Inversion pour avoir l'origine (0,0) en bas à gauche
-
-    // Correction des arrondis JavaScript sur les intersections magnétisées
-    const magnetismeActif = chkMagnetism ? chkMagnetism.checked : false;
-    if (magnetismeActif) {
-        grilleX = Math.round(grilleX);
-        grilleY = Math.round(grilleY);
-    }
 
     // Bornage strict pour rester dans la grille
     grilleX = Math.max(0, Math.min(cols, grilleX));
     grilleY = Math.max(0, Math.min(rows, grilleY));
 
-    const nbDecimales = magnetismeActif ? 0 : 1;
+    // Vérification de l'activation du magnétisme
+    const magnetismeActif = chkMagnetism ? chkMagnetism.checked : false;
+
+    let nbDecimalesX = 1;
+    let nbDecimalesY = 1;
+
+    // --- CONDITION : S'applique UNIQUEMENT si le magnétisme est activé ---
+    if (magnetismeActif) {
+        const tolerance = 0.4; // Seuil pour capter le contact avec la bande
+
+        // Traitement de l'axe X aux extrémités
+        if (grilleX <= tolerance) {
+            grilleX = 0;
+            nbDecimalesX = 0;
+        } else if (grilleX >= cols - tolerance) {
+            grilleX = cols;
+            nbDecimalesX = 0;
+        }
+
+        // Traitement de l'axe Y aux extrémités
+        if (grilleY <= tolerance) {
+            grilleY = 0;
+            nbDecimalesY = 0;
+        } else if (grilleY >= rows - tolerance) {
+            grilleY = rows;
+            nbDecimalesY = 0;
+        }
+    }
 
     return { 
-        x: grilleX.toFixed(nbDecimales), 
-        y: grilleY.toFixed(nbDecimales) 
+        x: grilleX.toFixed(nbDecimalesX), 
+        y: grilleY.toFixed(nbDecimalesY) 
     };
 }
+
+
+
 
 
 /**
