@@ -162,48 +162,62 @@ function placerRackOfficiel(mode) {
         ballsCountSelect.addEventListener('change', updateVisibleBalls);
     }
 
-    // EXPORTATION : Sauvegarde positions, sélecteur, titre et description
-    // EXPORTATION JSON : Sauvegarde positions, état de visibilité, sélecteur, titre, description et tracés
-    if (exportBtn) {
-        exportBtn.addEventListener('click', () => {
-            const listBilles = [];
-            activeBalls.forEach(ball => {
-                listBilles.push({
-                    id: ball.getAttribute('data-id'),
-                    x: ball.style.left,
-                    y: ball.style.top,
-                    // AJOUT : Sauvegarde de l'état de visibilité de la bille
-                    visible: ball.style.display !== 'none'
-                });
+// EXPORTATION : Sauvegarde positions, sélecteur, titre, description, tracés et options d'affichage
+if (exportBtn) {
+    exportBtn.addEventListener('click', () => {
+        const listBilles = [];
+        activeBalls.forEach(ball => {
+            listBilles.push({
+                id: ball.getAttribute('data-id'),
+                x: ball.style.left,
+                y: ball.style.top,
+                visible: ball.style.display !== 'none'
             });
-
-            // Récupération des valeurs textuelles nettoyées
-            const configTitle = titleInput ? titleInput.value.trim() : "configuration_billard";
-            const configDesc = descInput ? descInput.value : "";
-
-            // On crée l'objet global intégrant le tableau des dessins
-            const donneesExport = {
-                titre: configTitle,
-                description: configDesc,
-                nombreBillesVisibles: ballsCountSelect ? parseInt(ballsCountSelect.value, 10) : 15,
-                billes: listBilles,
-                lignesDessinees: window.dessinsSauvegardes || [] 
-            };
-
-            // Nettoyage du titre pour le nom du fichier
-            const nomFichierSecurise = configTitle.replace(/[/\\?%*:|"<>]/g, '-').substring(0, 100) || "configuration_billard";
-
-            const blob = new Blob([JSON.stringify(donneesExport, null, 4)], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${nomFichierSecurise}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
         });
-    }
+
+        // Récupération des valeurs textuelles nettoyées
+        const configTitle = titleInput ? titleInput.value.trim() : "configuration_billard";
+        const configDesc = descInput ? descInput.value : "";
+
+        // Récupération des éléments DOM pour les toggles
+        const chkToggleGrid = document.getElementById('chk-toggle-grid');
+        const chkHighDensityGrid = document.getElementById('chk-high-density-grid');
+        const chkMagnetism = document.getElementById('chk-magnetism');
+        const chkShowLogo = document.getElementById('chk-show-logo');
+        const chkShowTitle = document.getElementById('chk-show-title');
+
+        // On crée l'objet global intégrant toutes les données
+        const donneesExport = {
+            titre: configTitle,
+            description: configDesc,
+            nombreBillesVisibles: ballsCountSelect ? ballsCountSelect.value : "15", // Sauvegarde textuelle ou numérique
+            billes: listBilles,
+            lignesDessinees: window.dessinsSauvegardes || [],
+            // AJOUT : Sauvegarde de l'état des toggles
+            optionsVisuelles: {
+                grille: chkToggleGrid ? chkToggleGrid.checked : false,
+                hd: chkHighDensityGrid ? chkHighDensityGrid.checked : false,
+                magnetisme: chkMagnetism ? chkMagnetism.checked : true,
+                logo: chkShowLogo ? chkShowLogo.checked : false,
+                titreVisible: chkShowTitle ? chkShowTitle.checked : false
+            }
+        };
+
+        // Nettoyage du titre pour le nom du fichier
+        const nomFichierSecurise = configTitle.replace(/[/\\?%*:|"<>]/g, '-').substring(0, 100) || "configuration_billard";
+
+        const blob = new Blob([JSON.stringify(donneesExport, null, 4)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${nomFichierSecurise}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    });
+}
+
 
 
 // EXPORTATION TEXTE MIS À JOUR : Sauvegarde la liste complète des billes et des zones actives au format TXT
@@ -329,124 +343,154 @@ if (chkShowLogo && tableLogoOverlay) {
 
 
 
-   // IMPORTATION : Lit et réinjecte le titre, la description et la table de billard
+ // IMPORTATION : Lit et réinjecte la configuration complète
 if (importTriggerBtn && fileImportInput) {
     importTriggerBtn.addEventListener('click', () => fileImportInput.click());
 
     fileImportInput.addEventListener('change', (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
+        const file = event.target.files[0];
+        if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        try {
-            const donneesImportees = JSON.parse(e.target.result);
-            
-            let listeBilles = [];
-            let nbVisibles = 15;
-            let titreImported = "Configuration importée";
-            let descImported = "";
-
-            // Analyse du format de fichier et extraction des données
-            if (donneesImportees.billes && Array.isArray(donneesImportees.billes)) {
-                listeBilles = donneesImportees.billes;
-                nbVisibles = donneesImportees.nombreBillesVisibles;
-                titreImported = donneesImportees.titre || "Configuration sans titre";
-                descImported = donneesImportees.description || "";
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const donneesImportees = JSON.parse(e.target.result);
                 
-                // Restauration de tous les tracés (lignes, flèches, cibles, carrés et zones de grille)
-                if (donneesImportees.lignesDessinees && Array.isArray(donneesImportees.lignesDessinees)) {
-                    window.dessinsSauvegardes = donneesImportees.lignesDessinees;
-                } else {
-                    window.dessinsSauvegardes = [];
-                }
-            } else if (Array.isArray(donneesImportees)) {
-                listeBilles = donneesImportees;
-                nbVisibles = donneesImportees.filter(b => parseInt(b.id, 10) > 0).length;
-                window.dessinsSauvegardes = [];
-            } else {
-                throw new Error("Format JSON non reconnu");
-            }
+                let listeBilles = [];
+                let nbVisibles = "15";
+                let titreImported = "Configuration importée";
+                let descImported = "";
 
-                  // À remplacer à l'intérieur de reader.onload dans le Script 2 :
-
-            // 1. Ajuster la valeur affichée dans le menu déroulant
-            if (ballsCountSelect) {
-                ballsCountSelect.value = nbVisibles;
-            }
-
-            // 2 & 3. MODIFICATION : Restaurer la position ET la visibilité précise de chaque bille
-            activeBalls.forEach(ball => {
-                const ballId = ball.getAttribute('data-id');
-                // Trouver si cette bille possède des données enregistrées dans le fichier
-                const savedBall = listeBilles.find(b => b.id === ballId);
-
-                if (savedBall) {
-                    // Restaure sa position personnalisée
-                    ball.style.left = savedBall.x;
-                    ball.style.top = savedBall.y;
-
-                    // Si le fichier contient l'état de visibilité explicite, on l'applique
-                    if (savedBall.hasOwnProperty('visible')) {
-                        ball.style.display = savedBall.visible ? 'flex' : 'none';
+                if (donneesImportees.billes && Array.isArray(donneesImportees.billes)) {
+                    listeBilles = donneesImportees.billes;
+                    nbVisibles = donneesImportees.nombreBillesVisibles;
+                    titreImported = donneesImportees.titre || "Configuration sans titre";
+                    descImported = donneesImportees.description || "";
+                    
+                    if (donneesImportees.lignesDessinees && Array.isArray(donneesImportees.lignesDessinees)) {
+                        window.dessinsSauvegardes = donneesImportees.lignesDessinees;
                     } else {
-                        // Compatibilité avec vos anciens fichiers JSON qui n'avaient pas l'option
+                        window.dessinsSauvegardes = [];
+                    }
+                } else if (Array.isArray(donneesImportees)) {
+                    listeBilles = donneesImportees;
+                    nbVisibles = donneesImportees.filter(b => parseInt(b.id, 10) > 0).length.toString();
+                    window.dessinsSauvegardes = [];
+                } else {
+                    throw new Error("Format JSON non reconnu");
+                }
+
+                // 1. Ajuster la valeur affichée dans le menu déroulant
+                if (ballsCountSelect) {
+                    ballsCountSelect.value = nbVisibles;
+                }
+
+                // 2. Restaurer la position ET la visibilité de chaque bille
+                activeBalls.forEach(ball => {
+                    const ballId = ball.getAttribute('data-id');
+                    const savedBall = listeBilles.find(b => b.id === ballId);
+
+                    if (savedBall) {
+                        ball.style.left = savedBall.x;
+                        ball.style.top = savedBall.y;
+
+                        if (savedBall.hasOwnProperty('visible')) {
+                            ball.style.display = savedBall.visible ? 'flex' : 'none';
+                        } else {
+                            const idNum = parseInt(ballId, 10);
+                            if (idNum === 0) {
+                                ball.style.display = 'flex';
+                            } else {
+                                ball.style.display = idNum <= parseInt(nbVisibles, 10) ? 'flex' : 'none';
+                            }
+                        }
+                    } else {
                         const idNum = parseInt(ballId, 10);
                         if (idNum === 0) {
                             ball.style.display = 'flex';
                         } else {
-                            ball.style.display = idNum <= nbVisibles ? 'flex' : 'none';
+                            ball.style.display = idNum <= parseInt(nbVisibles, 10) ? 'flex' : 'none';
                         }
                     }
-                } else {
-                    // Si la bille n'est pas dans le fichier, comportement par défaut du menu déroulant
-                    const idNum = parseInt(ballId, 10);
-                    if (idNum === 0) {
-                        ball.style.display = 'flex';
-                    } else {
-                        ball.style.display = idNum <= nbVisibles ? 'flex' : 'none';
+                });
+                
+                if (typeof rafraichirListeLateraleBilles === "function") {
+                    rafraichirListeLateraleBilles();
+                }
+
+                // 3. Mettre à jour les champs de texte éditables
+                if (titleInput) titleInput.value = titreImported;
+                if (descInput) descInput.value = descImported;
+
+                // ====================================================================
+                // AJOUT ICI : RESTAURATION ET DÉCLENCHEMENT DES TOGGLES VISUELS
+                // ====================================================================
+                if (donneesImportees.optionsVisuelles) {
+                    const opts = donneesImportees.optionsVisuelles;
+                    
+                    const chkToggleGrid = document.getElementById('chk-toggle-grid');
+                    const chkHighDensityGrid = document.getElementById('chk-high-density-grid');
+                    const chkMagnetism = document.getElementById('chk-magnetism');
+                    const chkShowLogo = document.getElementById('chk-show-logo');
+                    const chkShowTitle = document.getElementById('chk-show-title');
+
+                    // Restauration de la Grille HD d'abord (pour que la grille sache s'il faut générer en 16x8 ou 8x4)
+                    if (chkHighDensityGrid && opts.hasOwnProperty('hd')) {
+                        chkHighDensityGrid.checked = opts.hd;
+                        chkHighDensityGrid.dispatchEvent(new Event('change'));
+                    }
+
+                    // Restauration de l'affichage de la Grille globale
+                    if (chkToggleGrid && opts.hasOwnProperty('grille')) {
+                        chkToggleGrid.checked = opts.grille;
+                        chkToggleGrid.dispatchEvent(new Event('change'));
+                    }
+
+                    // Restauration du Magnétisme
+                    if (chkMagnetism && opts.hasOwnProperty('magnetisme')) {
+                        chkMagnetism.checked = opts.magnetisme;
+                        chkMagnetism.dispatchEvent(new Event('change'));
+                    }
+
+                    // Restauration du Logo
+                    if (chkShowLogo && opts.hasOwnProperty('logo')) {
+                        chkShowLogo.checked = opts.logo;
+                        chkShowLogo.dispatchEvent(new Event('change'));
+                    }
+
+                    // Restauration de l'affichage du Titre
+                    if (chkShowTitle && opts.hasOwnProperty('titreVisible')) {
+                        chkShowTitle.checked = opts.titreVisible;
                     }
                 }
-            });
-			
-			// ==========================================
-            // AJOUT ICI : FORCER LA MISE À JOUR DE LA LISTE
-            // ==========================================
-            if (typeof rafraichirListeLateraleBilles === "function") {
-                rafraichirListeLateraleBilles();
+
+                // Forcer l'écriture du titre sur le tapis après configuration du toggle
+                if (typeof rafraichirTitreSurTapis === "function") {
+                    rafraichirTitreSurTapis();
+                }
+
+                // 4. Forcer le canvas à redessiner immédiatement
+                if (typeof window.redessinerToutesLesLignes === "function") {
+                    window.redessinerToutesLesLignes();
+                }
+
+                alert(`Configuration "${titreImported}" restaurée avec succès !`);
+                
+                const controlsAccordion = document.querySelector('.controls-accordion');
+                if (controlsAccordion) {
+                    controlsAccordion.open = false; 
+                }
+
+            } catch (error) {
+                alert("Erreur lors de la lecture du fichier JSON. Vérifiez sa structure.");
             }
 
-            // 4. Mettre à jour les champs de texte éditables du menu et du tapis de billard
-            if (titleInput) titleInput.value = titreImported;
-            if (typeof rafraichirTitreSurTapis === "function") rafraichirTitreSurTapis();
-            if (descInput) descInput.value = descImported;
-
-            // 5. Forcer le canvas à redessiner immédiatement toutes les formes géométriques et zones chargées
-            if (typeof window.redessinerToutesLesLignes === "function") {
-                window.redessinerToutesLesLignes();
-            }
-
-            alert(`Configuration "${titreImported}" restaurée avec succès !`);
-			
-			// ====================================================================
-            // AJOUT : FERMETURE AUTOMATIQUE DE L'ACCORDÉON <details>
-            // ====================================================================
-            const controlsAccordion = document.querySelector('.controls-accordion');
-            if (controlsAccordion) {
-                controlsAccordion.open = false; // Ferme nativement le volet d'options
-            }
-
-        } catch (error) {
-            alert("Erreur lors de la lecture du fichier JSON. Vérifiez sa structure.");
-        }
-
-        // Réinitialisation du champ de fichier pour autoriser une ré-importation immédiate du même fichier
-        fileImportInput.value = "";
-    };
-    reader.readAsText(file);
-});
-
+            fileImportInput.value = "";
+        };
+        reader.readAsText(file);
+    });
 }
+
 
 
 
