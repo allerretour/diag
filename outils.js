@@ -797,7 +797,7 @@ if (btnRandomHD) {
 
 
 // ====================================================================
-// GÉNÉRATION D'UNE SÉRIE DE 10 SESSIONS (AVEC COORDONNÉES TXT MAGNÉTIQUES FORCÉES)
+// GÉNÉRATION D'UNE SÉRIE DE 10 SESSIONS (AVEC COORDONNÉES TXT COMMISSIONS MODIFIÉES)
 // ====================================================================
 const btnExportSerieAleatoire = document.getElementById('btn-export-serie-aleatoire');
 
@@ -913,13 +913,10 @@ if (btnExportSerieAleatoire) {
             if (baseDesc) contenuTexte += `Description : ${baseDesc}\n`;
             contenuTexte += `Généré le   : ${horodatage}\n`;
             contenuTexte += `--------------------------------\n`;
-            contenuTexte += `Positions des billes (Grille 16x8, Magnétisme Activé pour l'export) :\n\n`;
+            contenuTexte += `Positions des billes (Grille 16x8) :\n\n`;
 
-            // Ajout de la bille blanche dans le fichier TXT
-            const dummyCueBall = document.createElement('div');
-            dummyCueBall.style.width = '24px'; 
-            const coordsBlanche = obtenirCoordonneesGrille(centreZoneX - 12, centreZoneY - 12, dummyCueBall);
-            contenuTexte += `- Bille Blanche             : X = ${coordsBlanche.x.padStart(4)}, Y = ${coordsBlanche.y.padStart(4)}\n`;
+            // === MODIFICATION ICI : REMPLACEMENT DES COORDONNÉES DE LA BLANCHE PAR LE CODE ZD ===
+            contenuTexte += `- Bille Blanche             : Zone de Départ = ZD${savedZdId}\n`;
 
             activeBalls.forEach(ball => {
                 const ballId = parseInt(ball.getAttribute('data-id'), 10);
@@ -934,7 +931,7 @@ if (btnExportSerieAleatoire) {
                             visible: true
                         });
 
-                        // Génération de la ligne texte avec coordonnées magnétiques
+                        // Génération de la ligne texte avec coordonnées magnétiques pour les billes de couleur
                         const numEl = ball.querySelector('.ball-num');
                         const numTexte = numEl ? numEl.innerText : String(ballId);
                         const estRayee = ball.classList.contains('striped');
@@ -995,6 +992,7 @@ if (btnExportSerieAleatoire) {
 
         // Restauration de l'état initial du magnétisme sur l'UI de l'utilisateur
         if (chkMagnetism) chkMagnetism.checked = etatMagnetismeUI;
+
 
         // --- GÉNÉRATION ET TÉLÉCHARGEMENT DU FICHIER ZIP COMPLET ---
         zip.generateAsync({ type: "blob" }).then((content) => {
