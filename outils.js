@@ -797,12 +797,15 @@ if (btnRandomHD) {
 
 
 // ====================================================================
-// GÉNÉRATION D'UNE SÉRIE DE 10 FICHIERS ALÉATOIRES PROGRESSIFS
+// GÉNÉRATION D'UNE SÉRIE DE 10 SESSIONS (AVEC COORDONNÉES TXT MAGNÉTIQUES FORCÉES)
 // ====================================================================
 const btnExportSerieAleatoire = document.getElementById('btn-export-serie-aleatoire');
 
 if (btnExportSerieAleatoire) {
     btnExportSerieAleatoire.addEventListener('click', () => {
+        // Initialisation de JSZip
+        const zip = new JSZip();
+
         // Le titre par défaut devient "Aleatoire progressif" si le champ input est vide
         const configTitle = "Aleatoire progressif";
         
@@ -818,7 +821,6 @@ if (btnExportSerieAleatoire) {
         const minutes = String(maintenant.getMinutes()).padStart(2, '0');
         const horodatage = `${jour}/${mois}/${annee} à ${heures}h${minutes}`;
         
-        // MODIFICATION : Ajout de la mention demandée dans la description
         const configDesc = `${baseDesc}\nCréé le : ${horodatage}`;
 
         const chkToggleGrid = document.getElementById('chk-toggle-grid');
@@ -833,6 +835,12 @@ if (btnExportSerieAleatoire) {
         const rows = 8;
         const pasX = gridWidth / cols;  
         const pasY = gridHeight / rows; 
+
+        // Sauvegarde temporaire de l'état du magnétisme de l'interface graphique
+        const etatMagnetismeUI = chkMagnetism ? chkMagnetism.checked : false;
+
+        // FORCE l'activation globale du magnétisme pour le calcul de l'export
+        if (chkMagnetism) chkMagnetism.checked = true;
 
         // i représente le nombre TOTAL de billes sur la table (de 2 à 11)
         for (let i = 2; i <= 11; i++) {
@@ -893,11 +901,26 @@ if (btnExportSerieAleatoire) {
             const cueX = `${centreZoneX - 12}px`;
             const cueY = `${centreZoneY - 12}px`;
 
-            // 5. Remplissage des données de configuration des billes
+            // 5. Remplissage des données géométriques
             const listBillesExport = [];
             listBillesExport.push({ id: "0", x: cueX, y: cueY, visible: true });
 
             let intersectionIdx = 0;
+            
+            // Préparation de la structure du fichier TXT avec magnétisme actif
+            let contenuTexte = `=== CONFIGURATION DE BILLARD ===\n`;
+            contenuTexte += `Titre       : ${configTitle}_${nbBillesCouleurRequises}_billes\n`;
+            if (baseDesc) contenuTexte += `Description : ${baseDesc}\n`;
+            contenuTexte += `Généré le   : ${horodatage}\n`;
+            contenuTexte += `--------------------------------\n`;
+            contenuTexte += `Positions des billes (Grille 16x8, Magnétisme Activé pour l'export) :\n\n`;
+
+            // Ajout de la bille blanche dans le fichier TXT
+            const dummyCueBall = document.createElement('div');
+            dummyCueBall.style.width = '24px'; 
+            const coordsBlanche = obtenirCoordonneesGrille(centreZoneX - 12, centreZoneY - 12, dummyCueBall);
+            contenuTexte += `- Bille Blanche             : X = ${coordsBlanche.x.padStart(4)}, Y = ${coordsBlanche.y.padStart(4)}\n`;
+
             activeBalls.forEach(ball => {
                 const ballId = parseInt(ball.getAttribute('data-id'), 10);
                 
@@ -910,6 +933,19 @@ if (btnExportSerieAleatoire) {
                             y: posAleatoire.y,
                             visible: true
                         });
+
+                        // Génération de la ligne texte avec coordonnées magnétiques
+                        const numEl = ball.querySelector('.ball-num');
+                        const numTexte = numEl ? numEl.innerText : String(ballId);
+                        const estRayee = ball.classList.contains('striped');
+                        const nomBille = `Bille N°${numTexte} (${estRayee ? 'Rayée' : 'Pleine'})`;
+
+                        const pX = parseFloat(posAleatoire.x);
+                        const pY = parseFloat(posAleatoire.y);
+                        const coordsGrille = obtenirCoordonneesGrille(pX, pY, ball);
+
+                        contenuTexte += `- ${nomBille.padEnd(25)} : X = ${coordsGrille.x.padStart(4)}, Y = ${coordsGrille.y.padStart(4)}\n`;
+
                         intersectionIdx++;
                     } else {
                         listBillesExport.push({
@@ -921,6 +957,15 @@ if (btnExportSerieAleatoire) {
                     }
                 }
             });
+
+            contenuTexte += `\nTotal : ${nbBillesCouleurRequises + 1} billes présentes sur le tapis.\n`;
+            
+            contenuTexte += `--------------------------------\n`;
+            contenuTexte += `Zones de jeu actives (Filtres tactiques) :\n\n`;
+            contenuTexte += `- Code : ZD${savedZdId.toString().padEnd(3)} | Type : Zone Départ   \n`;
+            contenuTexte += `- Code : ZA${savedZaId.toString().padEnd(3)} | Type : Zone Arrivée  \n`;
+            contenuTexte += `\nTotal : 2 zone(s) affichée(s) sur la table.\n`;
+            contenuTexte += `================================\n`;
 
             // 6. Objet JSON final
             const donneesExport = {
@@ -938,21 +983,30 @@ if (btnExportSerieAleatoire) {
                 }
             };
 
-            // 7. Formatage du nom de fichier avec le nombre de billes de COULEUR (i - 1)
             const indexFichier = String(nbBillesCouleurRequises).padStart(2, '0');
             const nomFichierSecurise = configTitle.replace(/[/\\?%*:|"<>]/g, '-').substring(0, 80);
-            const nomFinal = `${nomFichierSecurise}_serie_${indexFichier}_billes.json`;
+            
+            const nomFinalJson = `${nomFichierSecurise}_serie_${indexFichier}_billes.json`;
+            const nomFinalTxt = `${nomFichierSecurise}_serie_${indexFichier}_billes.txt`;
 
-            const blob = new Blob([JSON.stringify(donneesExport, null, 4)], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
+            zip.file(nomFinalJson, JSON.stringify(donneesExport, null, 4));
+            zip.file(nomFinalTxt, contenuTexte);
+        }
+
+        // Restauration de l'état initial du magnétisme sur l'UI de l'utilisateur
+        if (chkMagnetism) chkMagnetism.checked = etatMagnetismeUI;
+
+        // --- GÉNÉRATION ET TÉLÉCHARGEMENT DU FICHIER ZIP COMPLET ---
+        zip.generateAsync({ type: "blob" }).then((content) => {
+            const nomZipSecurise = configTitle.replace(/[/\\?%*:|"<>]/g, '-').substring(0, 80);
             const a = document.createElement('a');
-            a.href = url;
-            a.download = nomFinal;
+            a.href = URL.createObjectURL(content);
+            a.download = `${nomZipSecurise}_serie_complete.zip`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
+            URL.revokeObjectURL(a.href);
+        });
     });
 }
 
