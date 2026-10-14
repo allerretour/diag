@@ -842,10 +842,16 @@ if (btnExportSerieAleatoire) {
         // FORCE l'activation globale du magnétisme pour le calcul de l'export
         if (chkMagnetism) chkMagnetism.checked = true;
 
-        // i représente le nombre TOTAL de billes sur la table (de 2 à 11)
-        for (let i = 2; i <= 11; i++) {
-            const nbBillesCouleurRequises = i - 1; // Le nombre de billes de couleur réelles (1 à 10)
+       // 1. On récupère l'élément HTML créé
+	const inputNbManches = document.getElementById('input-nb-manches');
 
+	// 2. À l'intérieur de l'événement 'click' du bouton, lisez sa valeur :
+	const totalManchesSouhaitees = inputNbManches ? parseInt(inputNbManches.value, 10) : 10;
+
+	// 3. Modifiez la boucle pour qu'elle s'adapte dynamiquement
+	for (let i = 2; i <= (totalManchesSouhaitees + 1); i++) {
+    	const nbBillesCouleurRequises = i - 1;
+    	
             // 1. Générer les intersections de la grille HD 16x8
             const intersectionsDisponibles = [];
             for (let c = 0; c <= cols; c++) {
