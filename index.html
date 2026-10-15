@@ -729,6 +729,75 @@
 }
 
 
+/* Style de l'accordéon d'aide */
+.shortcuts-help {
+    background-color: #1e293b; /* Bleu nuit/Ardoise sombre */
+    border: 1px solid #334155;
+    border-radius: 6px;
+    margin: 10px 0;
+    color: #f8fafc;
+    font-family: sans-serif;
+}
+
+.shortcuts-help summary {
+    padding: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+}
+
+.shortcuts-grid {
+    padding: 10px;
+    border-top: 1px solid #334155;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.shortcut-group h4 {
+    margin: 0 0 8px 0;
+    color: #3b82f6; /* Accent bleu */
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.shortcut-group ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.shortcut-group li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #cbd5e1;
+}
+
+/* Style des touches de clavier virtuelles (KBD) */
+kbd {
+    background: #0f172a;
+    border: 1px solid #475569;
+    border-radius: 4px;
+    box-shadow: 0 2px 0 #475569;
+    color: #f8fafc;
+    display: inline-block;
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 2px 6px;
+    text-align: center;
+    min-width: 15px;
+    white-space: nowrap;
+}
 
 
 
@@ -1031,6 +1100,51 @@
        <!-- Fin de votre bloc de contrôles existant -->
     </div>
 </details>
+
+
+<details class="controls-accordion shortcuts-help">
+    <summary>⌨️ Guide des Raccourcis Clavier</summary>
+    <div class="shortcuts-grid">
+        <div class="shortcut-group">
+            <h4>🎨 Formes Tactiques (Aperçus)</h4>
+            <ul>
+                <li><kbd>T</kbd> <span><b>Cible de visée</b> (Refaire T pour changer de quadrant)</span></li>
+                <li><kbd>Z</kbd> <span><b>Carré de zone</b> (Refaire Z pour changer la taille)</span></li>
+                <li><kbd>9</kbd> <span><b>Repère X</b> (Refaire 9 pour Étoile 4/6 ou Cercle)</span></li>
+                <li><kbd>0</kbd> <span><b>Effets Bille Blanche</b> (Grand réticule)</span></li>
+                <li><kbd>Échap</kbd> <span>Annuler l'outil actif / Masquer l'aperçu</span></li>
+            </ul>
+        </div>
+        
+        <div class="shortcut-group">
+            <h4>📐 Zones de Jeu (Grille)</h4>
+            <ul>
+                <li><kbd>1</kbd> à <kbd>8</kbd> <span><b>Activer / Modifier une Zone</b><br>1er clic: Départ (ZD) | 2e clic: Arrivée (ZA) | 3e clic: Effacer</span></li>
+            </ul>
+        </div>
+
+        <div class="shortcut-group">
+            <h4>🖌️ Dessin & Tracés</h4>
+            <ul>
+                <li><kbd>Clic Droit</kbd> <span><b>Dessin libre</b> (Prend la couleur de la bille active)</span></li>
+                <li><kbd>Ctrl</kbd> + <kbd>Glisser</kbd> <span>Force une <b>Ligne Droite</b></span></li>
+                <li><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Glisser</kbd> <span>Ligne Droite avec <b>Flèche</b></span></li>
+                <li><kbd>E</kbd> ou <kbd>Suppr</kbd> <span><b>Effacer l'élément</b> sous le curseur</span></li>
+                <li><kbd>Ctrl + Z</kbd> <span><b>Annuler</b> le dernier dessin</span></li>
+                <li><kbd>H</kbd> <span><b>Masquer / Afficher</b> tous les dessins</span></li>
+            </ul>
+        </div>
+
+        <div class="shortcut-group">
+            <h4>🔮 Gestion des Billes</h4>
+            <ul>
+                <li><kbd>Clic Gauche</kbd> <span>Sélectionner une bille (Contour blanc)</span></li>
+                <li><kbd>Double-Clic</kbd> <span><b>Masquer / Retirer</b> la bille du tapis</span></li>
+            </ul>
+        </div>
+    </div>
+</details>
+
 
 
 
