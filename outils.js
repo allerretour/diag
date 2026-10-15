@@ -797,7 +797,7 @@ if (btnRandomHD) {
 
 
 // ====================================================================
-// GÉNÉRATION D'UNE SÉRIE DE 10 SESSIONS (AVEC COORDONNÉES TXT COMMISSIONS MODIFIÉES)
+// GÉNÉRATION D'UNE SÉRIE DE 10 SESSIONS (1 FICHIER ZIP - 2 DOSSIERS NESTES)
 // ====================================================================
 const btnExportSerieAleatoire = document.getElementById('btn-export-serie-aleatoire');
 
@@ -805,6 +805,10 @@ if (btnExportSerieAleatoire) {
     btnExportSerieAleatoire.addEventListener('click', () => {
         // Initialisation de JSZip
         const zip = new JSZip();
+
+        // Création des deux sous-dossiers virtuels à la racine de l'archive
+        const dossierJson = zip.folder("Configuration JSON");
+        const dossierTxt = zip.folder("Positionnement TXT");
 
         // Le titre par défaut devient "Aleatoire progressif" si le champ input est vide
         const configTitle = "Aleatoire progressif";
@@ -842,16 +846,16 @@ if (btnExportSerieAleatoire) {
         // FORCE l'activation globale du magnétisme pour le calcul de l'export
         if (chkMagnetism) chkMagnetism.checked = true;
 
-       // 1. On récupère l'élément HTML créé
-	const inputNbManches = document.getElementById('input-nb-manches');
+        // 1. On récupère l'élément HTML créé
+        const inputNbManches = document.getElementById('input-nb-manches');
 
-	// 2. À l'intérieur de l'événement 'click' du bouton, lisez sa valeur :
-	const totalManchesSouhaitees = inputNbManches ? parseInt(inputNbManches.value, 10) : 10;
+        // 2. À l'intérieur de l'événement 'click' du bouton, lisez sa valeur :
+        const totalManchesSouhaitees = inputNbManches ? parseInt(inputNbManches.value, 10) : 10;
 
-	// 3. Modifiez la boucle pour qu'elle s'adapte dynamiquement
-	for (let i = 2; i <= (totalManchesSouhaitees + 1); i++) {
-    	const nbBillesCouleurRequises = i - 1;
-    	
+        // 3. Modifiez la boucle pour qu'elle s'adapte dynamiquement
+        for (let i = 2; i <= (totalManchesSouhaitees + 1); i++) {
+            const nbBillesCouleurRequises = i - 1;
+            
             // 1. Générer les intersections de la grille HD 16x8
             const intersectionsDisponibles = [];
             for (let c = 0; c <= cols; c++) {
@@ -992,20 +996,30 @@ if (btnExportSerieAleatoire) {
             const nomFinalJson = `${nomFichierSecurise}_serie_${indexFichier}_billes.json`;
             const nomFinalTxt = `${nomFichierSecurise}_serie_${indexFichier}_billes.txt`;
 
-            zip.file(nomFinalJson, JSON.stringify(donneesExport, null, 4));
-            zip.file(nomFinalTxt, contenuTexte);
+            // Modification : Distribution ordonnée dans les répertoires correspondants
+            dossierJson.file(nomFinalJson, JSON.stringify(donneesExport, null, 4));
+            dossierTxt.file(nomFinalTxt, contenuTexte);
         }
 
         // Restauration de l'état initial du magnétisme sur l'UI de l'utilisateur
         if (chkMagnetism) chkMagnetism.checked = etatMagnetismeUI;
 
+        // --- GÉNÉRATION ET TÉLÉCHARGEMENT DE L'ARCHIVE REGROUPÉE UNIQUE ---
+        // Formatage de la date et de l'heure pour le fichier : AAAAMMJJ_HHMM
+        const anneeFichier = maintenant.getFullYear();
+        const moisFichier = String(maintenant.getMonth() + 1).padStart(2, '0');
+        const jourFichier = String(maintenant.getDate()).padStart(2, '0');
+        const heuresFichier = String(maintenant.getHours()).padStart(2, '0');
+        const minutesFichier = String(maintenant.getMinutes()).padStart(2, '0');
+        const horodatageFichier = `${anneeFichier}${moisFichier}${jourFichier}_${heuresFichier}${minutesFichier}`;
 
-        // --- GÉNÉRATION ET TÉLÉCHARGEMENT DU FICHIER ZIP COMPLET ---
+        // Calcul dynamique du nombre de billes maximum de la série pour le nom de l'archive
+        const nomArchiveFinale = `${horodatageFichier}_SERIE_${totalManchesSouhaitees}_billes.zip`;
+
         zip.generateAsync({ type: "blob" }).then((content) => {
-            const nomZipSecurise = configTitle.replace(/[/\\?%*:|"<>]/g, '-').substring(0, 80);
             const a = document.createElement('a');
             a.href = URL.createObjectURL(content);
-            a.download = `${nomZipSecurise}_serie_complete.zip`;
+            a.download = nomArchiveFinale;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -1013,6 +1027,9 @@ if (btnExportSerieAleatoire) {
         });
     });
 }
+
+
+
 
 
 
