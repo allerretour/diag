@@ -797,7 +797,7 @@ if (btnRandomHD) {
 
 
 // ====================================================================
-// GÉNÉRATION D'UNE SÉRIE DE 10 SESSIONS (1 FICHIER ZIP - 2 DOSSIERS NESTES)
+// GÉNÉRATION D'UNE SÉRIE DE SESSIONS AVEC NUMÉRO DE MATCH UNIQUE
 // ====================================================================
 const btnExportSerieAleatoire = document.getElementById('btn-export-serie-aleatoire');
 
@@ -805,6 +805,11 @@ if (btnExportSerieAleatoire) {
     btnExportSerieAleatoire.addEventListener('click', () => {
         // Initialisation de JSZip
         const zip = new JSZip();
+
+        // Génère un code unique de 4 lettres majuscules (ex: JFTX)
+	const matchUniqueId = Array.from({length: 4}, () => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
+
+   
 
         // Création des deux sous-dossiers virtuels à la racine de l'archive
         const dossierJson = zip.folder("Configuration JSON");
@@ -825,7 +830,8 @@ if (btnExportSerieAleatoire) {
         const minutes = String(maintenant.getMinutes()).padStart(2, '0');
         const horodatage = `${jour}/${mois}/${annee} à ${heures}h${minutes}`;
         
-        const configDesc = `${baseDesc}\nCréé le : ${horodatage}`;
+        // INCLUSION DU NUMÉRO DE MATCH DANS LA DESCRIPTION GÉNÉRALE
+        const configDesc = `${baseDesc}\nMatch unique N° : ${matchUniqueId}\nCréé le : ${horodatage}`;
 
         const chkToggleGrid = document.getElementById('chk-toggle-grid');
         const chkHighDensityGrid = document.getElementById('chk-high-density-grid');
@@ -919,13 +925,14 @@ if (btnExportSerieAleatoire) {
             
             // Préparation de la structure du fichier TXT avec magnétisme actif
             let contenuTexte = `=== CONFIGURATION DE BILLARD ===\n`;
-            contenuTexte += `Titre       : ${configTitle}_${nbBillesCouleurRequises}_billes\n`;
-            if (baseDesc) contenuTexte += `Description : ${baseDesc}\n`;
+            // AJOUT DU CODE MATCH DANS LE TITRE DU MANUSCRIT TXT
+            contenuTexte += `Titre       : ${configTitle}_MATCH-${matchUniqueId}_manche_${String(nbBillesCouleurRequises).padStart(2, '0')}\n`;
+            if (baseDesc) contenuTexte += `Description : ${baseDesc} (Match unique N° : ${matchUniqueId})\n`;
             contenuTexte += `Généré le   : ${horodatage}\n`;
             contenuTexte += `--------------------------------\n`;
             contenuTexte += `Positions des billes (Grille 16x8) :\n\n`;
 
-            // === MODIFICATION ICI : REMPLACEMENT DES COORDONNÉES DE LA BLANCHE PAR LE CODE ZD ===
+            // Remplacement des coordonnées de la blanche par le code ZD
             contenuTexte += `- Bille Blanche             : Zone de Départ = ZD${savedZdId}\n`;
 
             activeBalls.forEach(ball => {
@@ -941,7 +948,7 @@ if (btnExportSerieAleatoire) {
                             visible: true
                         });
 
-                        // Génération de la ligne texte avec coordonnées magnétiques pour les billes de couleur
+                        // Génération de la ligne texte avec coordonnées magnétiques
                         const numEl = ball.querySelector('.ball-num');
                         const numTexte = numEl ? numEl.innerText : String(ballId);
                         const estRayee = ball.classList.contains('striped');
@@ -976,8 +983,8 @@ if (btnExportSerieAleatoire) {
 
             // 6. Objet JSON final
             const donneesExport = {
-                titre: `${configTitle}_${nbBillesCouleurRequises}_billes`,
-                description: configDesc,
+                titre: `${configTitle}_MATCH-${matchUniqueId}_manche_${String(nbBillesCouleurRequises).padStart(2, '0')}`,
+                description: configDesc, // Contient déjà le numéro unique de match
                 nombreBillesVisibles: String(i), 
                 billes: listBillesExport,
                 lignesDessinees: zonesDessinees,
@@ -991,21 +998,21 @@ if (btnExportSerieAleatoire) {
             };
 
             const indexFichier = String(nbBillesCouleurRequises).padStart(2, '0');
-            const nomFichierSecurise = configTitle.replace(/[/\\?%*:|"<>]/g, '-').substring(0, 80);
+            const nomFichierSecurise = configTitle.replace(/[/\\?%*:|"<>]/g, '-').substring(0, 60);
             
-            const nomFinalJson = `${nomFichierSecurise}_serie_${indexFichier}_billes.json`;
-            const nomFinalTxt = `${nomFichierSecurise}_serie_${indexFichier}_billes.txt`;
+            // Le nom des fichiers inclut l'ID unique du match
+            const nomFinalJson = `${nomFichierSecurise}_M${matchUniqueId}_manche_${indexFichier}.json`;
+            const nomFinalTxt = `${nomFichierSecurise}_M${matchUniqueId}_manche_${indexFichier}.txt`;
 
-            // Modification : Distribution ordonnée dans les répertoires correspondants
+            // Distribution ordonnée dans les répertoires correspondants du ZIP
             dossierJson.file(nomFinalJson, JSON.stringify(donneesExport, null, 4));
             dossierTxt.file(nomFinalTxt, contenuTexte);
         }
 
-        // Restauration de l'état initial du magnétisme sur l'UI de l'utilisateur
+        // Restauration de l'état initial du magnétisme sur l'interface utilisateur
         if (chkMagnetism) chkMagnetism.checked = etatMagnetismeUI;
 
-        // --- GÉNÉRATION ET TÉLÉCHARGEMENT DE L'ARCHIVE REGROUPÉE UNIQUE ---
-        // Formatage de la date et de l'heure pour le fichier : AAAAMMJJ_HHMM
+        // --- GÉNÉRATION ET TÉLÉCHARGEMENT DE L'ARCHIVE UNIQUE COMPLETÉ ---
         const anneeFichier = maintenant.getFullYear();
         const moisFichier = String(maintenant.getMonth() + 1).padStart(2, '0');
         const jourFichier = String(maintenant.getDate()).padStart(2, '0');
@@ -1013,8 +1020,8 @@ if (btnExportSerieAleatoire) {
         const minutesFichier = String(maintenant.getMinutes()).padStart(2, '0');
         const horodatageFichier = `${anneeFichier}${moisFichier}${jourFichier}_${heuresFichier}${minutesFichier}`;
 
-        // Calcul dynamique du nombre de billes maximum de la série pour le nom de l'archive
-        const nomArchiveFinale = `${horodatageFichier}_SERIE_${totalManchesSouhaitees}_billes.zip`;
+        // Construction du nom de l'archive finale
+        const nomArchiveFinale = `${horodatageFichier}_MATCH-${matchUniqueId}_SERIE_${totalManchesSouhaitees}_manches.zip`;
 
         zip.generateAsync({ type: "blob" }).then((content) => {
             const a = document.createElement('a');
