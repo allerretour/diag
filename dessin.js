@@ -794,6 +794,72 @@ if (dessin.estZoneGrille) {
 }
 
 
+// ====================================================================
+// DÉPLACEMENT MICRO-MÉTRIQUE DES BILLES AUX FLÈCHES DU CLAVIER
+// ====================================================================
+if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+    // Si aucune bille n'est sélectionnée, on ne fait rien
+    if (!window.billeSelectionneeCourante || window.billeSelectionneeCourante.style.display === 'none') {
+        return;
+    }
+
+    // Bloque le défilement par défaut de la page web dans le navigateur
+    e.preventDefault();
+
+    // 1. Récupération des positions physiques actuelles en pixels
+    let currentX = parseFloat(window.billeSelectionneeCourante.style.left) || 0;
+    let currentY = parseFloat(window.billeSelectionneeCourante.style.top) || 0;
+
+    // 2. Définition des pas géométriques basés sur votre grille 16x8
+    const gridWidth = 754;
+    const gridHeight = 364;
+    const pasX = gridWidth / 16;  // ~47.12px (1 unité de grille X)
+    const pasY = gridHeight / 8;  // ~45.5px  (1 unité de grille Y)
+
+    // Si SHIFT est enfoncé, on déplace d'une case entière, sinon d'un micro-pas (1/10ème de case)
+    const multiplicateur = e.shiftKey ? 1.0 : 0.1;
+    const incrementX = pasX * multiplicateur;
+    const incrementY = pasY * multiplicateur;
+
+    // 3. Calcul des nouvelles coordonnées selon la flèche pressée
+    switch (e.key) {
+        case 'ArrowLeft':
+            currentX -= incrementX;
+            break;
+        case 'ArrowRight':
+            currentX += incrementX;
+            break;
+        case 'ArrowUp':
+            currentY -= incrementY; // En CSS, diminuer 'top' fait monter l'élément
+            break;
+        case 'ArrowDown':
+            currentY += incrementY; // Augmenter 'top' fait descendre l'élément
+            break;
+    }
+
+    // 4. Sécurité anti-débordement des bandes et poches
+    const positionClampee = clampPosition(currentX, currentY);
+
+    // 5. Application directe des coordonnées physiques (sans snap magnétique forcé pour permettre le hors-piste au millimètre)
+    window.billeSelectionneeCourante.style.left = `${positionClampee.x}px`;
+    window.billeSelectionneeCourante.style.top = `${positionClampee.y}px`;
+
+    // 6. Résolution des collisions à la volée avec les autres billes du tapis
+    if (typeof resolveCollisions === "function") {
+        resolveCollisions(window.billeSelectionneeCourante);
+    }
+
+    // 7. Rafraîchissement des modules d'information (HUD latéral et affichage texte)
+    if (typeof rafraichirListeLateraleBilles === "function") {
+        rafraichirListeLateraleBilles();
+    }
+}
+
+
+
+
+
+
 // Raccourci pour masquer / afficher le canvas (Touche H)
 if (e.key.toLowerCase() === 'h') {
     e.preventDefault();
