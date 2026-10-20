@@ -35,6 +35,59 @@ function updateVisibleBalls() {
     });
 }
 
+// ====================================================================
+// CONFIGURATION DYNAMIQUE DES NUANCES DU TAPIS
+// ====================================================================
+const feltRadios = document.querySelectorAll('input[name="felt-color"]');
+
+// Définition des palettes de couleurs calquées sur votre modèle mathématique
+const palettesTapis = {
+    vert: {
+        "--tapis-couleur-principale": "#1e7e43",
+        "--tapis-eclat-centre":       "#27ae60",
+        "--tapis-ombre-profonde":     "#165b30", // Éclairci (anciennement #0e3a1e)
+        "--bande-dessus-lumineux":    "#22924e",
+        "--bande-ombre-exterieure":   "#1a633a", // Éclairci (anciennement #114725)
+        "--bande-ombre-interieure":   "#1d6f40"  // Éclairci (anciennement #15542d)
+    },
+    bleu: {
+        "--tapis-couleur-principale": "#1f4e79",
+        "--tapis-eclat-centre":       "#2a6ba2",
+        "--tapis-ombre-profonde":     "#183b5c", // Éclairci (anciennement #0f273d)
+        "--bande-dessus-lumineux":    "#245c8f",
+        "--bande-ombre-exterieure":   "#1c4469", // Éclairci (anciennement #12304c)
+        "--bande-ombre-interieure":   "#204d77"  // Éclairci (anciennement #163654)
+    },
+    gris: {
+        "--tapis-couleur-principale": "#5d6d7e",
+        "--tapis-eclat-centre":       "#6c7a89",
+        "--tapis-ombre-profonde":     "#495562", // Éclairci (anciennement #34495e)
+        "--bande-dessus-lumineux":    "#707b7c",
+        "--bande-ombre-exterieure":   "#4f5d6c", // Éclairci (anciennement #3b4f63)
+        "--bande-ombre-interieure":   "#546475"  // Éclairci (anciennement #41566b)
+    }
+};
+
+
+feltRadios.forEach(radio => {
+    radio.addEventListener('change', (event) => {
+        const choix = event.target.value;
+        const palette = palettesTapis[choix];
+
+        if (palette) {
+            // On applique les nouvelles variables directement sur le :root (document.documentElement)
+            Object.keys(palette).forEach(variable => {
+                document.documentElement.style.setProperty(variable, palette[variable]);
+            });
+        }
+    });
+});
+
+
+
+
+
+
 // Écouteur d'événement intelligent sur le changement du dropdown
 if (ballsCountSelect) {
     ballsCountSelect.addEventListener('change', (event) => {
@@ -187,21 +240,24 @@ if (exportBtn) {
         const chkShowTitle = document.getElementById('chk-show-title');
 
         // On crée l'objet global intégrant toutes les données
-        const donneesExport = {
-            titre: configTitle,
-            description: configDesc,
-            nombreBillesVisibles: ballsCountSelect ? ballsCountSelect.value : "15", // Sauvegarde textuelle ou numérique
-            billes: listBilles,
-            lignesDessinees: window.dessinsSauvegardes || [],
-            // AJOUT : Sauvegarde de l'état des toggles
-            optionsVisuelles: {
-                grille: chkToggleGrid ? chkToggleGrid.checked : false,
-                hd: chkHighDensityGrid ? chkHighDensityGrid.checked : false,
-                magnetisme: chkMagnetism ? chkMagnetism.checked : true,
-                logo: chkShowLogo ? chkShowLogo.checked : false,
-                titreVisible: chkShowTitle ? chkShowTitle.checked : false
-            }
-        };
+        // Trouvez ce bloc dans le gestionnaire d'export (exportBtn.addEventListener) :
+const donneesExport = {
+    titre: configTitle,
+    description: configDesc,
+    nombreBillesVisibles: ballsCountSelect ? ballsCountSelect.value : "15",
+    billes: listBilles,
+    lignesDessinees: window.dessinsSauvegardes || [],
+    optionsVisuelles: {
+        grille: chkToggleGrid ? chkToggleGrid.checked : false,
+        hd: chkHighDensityGrid ? chkHighDensityGrid.checked : false,
+        magnetisme: chkMagnetism ? chkMagnetism.checked : true,
+        logo: chkShowLogo ? chkShowLogo.checked : false,
+        titreVisible: chkShowTitle ? chkShowTitle.checked : false,
+        // --- CONSERVATION DE LA COULEUR DU TAPIS ---
+        couleurTapis: document.querySelector('input[name="felt-color"]:checked') ? document.querySelector('input[name="felt-color"]:checked').value : "bleu"
+    }
+};
+
 
         // Nettoyage du titre pour le nom du fichier
         const nomFichierSecurise = configTitle.replace(/[/\\?%*:|"<>]/g, '-').substring(0, 100) || "configuration_billard";
@@ -462,7 +518,29 @@ if (importTriggerBtn && fileImportInput) {
                     if (chkShowTitle && opts.hasOwnProperty('titreVisible')) {
                         chkShowTitle.checked = opts.titreVisible;
                     }
+					
+					// --- RESTAURATION DE LA COULEUR DU TAPIS DEPUIS LE JSON ---
+    if (opts.hasOwnProperty('couleurTapis')) {
+        const couleurEnregistree = opts.couleurTapis; // 'vert', 'bleu' ou 'gris'
+        
+        // 1. Coche le bouton radio correspondant dans l'interface utilisateur
+        const radioAcocher = document.querySelector(`input[name="felt-color"][value="${couleurEnregistree}"]`);
+        if (radioAcocher) {
+            radioAcocher.checked = true;
+        }
+
+        // 2. Réinjecte instantanément la bonne palette de variables CSS (:root)
+        const palette = palettesTapis[couleurEnregistree];
+        if (palette) {
+            Object.keys(palette).forEach(variable => {
+                document.documentElement.style.setProperty(variable, palette[variable]);
+            });
+        }
+    }
+					
                 }
+				
+				
 
                 // Forcer l'écriture du titre sur le tapis après configuration du toggle
                 if (typeof rafraichirTitreSurTapis === "function") {
@@ -981,21 +1059,24 @@ if (btnExportSerieAleatoire) {
             contenuTexte += `\nTotal : 2 zone(s) affichée(s) sur la table.\n`;
             contenuTexte += `================================\n`;
 
-            // 6. Objet JSON final
-            const donneesExport = {
-                titre: `${configTitle}_MATCH-${matchUniqueId}_manche_${String(nbBillesCouleurRequises).padStart(2, '0')}`,
-                description: configDesc, // Contient déjà le numéro unique de match
-                nombreBillesVisibles: String(i), 
-                billes: listBillesExport,
-                lignesDessinees: zonesDessinees,
-                optionsVisuelles: {
-                    grille: chkToggleGrid ? chkToggleGrid.checked : true,
-                    hd: chkHighDensityGrid ? chkHighDensityGrid.checked : true,
-                    magnetisme: true,
-                    logo: true,
-                    titreVisible: chkShowTitle ? chkShowTitle.checked : false
-                }
-            };
+            // Trouvez ce bloc dans la boucle du générateur automatique (.ZIP) :
+const donneesExport = {
+    titre: `${configTitle}_MATCH-${matchUniqueId}_manche_${String(nbBillesCouleurRequises).padStart(2, '0')}`,
+    description: configDesc,
+    nombreBillesVisibles: String(i), 
+    billes: listBillesExport,
+    lignesDessinees: zonesDessinees,
+    optionsVisuelles: {
+        grille: chkToggleGrid ? chkToggleGrid.checked : true,
+        hd: chkHighDensityGrid ? chkHighDensityGrid.checked : true,
+        magnetisme: true,
+        logo: true,
+        titreVisible: chkShowTitle ? chkShowTitle.checked : false,
+        // --- TRANSFERENCE DE LA COULEUR DU TAPIS AUX MANCHES DU ZIP ---
+        couleurTapis: document.querySelector('input[name="felt-color"]:checked') ? document.querySelector('input[name="felt-color"]:checked').value : "bleu"
+    }
+};
+
 
             const indexFichier = String(nbBillesCouleurRequises).padStart(2, '0');
             const nomFichierSecurise = configTitle.replace(/[/\\?%*:|"<>]/g, '-').substring(0, 60);
