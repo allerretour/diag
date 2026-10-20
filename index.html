@@ -8,6 +8,22 @@
 
     <title>Concepteur de diagramme</title>
     <style>
+	 /* ====================================================================
+   DÉFINITION DES VARIABLES DE COULEUR (Faciles à changer)
+   ==================================================================== */
+:root {
+    /* Changez uniquement cette ligne pour changer la couleur du billard ! */
+    --tapis-couleur-principale: #1f4e79; /* Bleu tournoi officiel */
+
+    /* Nuances calculées automatiquement pour les volumes (Ombres et Lumières) */
+    --tapis-eclat-centre:       #2a6ba2; /* Point lumineux sous la lampe */
+    --tapis-ombre-profonde:     #0f273d; /* Coins sombres de la table */
+    --bande-dessus-lumineux:    #245c8f; /* Sommet de la bande plastique */
+    --bande-ombre-exterieure:   #12304c; /* Ombre de raccord au cadre bois */
+    --bande-ombre-interieure:   #163654; /* Chute de la bande vers le tapis */
+}
+	
+	
         * { box-sizing: border-box; }
         body {
             background-color: #1e272e;
@@ -97,102 +113,103 @@
             justify-content: center;
             
         }
-        #pool-table {
-            position: relative;
-            width: 800px;
-            height: 400px;
-            background: radial-gradient(circle, #0f7a44 40%, #0a522d 100%);
-            box-shadow: inset 0 10px 20px rgba(0,0,0,0.5);
-            
-        }
-        /* Bandes physiques ajustées aux nouvelles positions de vos poches */
-/* 1. Base commune pour toutes les bandes */
+      
+
+/* ====================================================================
+   STRUCTURE ET INTEGRATION DES VARIABLES
+   ==================================================================== */
+#pool-table {
+    position: relative;
+    width: 800px;
+    height: 400px;
+    /* Application des variables pour l'effet de lumière réaliste */
+    background: radial-gradient(
+        circle at 50% 50%, 
+        var(--tapis-eclat-centre) 0%, 
+        var(--tapis-couleur-principale) 75%, 
+        var(--tapis-ombre-profonde) 100%
+    );
+    box-shadow: inset 0 10px 20px rgba(0,0,0,0.5);
+}
+
+/* Base commune pour toutes les bandes physiques */
 .cushion { 
-  position: absolute; 
-  background-color: #0a7e43; /* Votre vert d'origine en secours */
-  z-index: 2;
-  
-  /* Ombre interne globale pour simuler l'arrondi du tissu et le biseau */
-  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.4);
+    position: absolute; 
+    background-color: var(--tapis-couleur-principale);
+    z-index: 2;
+    box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.4);
 }
 
-/* 2. Bandes Horizontales (Haut et Bas) - Dégradé du haut vers le bas */
-.cushion.horizontal, 
-.cushion[style*="width: 7"], .cushion[style*="width: 3"] /* Cible vos bandes selon vos styles en ligne si nécessaire */ {
-  background-image: linear-gradient(
-    to bottom,
-    #064d29 0%,    /* Extérieur : ombre du cadre en bois */
-    #0a7e43 30%,   /* Dessus de la bande : votre vert lumineux */
-    #054424 100%   /* Intérieur : ombre plongeante vers le tapis */
-  );
+/* Bandes Supérieures (Haut Gauche et Haut Droite) */
+.cushion.top-left, 
+.cushion.top-right {
+    background-image: linear-gradient(
+        to bottom,
+        var(--bande-ombre-exterieure) 0%,
+        var(--bande-dessus-lumineux) 30%,
+        var(--bande-ombre-interieure) 100%
+    );
 }
 
-/* 3. Bandes Verticales (Gauche et Droite) - Dégradé de la gauche vers la droite */
-.cushion.vertical,
-.cushion[style*="height: 3"] /* Ajustez selon les classes ou attributs réels de vos bandes verticales */ {
-  background-image: linear-gradient(
-    to right,
-    #064d29 0%,    /* Extérieur */
-    #0a7e43 30%,   /* Dessus de la bande */
-    #054424 100%   /* Intérieur vers le tapis */
-  );
+/* Bandes Inférieures (Bas Gauche et Bas Droite) */
+.cushion.bottom-left, 
+.cushion.bottom-right {
+    background-image: linear-gradient(
+        to top,
+        var(--bande-ombre-exterieure) 0%,
+        var(--bande-dessus-lumineux) 30%,
+        var(--bande-ombre-interieure) 100%
+    );
 }
 
+/* Bande Verticale Gauche */
+.cushion.left {
+    background-image: linear-gradient(
+        to right,
+        var(--bande-ombre-exterieure) 0%,
+        var(--bande-dessus-lumineux) 30%,
+        var(--bande-ombre-interieure) 100%
+    );
+}
 
-/* --- BANDES SUPÉRIEURES (Rallongées à 352px pour rétrécir la poche centrale) --- */
-/* Gauche : 45° à gauche (poche coin), 75° à droite (poche centre) */
+/* Bande Verticale Droite */
+.cushion.right {
+    background-image: linear-gradient(
+        to left,
+        var(--bande-ombre-exterieure) 0%,
+        var(--bande-dessus-lumineux) 30%,
+        var(--bande-ombre-interieure) 100%
+    );
+}
+
+/* ====================================================================
+   STRUCTURE GÉOMÉTRIQUE ET COUPE (Strictement inchangée)
+   ==================================================================== */
 .cushion.top-left { 
-  top: 0; 
-  left: 30px; 
-  width: 346px; /* Allongé de 4px */
-  height: 18px; 
-  clip-path: polygon(0 0, 100% 0, calc(100% - 5px) 100%, 18px 100%);
+    top: 0; left: 30px; width: 346px; height: 18px; 
+    clip-path: polygon(0 0, 100% 0, calc(100% - 5px) 100%, 18px 100%);
 }
-/* Droite : 75° à gauche (poche centre), 45° à droite (poche coin) */
 .cushion.top-right { 
-  top: 0; 
-  right: 30px; 
-  width: 346px; /* Allongé de 4px */
-  height: 18px; 
-  clip-path: polygon(0 0, 100% 0, calc(100% - 18px) 100%, 5px 100%);
+    top: 0; right: 30px; width: 346px; height: 18px; 
+    clip-path: polygon(0 0, 100% 0, calc(100% - 18px) 100%, 5px 100%);
 }
-
-/* --- BANDES INFÉRIEURES (Rallongées à 352px pour rétrécir la poche centrale) --- */
-/* Gauche : 75° à droite (poche centre), 45° à gauche (poche coin) */
 .cushion.bottom-left { 
-  bottom: 0; 
-  left: 30px; 
-  width: 346px; /* Allongé de 4px */
-  height: 18px; 
-  clip-path: polygon(18px 0, calc(100% - 5px) 0, 100% 100%, 0 100%);
+    bottom: 0; left: 30px; width: 346px; height: 18px; 
+    clip-path: polygon(18px 0, calc(100% - 5px) 0, 100% 100%, 0 100%);
 }
-
-
-
-/* Droite : 45° à droite (poche coin), 75° à gauche (poche centre) */
 .cushion.bottom-right { 
-  bottom: 0; 
-  right: 30px; 
-  width: 346px; /* Allongé de 4px */
-  height: 18px; 
-  clip-path: polygon(5px 0, calc(100% - 18px) 0, 100% 100%, 0 100%);
+    bottom: 0; right: 30px; width: 346px; height: 18px; 
+    clip-path: polygon(5px 0, calc(100% - 18px) 0, 100% 100%, 0 100%);
 }
-
-/* --- BANDES VERTICALES (Inchangées) --- */
 .cushion.left { 
-  top: 30px; 
-  left: 0; 
-  width: 18px; 
-  height: 340px; 
-  clip-path: polygon(0 0, 100% 18px, 100% calc(100% - 18px), 0 100%);
+    top: 30px; left: 0; width: 18px; height: 340px; 
+    clip-path: polygon(0 0, 100% 18px, 100% calc(100% - 18px), 0 100%);
 }
 .cushion.right { 
-  top: 30px; 
-  right: 0; 
-  width: 18px; 
-  height: 340px; 
-  clip-path: polygon(100% 0, 100% 100%, 0 calc(100% - 18px), 0 18px);
+    top: 30px; right: 0; width: 18px; height: 340px; 
+    clip-path: polygon(100% 0, 100% 100%, 0 calc(100% - 18px), 0 18px);
 }
+
 
 
 
@@ -222,6 +239,8 @@
             box-shadow: 3px 5px 6px rgba(0, 0, 0, 0.4); /* Ombre sur le tapis */
 	    user-select: none; /* Empêche le texte ou la bille de se surligner en bleu au double-clic */
         }
+		
+
         
         /* Effet de brillance 3D universel (appliqué via un pseudo-élément ::after) */
         .ball::after {
