@@ -1,3 +1,26 @@
+// Variable globale pour stocker la chaîne Base64 du logo
+window.logoBase64Courant = null;
+
+const inputLogoFile = document.getElementById('input-logo-file');
+const tableLogoOverlay = document.getElementById('table-logo-overlay');
+
+// 1. ÉCOUTEUR : Convertir l'image locale en Base64 au moment du choix
+if (inputLogoFile && tableLogoOverlay) {
+    inputLogoFile.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            window.logoBase64Courant = event.target.result; // Contient la chaîne Base64 de l'image
+            tableLogoOverlay.src = window.logoBase64Courant; // L'affiche instantanément sur le tapis
+            tableLogoOverlay.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+
 document.addEventListener("DOMContentLoaded", () => {
     // Initialise les éléments visuels de la table
     initialiserBilles();
@@ -116,6 +139,8 @@ if (ballsCountSelect) {
         rafraichirListeLateraleBilles();
     });
 }
+
+
 
 
 // ====================================================================
@@ -245,6 +270,7 @@ const donneesExport = {
     titre: configTitle,
     description: configDesc,
     nombreBillesVisibles: ballsCountSelect ? ballsCountSelect.value : "15",
+    logoImageRaw: window.logoBase64Courant,
     billes: listBilles,
     lignesDessinees: window.dessinsSauvegardes || [],
     optionsVisuelles: {
@@ -518,6 +544,21 @@ if (importTriggerBtn && fileImportInput) {
                     if (chkShowTitle && opts.hasOwnProperty('titreVisible')) {
                         chkShowTitle.checked = opts.titreVisible;
                     }
+
+
+                    if (donneesImportees.hasOwnProperty('logoImageRaw') && donneesImportees.logoImageRaw) {
+    window.logoBase64Courant = donneesImportees.logoImageRaw;
+    if (tableLogoOverlay) {
+        tableLogoOverlay.src = window.logoBase64Courant; // Réinjecte l'image brute sauvegardée sur le tapis
+    }
+} else {
+    // Si la configuration importée n'a pas de logo personnalisé, on remet l'image par défaut
+    window.logoBase64Courant = null;
+    if (tableLogoOverlay) {
+        tableLogoOverlay.src = "logo.png"; 
+    }
+}
+
 					
 					// --- RESTAURATION DE LA COULEUR DU TAPIS DEPUIS LE JSON ---
     if (opts.hasOwnProperty('couleurTapis')) {
@@ -885,9 +926,7 @@ if (btnExportSerieAleatoire) {
         const zip = new JSZip();
 
         // Génère un code unique de 4 lettres majuscules (ex: JFTX)
-	const matchUniqueId = Array.from({length: 4}, () => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
-
-   
+        const matchUniqueId = Array.from({length: 4}, () => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
 
         // Création des deux sous-dossiers virtuels à la racine de l'archive
         const dossierJson = zip.folder("Configuration JSON");
@@ -896,7 +935,8 @@ if (btnExportSerieAleatoire) {
         // Le titre par défaut devient "Aleatoire progressif" si le champ input est vide
         const configTitle = "Aleatoire progressif";
         
-        // Récupération de la description existante
+        // Récupération de la description et du champ de description
+        const descInput = document.getElementById('input-desc');
         const baseDesc = descInput ? descInput.value.trim() : "Série progressive générée aléatoirement.";
 
         // --- GÉNÉRATION DE L'HORODATAGE LISIBLE ---
@@ -914,6 +954,8 @@ if (btnExportSerieAleatoire) {
         const chkToggleGrid = document.getElementById('chk-toggle-grid');
         const chkHighDensityGrid = document.getElementById('chk-high-density-grid');
         const chkShowTitle = document.getElementById('chk-show-title');
+        const tableLogoOverlay = document.getElementById('table-logo-overlay');
+        const rangeLogoSize = document.getElementById('range-logo-size');
 
         const gridLeft = 19;
         const gridTop = 17;
@@ -935,6 +977,12 @@ if (btnExportSerieAleatoire) {
 
         // 2. À l'intérieur de l'événement 'click' du bouton, lisez sa valeur :
         const totalManchesSouhaitees = inputNbManches ? parseInt(inputNbManches.value, 10) : 10;
+
+        // Récupération de la source du logo en priorité depuis la mémoire globale Base64, sinon depuis la balise image
+        let logoAExporter = window.logoBase64Courant;
+        if (!logoAExporter && tableLogoOverlay && tableLogoOverlay.src && !tableLogoOverlay.src.endsWith('logo.png')) {
+            logoAExporter = tableLogoOverlay.src;
+        }
 
         // 3. Modifiez la boucle pour qu'elle s'adapte dynamiquement
         for (let i = 2; i <= (totalManchesSouhaitees + 1); i++) {
@@ -1003,14 +1051,12 @@ if (btnExportSerieAleatoire) {
             
             // Préparation de la structure du fichier TXT avec magnétisme actif
             let contenuTexte = `=== CONFIGURATION DE BILLARD ===\n`;
-            // AJOUT DU CODE MATCH DANS LE TITRE DU MANUSCRIT TXT
             contenuTexte += `Titre       : ${configTitle}_MATCH-${matchUniqueId}_manche_${String(nbBillesCouleurRequises).padStart(2, '0')}\n`;
             if (baseDesc) contenuTexte += `Description : ${baseDesc} (Match unique N° : ${matchUniqueId})\n`;
             contenuTexte += `Généré le   : ${horodatage}\n`;
             contenuTexte += `--------------------------------\n`;
             contenuTexte += `Positions des billes (Grille 16x8) :\n\n`;
 
-            // Remplacement des coordonnées de la blanche par le code ZD
             contenuTexte += `- Bille Blanche             : Zone de Départ = ZD${savedZdId}\n`;
 
             activeBalls.forEach(ball => {
@@ -1026,7 +1072,6 @@ if (btnExportSerieAleatoire) {
                             visible: true
                         });
 
-                        // Génération de la ligne texte avec coordonnées magnétiques
                         const numEl = ball.querySelector('.ball-num');
                         const numTexte = numEl ? numEl.innerText : String(ballId);
                         const estRayee = ball.classList.contains('striped');
@@ -1059,33 +1104,33 @@ if (btnExportSerieAleatoire) {
             contenuTexte += `\nTotal : 2 zone(s) affichée(s) sur la table.\n`;
             contenuTexte += `================================\n`;
 
-            // Trouvez ce bloc dans la boucle du générateur automatique (.ZIP) :
-const donneesExport = {
-    titre: `${configTitle}_MATCH-${matchUniqueId}_manche_${String(nbBillesCouleurRequises).padStart(2, '0')}`,
-    description: configDesc,
-    nombreBillesVisibles: String(i), 
-    billes: listBillesExport,
-    lignesDessinees: zonesDessinees,
-    optionsVisuelles: {
-        grille: chkToggleGrid ? chkToggleGrid.checked : true,
-        hd: chkHighDensityGrid ? chkHighDensityGrid.checked : true,
-        magnetisme: true,
-        logo: true,
-        titreVisible: chkShowTitle ? chkShowTitle.checked : false,
-        // --- TRANSFERENCE DE LA COULEUR DU TAPIS AUX MANCHES DU ZIP ---
-        couleurTapis: document.querySelector('input[name="felt-color"]:checked') ? document.querySelector('input[name="felt-color"]:checked').value : "bleu"
-    }
-};
+            // CONFIGURATION INTÉGRANT DÉFINITIVEMENT LE LOGO DANS CHAQUE FICHIER DE L'ARCHIVE
+            const donneesExport = {
+                titre: `${configTitle}_MATCH-${matchUniqueId}_manche_${String(nbBillesCouleurRequises).padStart(2, '0')}`,
+                description: configDesc,
+                nombreBillesVisibles: String(i), 
+                logoImageRaw: logoAExporter, // <--- AJOUT SÉCURISÉ ICI : Transmet la chaîne Base64
+                billes: listBillesExport,
+                lignesDessinees: zonesDessinees,
+                optionsVisuelles: {
 
+                    grille: chkToggleGrid ? chkToggleGrid.checked : true,
+                    hd: chkHighDensityGrid ? chkHighDensityGrid.checked : true,
+                    magnetisme: true,
+                    logo: true,
+                    titreVisible: chkShowTitle ? chkShowTitle.checked : false,
+                    
+                    couleurTapis: document.querySelector('input[name="felt-color"]:checked') ? document.querySelector('input[name="felt-color"]:checked').value : "bleu"
+                }
+            };
 
             const indexFichier = String(nbBillesCouleurRequises).padStart(2, '0');
             const nomFichierSecurise = configTitle.replace(/[/\\?%*:|"<>]/g, '-').substring(0, 60);
             
-            // Le nom des fichiers inclut l'ID unique du match
             const nomFinalJson = `${nomFichierSecurise}_M${matchUniqueId}_manche_${indexFichier}.json`;
             const nomFinalTxt = `${nomFichierSecurise}_M${matchUniqueId}_manche_${indexFichier}.txt`;
 
-            // Distribution ordonnée dans les répertoires correspondants du ZIP
+            // Ajout des fichiers générés dans les sous-dossiers ZIP correspondants
             dossierJson.file(nomFinalJson, JSON.stringify(donneesExport, null, 4));
             dossierTxt.file(nomFinalTxt, contenuTexte);
         }
@@ -1093,7 +1138,7 @@ const donneesExport = {
         // Restauration de l'état initial du magnétisme sur l'interface utilisateur
         if (chkMagnetism) chkMagnetism.checked = etatMagnetismeUI;
 
-        // --- GÉNÉRATION ET TÉLÉCHARGEMENT DE L'ARCHIVE UNIQUE COMPLETÉ ---
+        // --- GÉNÉRATION ET TÉLÉCHARGEMENT DE L'ARCHIVE UNIQUE COMPLÉTÉE ---
         const anneeFichier = maintenant.getFullYear();
         const moisFichier = String(maintenant.getMonth() + 1).padStart(2, '0');
         const jourFichier = String(maintenant.getDate()).padStart(2, '0');
@@ -1101,7 +1146,6 @@ const donneesExport = {
         const minutesFichier = String(maintenant.getMinutes()).padStart(2, '0');
         const horodatageFichier = `${anneeFichier}${moisFichier}${jourFichier}_${heuresFichier}${minutesFichier}`;
 
-        // Construction du nom de l'archive finale
         const nomArchiveFinale = `${horodatageFichier}_MATCH-${matchUniqueId}_SERIE_${totalManchesSouhaitees}_manches.zip`;
 
         zip.generateAsync({ type: "blob" }).then((content) => {
@@ -1115,7 +1159,6 @@ const donneesExport = {
         });
     });
 }
-
 
 
 
