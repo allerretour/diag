@@ -3,6 +3,8 @@ window.logoBase64Courant = null;
 
 const inputLogoFile = document.getElementById('input-logo-file');
 const tableLogoOverlay = document.getElementById('table-logo-overlay');
+// NOUVEAU : Récupération du bouton Reset
+const btnResetLogo = document.getElementById('btn-reset-logo');
 
 // 1. ÉCOUTEUR : Convertir l'image locale en Base64 au moment du choix
 if (inputLogoFile && tableLogoOverlay) {
@@ -20,6 +22,26 @@ if (inputLogoFile && tableLogoOverlay) {
     });
 }
 
+// NOUVEAU : ÉCOUTEUR pour restaurer le logo original
+if (btnResetLogo && tableLogoOverlay) {
+    btnResetLogo.addEventListener('click', () => {
+        // 1. On vide la variable globale pour les futurs exports
+        window.logoBase64Courant = null; 
+        
+        // 2. On remet la source par défaut
+        tableLogoOverlay.src = "logo.png"; 
+        
+        // 3. FORCE l'affichage au cas où les styles CSS bloquent l'élément
+        tableLogoOverlay.style.display = 'block';
+        tableLogoOverlay.style.visibility = 'visible';
+        
+        // 4. On réinitialise l'input file pour enlever l'ancien fichier de la mémoire de l'input
+        const inputLogoFile = document.getElementById('input-logo-file');
+        if (inputLogoFile) {
+            inputLogoFile.value = ""; 
+        }
+    });
+}
 
 document.addEventListener("DOMContentLoaded", () => {
     // Initialise les éléments visuels de la table
