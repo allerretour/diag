@@ -331,11 +331,11 @@ function dessinerPointeFleche(fromX, fromY, toX, toY, couleur) {
 
 
 
-// Dessine une cible carrée et la TRONQUE si elle dépasse sur les bandes de sécurité
-// Dessine une cible carrée et la TRONQUE si elle dépasse sur les bandes de sécurité
-// Dessine une cible carrée et la TRONQUE si elle dépasse sur les bandes de sécurité
 function dessinerCible(x, y, couleur) {
     ctx.save(); // Sauvegarde l'état global du canvas
+
+    // === AJOUT TECHNIQUE : FORCE LES LIGNES PLEINES POUR LA CIBLE ===
+    ctx.setLineDash([]); 
 
     // --- 1. DÉFINITION DES BANDES DE SÉCURITÉ ---
     let bandeGauche = 18;
@@ -356,9 +356,9 @@ function dessinerCible(x, y, couleur) {
     ctx.beginPath();
     ctx.rect(zoneUtileX, zoneUtileY, zoneUtileLargeur, zoneUtileHauteur);
     ctx.clip(); // Tronque parfaitement si la forme déborde au zoom
+    
     // --- 3. DESSIN DU FOND OPAQUE A 30% ---
     ctx.save(); 
-    ctx.setLineDash([]);
     ctx.fillStyle = couleur;
     ctx.globalAlpha = 0.30; 
 
@@ -403,15 +403,12 @@ function dessinerCible(x, y, couleur) {
     let dist3 = r3 + (r2 - r3) / 2;
     let dist5 = r3 / 2; 
 
-    // MODIFICATION : Calcul de l'angle selon le quadrant courant (0, 1, 2 ou 3)
-    // Au repos (0), l'angle de départ est à 45° (Math.PI / 4) pour le quadrant Bas-Droite
     const indexQuadrant = window.quadrantCibleCourant || 0;
     const angleRotation = (Math.PI / 4) + (indexQuadrant * (Math.PI / 2));
 
     const cosAngle = Math.cos(angleRotation);
     const sinAngle = Math.sin(angleRotation);
 
-    // Affichage des chiffres projetés sur la diagonale active
     ctx.fillText("1", x + dist1 * cosAngle, y + dist1 * sinAngle);
     ctx.fillText("2", x + dist2 * cosAngle, y + dist2 * sinAngle);
     ctx.fillText("3", x + dist3 * cosAngle, y + dist3 * sinAngle);

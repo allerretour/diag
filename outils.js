@@ -598,7 +598,7 @@ function genererGrille() {
     gridOverlay.style.overflow = 'visible'; // Permet aux chiffres de déborder sur les diamants extérieurs
     
     // === CRITIQUE : FORCER LA PRIORITÉ DE L'OVERLAY GLOBAL AU-DESSUS DE TOUT ===
-    gridOverlay.style.zIndex = '99999';   // Passe au-dessus du tapis, des billes et du canvas de dessin
+    gridOverlay.style.zIndex = '1';   // Passe au-dessus du tapis, des billes et du canvas de dessin
 
     // Répartition dynamique des colonnes et rangées
     gridOverlay.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
