@@ -22,6 +22,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const undoBtn = document.getElementById('btn-undo-lines'); 
     // AJOUT : Récupération de la case à cocher
     const dashedCheck = document.getElementById('chk-dashed-lines');
+	// === AJOUT : Récupération de la nouvelle case à cocher ===
+    const toggleDrawingsCheck = document.getElementById('chk-toggle-drawings');
 
     let isDrawing = false;
     let currentLine = null; 
@@ -37,6 +39,9 @@ if (chkMagnetism) {
         }
     });
 }
+
+
+
 
 
 
@@ -853,19 +858,26 @@ if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
 }
 
 
-
+// === MODIFICATION DE LA LOGIQUE TOUCHE H & ADAPTATION CASE À COCHER ===
+    if (toggleDrawingsCheck) {
+        toggleDrawingsCheck.addEventListener('change', () => {
+            canvas.style.visibility = toggleDrawingsCheck.checked ? 'visible' : 'hidden';
+        });
+    }
 
 
 
 // Raccourci pour masquer / afficher le canvas (Touche H)
-if (e.key.toLowerCase() === 'h') {
-    e.preventDefault();
-    if (canvas.style.visibility === 'hidden') {
-        canvas.style.visibility = 'visible';
-    } else {
-        canvas.style.visibility = 'hidden';
-    }
-}
+        if (e.key.toLowerCase() === 'h') {
+            e.preventDefault();
+            if (canvas.style.visibility === 'hidden') {
+                canvas.style.visibility = 'visible';
+                if (toggleDrawingsCheck) toggleDrawingsCheck.checked = true;
+            } else {
+                canvas.style.visibility = 'hidden';
+                if (toggleDrawingsCheck) toggleDrawingsCheck.checked = false;
+            }
+        }
 
 
 
@@ -1174,6 +1186,9 @@ table.addEventListener('mousedown', (e) => {
         }
     }
 });
+
+
+
 
 
 });

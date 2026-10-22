@@ -44,6 +44,8 @@ if (btnResetLogo && tableLogoOverlay) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+	
+	
     // Initialise les éléments visuels de la table
     initialiserBilles();
 
@@ -81,37 +83,52 @@ function updateVisibleBalls() {
 }
 
 // ====================================================================
-// CONFIGURATION DYNAMIQUE DES NUANCES DU TAPIS
+// CONFIGURATION DYNAMIQUE DES NUANCES DU TAPIS ET DU CADRE EN BOIS
 // ====================================================================
 const feltRadios = document.querySelectorAll('input[name="felt-color"]');
 
-// Définition des palettes de couleurs calquées sur votre modèle mathématique
+// Définition des palettes de couleurs selon les essences demandées
 const palettesTapis = {
     vert: {
         "--tapis-couleur-principale": "#1e7e43",
         "--tapis-eclat-centre":       "#27ae60",
-        "--tapis-ombre-profonde":     "#165b30", // Éclairci (anciennement #0e3a1e)
+        "--tapis-ombre-profonde":     "#165b30",
         "--bande-dessus-lumineux":    "#22924e",
-        "--bande-ombre-exterieure":   "#1a633a", // Éclairci (anciennement #114725)
-        "--bande-ombre-interieure":   "#1d6f40"  // Éclairci (anciennement #15542d)
+        "--bande-ombre-exterieure":   "#1a633a",
+        "--bande-ombre-interieure":   "#1d6f40",
+        // BOIS CHÊNE FONCÉ
+        "--bois-clair":               "#52321a", // Chêne foncé éclairé
+        "--bois-fonce":               "#301d0f", // Teinte de fond chêne
+        "--bois-bordure":             "#1f120a"
     },
     bleu: {
         "--tapis-couleur-principale": "#1f4e79",
         "--tapis-eclat-centre":       "#2a6ba2",
-        "--tapis-ombre-profonde":     "#183b5c", // Éclairci (anciennement #0f273d)
+        "--tapis-ombre-profonde":     "#183b5c",
         "--bande-dessus-lumineux":    "#245c8f",
-        "--bande-ombre-exterieure":   "#1c4469", // Éclairci (anciennement #12304c)
-        "--bande-ombre-interieure":   "#204d77"  // Éclairci (anciennement #163654)
+        "--bande-ombre-exterieure":   "#1c4469",
+        "--bande-ombre-interieure":   "#204d77",
+        // BOIS PÂLE (Érable / Frêne)
+        "--bois-clair":               "#e8ccad", // Bois naturel clair
+        "--bois-fonce":               "#c7a783", // Ombres douces dorées
+        "--bois-bordure":             "#9e815f"
     },
     gris: {
         "--tapis-couleur-principale": "#5d6d7e",
         "--tapis-eclat-centre":       "#6c7a89",
-        "--tapis-ombre-profonde":     "#495562", // Éclairci (anciennement #34495e)
+        "--tapis-ombre-profonde":     "#495562",
         "--bande-dessus-lumineux":    "#707b7c",
-        "--bande-ombre-exterieure":   "#4f5d6c", // Éclairci (anciennement #3b4f63)
-        "--bande-ombre-interieure":   "#546475"  // Éclairci (anciennement #41566b)
+        "--bande-ombre-exterieure":   "#4f5d6c",
+        "--bande-ombre-interieure":   "#546475",
+        // BOIS ÉBÈNE
+        "--bois-clair":               "#212121", // Noir ébène satiné
+        "--bois-fonce":               "#0d0d0d", // Profondeur sombre
+        "--bois-bordure":             "#050505"
     }
 };
+
+
+
 
 
 feltRadios.forEach(radio => {
@@ -127,6 +144,7 @@ feltRadios.forEach(radio => {
         }
     });
 });
+
 
 
 
@@ -601,7 +619,9 @@ if (importTriggerBtn && fileImportInput) {
 					
 					// --- RESTAURATION DE LA COULEUR DU TAPIS DEPUIS LE JSON ---
     if (opts.hasOwnProperty('couleurTapis')) {
-        const couleurEnregistree = opts.couleurTapis; // 'vert', 'bleu' ou 'gris'
+        // Remplacer "bleu" par "vert" en cas d'absence dans le fichier JSON importé
+		const couleurEnregistree = opts.couleurTapis || "vert"; 
+
         
         // 1. Coche le bouton radio correspondant dans l'interface utilisateur
         const radioAcocher = document.querySelector(`input[name="felt-color"][value="${couleurEnregistree}"]`);
@@ -1216,7 +1236,25 @@ if (btnExportSerieAleatoire) {
 }
 
 
+// 1. Définition d'une fonction globale ou locale d'application de couleur
+function appliquerCouleurTapis(couleur) {
+    const palette = palettesTapis[couleur];
+    if (palette) {
+        // Applique les variables CSS sur le :root
+        Object.keys(palette).forEach(variable => {
+            document.documentElement.style.setProperty(variable, palette[variable]);
+        });
+        
+        // Coche le bon bouton radio dans l'interface
+        const radioAcocher = document.querySelector(`input[name="felt-color"][value="${couleur}"]`);
+        if (radioAcocher) {
+            radioAcocher.checked = true;
+        }
+    }
+}
 
+// 2. FORCER L'INITIALISATION EN VERT AU CHARGEMENT DE LA PAGE
+appliquerCouleurTapis("vert");
 
 
 

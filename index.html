@@ -98,22 +98,20 @@
 }
 
 
-        
-        #table-frame {
-            position: relative;
-            width: 860px;
-            height: 460px;
-            background: linear-gradient(135deg, #4a2711, #2c160a);
-            border: 4px solid #1a0d06;
-            border-radius: 18px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.7), inset 0 2px 5px rgba(255,255,255,0.2);
-            padding: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            
-        }
-      
+#table-frame {
+    position: relative;
+    width: 860px;
+    height: 460px;
+    /* Valeurs de secours par défaut sur le Chêne foncé (#52321a / #301d0f) */
+    background: linear-gradient(135deg, var(--bois-clair, #52321a), var(--bois-fonce, #301d0f));
+    border: 4px solid var(--bois-bordure, #1f120a);
+    border-radius: 18px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.7), inset 0 2px 5px rgba(255,255,255,0.2);
+    padding: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 
 /* ====================================================================
    STRUCTURE ET INTEGRATION DES VARIABLES
@@ -122,15 +120,17 @@
     position: relative;
     width: 800px;
     height: 400px;
-    /* Application des variables pour l'effet de lumière réaliste */
+    /* Valeurs de secours par défaut sur le Tapis Vert (#27ae60 / #1e7e43 / #165b30) */
     background: radial-gradient(
         circle at 50% 50%, 
-        var(--tapis-eclat-centre) 0%, 
-        var(--tapis-couleur-principale) 75%, 
-        var(--tapis-ombre-profonde) 100%
+        var(--tapis-eclat-centre, #27ae60) 0%, 
+        var(--tapis-couleur-principale, #1e7e43) 75%, 
+        var(--tapis-ombre-profonde, #165b30) 100%
     );
     box-shadow: inset 0 10px 20px rgba(0,0,0,0.5);
 }
+
+
 
 /* Base commune pour toutes les bandes physiques */
 .cushion { 
@@ -953,6 +953,11 @@ kbd {
     <label class="control-item">
         <input type="checkbox" id="chk-toggle-balls-list" checked> Liste des billes
     </label>
+	
+	<label class="control-item">
+		<input type="checkbox" id="chk-toggle-drawings" checked> Dessins/tracés
+	</label>
+
 
 </div>
 
@@ -1121,16 +1126,18 @@ kbd {
   <legend>🟢 Couleur du Tapis</legend>
   <div class="felt-color-picker">
     <label class="felt-option">
-      <input type="radio" name="felt-color" value="vert"> Vert Club
+      <!-- Déplacement de l'attribut checked ici -->
+      <input type="radio" name="felt-color" value="vert" checked> Vert Club
     </label>
     <label class="felt-option">
-      <input type="radio" name="felt-color" value="bleu" checked> Bleu Tournoi
+      <input type="radio" name="felt-color" value="bleu"> Bleu Tournoi
     </label>
     <label class="felt-option">
       <input type="radio" name="felt-color" value="gris"> Gris Moderne
     </label>
   </div>
 </fieldset>
+
 
 
 <div class="option-group">
