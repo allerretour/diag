@@ -285,6 +285,7 @@ if (exportBtn) {
         const chkMagnetism = document.getElementById('chk-magnetism');
         const chkShowLogo = document.getElementById('chk-show-logo');
         const chkShowTitle = document.getElementById('chk-show-title');
+		const chkToggleBallsList = document.getElementById('chk-toggle-balls-list');
 
         // On crée l'objet global intégrant toutes les données
         // Trouvez ce bloc dans le gestionnaire d'export (exportBtn.addEventListener) :
@@ -302,7 +303,10 @@ const donneesExport = {
         logo: chkShowLogo ? chkShowLogo.checked : false,
         titreVisible: chkShowTitle ? chkShowTitle.checked : false,
         // --- CONSERVATION DE LA COULEUR DU TAPIS ---
-        couleurTapis: document.querySelector('input[name="felt-color"]:checked') ? document.querySelector('input[name="felt-color"]:checked').value : "bleu"
+        couleurTapis: document.querySelector('input[name="felt-color"]:checked') ? document.querySelector('input[name="felt-color"]:checked').value : "bleu",
+		 // --- SAUVEGARDE DE L'ÉTAT DE LA BARRE LATÉRALE ---
+        listeBillesVisible: chkToggleBallsList ? chkToggleBallsList.checked : true
+
     }
 };
 
@@ -537,6 +541,8 @@ if (importTriggerBtn && fileImportInput) {
                     const chkMagnetism = document.getElementById('chk-magnetism');
                     const chkShowLogo = document.getElementById('chk-show-logo');
                     const chkShowTitle = document.getElementById('chk-show-title');
+					// On récupère notre nouvelle case à cocher
+					const chkToggleBallsList = document.getElementById('chk-toggle-balls-list');
 
                     // Restauration de la Grille HD d'abord (pour que la grille sache s'il faut générer en 16x8 ou 8x4)
                     if (chkHighDensityGrid && opts.hasOwnProperty('hd')) {
@@ -566,6 +572,17 @@ if (importTriggerBtn && fileImportInput) {
                     if (chkShowTitle && opts.hasOwnProperty('titreVisible')) {
                         chkShowTitle.checked = opts.titreVisible;
                     }
+					
+					// --- RESTAURATION DE LA BARRE LATÉRALE ---
+					if (chkToggleBallsList && opts.hasOwnProperty('listeBillesVisible')) {
+						chkToggleBallsList.checked = opts.listeBillesVisible;
+					// Déclenche l'événement de changement pour masquer/afficher la structure HTML immédiatement
+						chkToggleBallsList.dispatchEvent(new Event('change'));
+					} else if (chkToggleBallsList) {
+					// Optionnel : Comportement par défaut si un ancien JSON ne possède pas l'option
+						chkToggleBallsList.checked = true;
+						chkToggleBallsList.dispatchEvent(new Event('change'));
+					}
 
 
                     if (donneesImportees.hasOwnProperty('logoImageRaw') && donneesImportees.logoImageRaw) {
@@ -929,6 +946,26 @@ if (btnRandomHD) {
 }
 
 
+// --- GESTION DU MASQUAGE DE LA SECTION COMPLETE (TITRE + TABLEAU) ---
+const chkToggleBallsList = document.getElementById('chk-toggle-balls-list');
+// On cible la barre latérale complète définie dans votre HTML
+const ballsSidebar = document.getElementById('balls-sidebar'); 
+
+if (chkToggleBallsList && ballsSidebar) {
+    chkToggleBallsList.addEventListener('change', () => {
+        if (chkToggleBallsList.checked) {
+            // Restaure la disposition CSS d'origine (Flex/Grid) en colonnes sans la briser
+            ballsSidebar.style.display = ""; 
+        } else {
+            // Masque l'ensemble du bloc (le titre H3 et le tableau inclus)
+            ballsSidebar.style.display = 'none';
+        }
+    });
+}
+
+
+
+
 // ====================================================================
 // GÉNÉRATION D'UNE SÉRIE DE SESSIONS AVEC NUMÉRO DE MATCH UNIQUE
 // ====================================================================
@@ -970,6 +1007,7 @@ if (btnExportSerieAleatoire) {
         const chkShowTitle = document.getElementById('chk-show-title');
         const tableLogoOverlay = document.getElementById('table-logo-overlay');
         const rangeLogoSize = document.getElementById('range-logo-size');
+		const chkToggleBallsList = document.getElementById('chk-toggle-balls-list');
 
         const gridLeft = 19;
         const gridTop = 17;
@@ -1134,7 +1172,10 @@ if (btnExportSerieAleatoire) {
                     logo: true,
                     titreVisible: chkShowTitle ? chkShowTitle.checked : false,
                     
-                    couleurTapis: document.querySelector('input[name="felt-color"]:checked') ? document.querySelector('input[name="felt-color"]:checked').value : "bleu"
+                    couleurTapis: document.querySelector('input[name="felt-color"]:checked') ? document.querySelector('input[name="felt-color"]:checked').value : "bleu",
+					// --- APPLIQUE LA PRÉFÉRENCE SUR TOUS LES FICHIERS DE LA SÉRIE ---
+					listeBillesVisible: chkToggleBallsList ? chkToggleBallsList.checked : true
+
                 }
             };
 

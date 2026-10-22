@@ -582,7 +582,7 @@
     position: absolute;
     top: 12%;
     left: 50%;
-    transform: translate(-70%, -30%);
+    transform: translate(-50%, -30%);
     font-family: sans-serif;
     font-size: 20px;
     font-weight: bold;
@@ -635,14 +635,14 @@
 
 .table-controls {
     display: flex;
-    width: 800px;
-    align-items: center;      /* Aligne verticalement les cases et le texte au centre */
-    gap: 16px;                /* Espace de 20px entre chaque bloc sur la ligne */
-    margin-top: 30px;    	/* Espace le tout du bas de la table de billard */
-    margin-bottom: 15px;
-	font-family: sans-serif;
-    font-size: 12px;
+    justify-content: center; /* Centre horizontalement toutes les cases à cocher */
+    align-items: center;     /* Aligne verticalement les cases et les écritures sur la même ligne */
+    flex-wrap: wrap;         /* Si l'écran est trop petit, les boutons passent à la ligne proprement */
+    gap: 15px;               /* Crée un espacement régulier entre chaque élément */
+    margin: 15px auto;       /* Centre le bloc complet et l'espace de la table */
+    width: 100%;             /* Force le conteneur à occuper toute la largeur disponible */
 }
+
 
 /* Style spécifique pour le texte de position de la bille */
 #ball-position-display {
@@ -925,17 +925,16 @@ kbd {
 
 <div class="table-controls">
 	
-	<label class="control-item">
-                <input type="checkbox" id="chk-toggle-grid"> Grille
-            </label>
+    <label class="control-item">
+        <input type="checkbox" id="chk-toggle-grid"> Grille
+    </label>
 
-    	<label class="control-item">
-            <input type="checkbox" id="chk-high-density-grid"> HD 16x8
-            </label>
+    <label class="control-item">
+        <input type="checkbox" id="chk-high-density-grid"> HD 16x8
+    </label>
 
-	<label class="control-item">
-    		<input type="checkbox" id="chk-magnetism" >
-    Mag / bandes
+    <label class="control-item">
+        <input type="checkbox" id="chk-magnetism"> Mag / bandes
     </label>
 	
     <label class="control-item">
@@ -946,12 +945,17 @@ kbd {
         <input type="checkbox" id="chk-show-logo" checked> Logo
     </label>
 	
-	<label class="control-item" for="chk-dashed-lines" >
-             <input type="checkbox" id="chk-dashed-lines"> Pointillés
-	</label>
-    
-    
+    <label class="control-item" for="chk-dashed-lines">
+        <input type="checkbox" id="chk-dashed-lines"> Pointillés
+    </label>
+	
+    <!-- AJOUT DE LA CLASSE ICI POUR HARMONISER L'AFFICHAGE -->
+    <label class="control-item">
+        <input type="checkbox" id="chk-toggle-balls-list" checked> Liste des billes
+    </label>
+
 </div>
+
 
 
 <!-- Section Pliable des Contrôles -->
@@ -1135,6 +1139,7 @@ kbd {
 
 <!-- Bouton à ajouter dans votre interface utilisateur -->
 <button id="btn-reset-logo" type="button" class="btn btn-action btn-xs py-1 px-2">Réinitialiser le Logo</button>
+
 
 
 </div>
