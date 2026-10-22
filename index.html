@@ -894,6 +894,26 @@ kbd {
 }
 
 
+/* Style appliqué à la ligne complète dans la liste latérale lorsqu'elle est masquée */
+.sidebar-ball-item.is-hidden-ball {
+    opacity: 0.45; /* On réduit l'opacité globale de la ligne sans toucher aux tailles */
+    filter: grayscale(80%); /* Rend l'élément plus gris et neutre */
+    transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+/* On force l'élément miniature de la bille à conserver ses dimensions strictes */
+.sidebar-ball-item.is-hidden-ball .ball {
+    flex-shrink: 0; /* Empêche le conteneur flexbox de l'écraser ou de le déformer */
+    transform: none !important; /* Annule tout effet de distorsion dynamique */
+}
+
+/* Effet de survol doux pour inviter au clic */
+.sidebar-ball-item.is-hidden-ball:hover {
+    opacity: 0.85;
+    filter: grayscale(0%);
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
 
 
 

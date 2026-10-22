@@ -365,46 +365,57 @@ function rafraichirListeLateraleBilles() {
     // Vider la liste précédente
     sidebarList.innerHTML = "";
 
-    // Parcourir toutes les billes actives
+    // Parcourir TOUTES les billes actives (visibles et masquées)
     activeBalls.forEach(ball => {
-        // Ignorer les billes masquées (style.display === 'none')
-        if (ball.style.display === 'none') return;
-
         const ballId = ball.getAttribute('data-id');
         const numEl = ball.querySelector('.ball-num');
         const estRayee = ball.classList.contains('striped');
         const couleurBille = ball.style.backgroundColor;
+        const estMasquee = ball.style.display === 'none';
 
         // 1. Création de la ligne d'item
         const itemRow = document.createElement('div');
         itemRow.classList.add('sidebar-ball-item');
-        itemRow.style.cursor = 'pointer'; // Indique visuellement que la ligne est cliquable
+        itemRow.style.cursor = 'pointer'; 
 
-        // Ajouter la surbrillance si c'est la bille sélectionnée
-        if (window.billeSelectionneeCourante === ball) {
+        // Gestion de la surbrillance (Uniquement si la bille est actuellement affichée)
+        if (window.billeSelectionneeCourante === ball && !estMasquee) {
             itemRow.classList.add('active-highlight');
         }
 
+        // ÉTAPE CLÉ : Si la bille a été enlevée par double-clic, on applique un style visuel grisé
+        if (estMasquee) {
+            itemRow.classList.add('is-hidden-ball');
+        }
+
         // ====================================================================
-        // AJOUT : ÉCOUTEUR DE CLIC POUR RE-SÉLECTIONNER LA BILLE DEPUIS LA LISTE
+        // ÉCOUTEUR DE CLIC UNIQUE (SÉLECTION OU RÉAPPARITION)
         // ====================================================================
         itemRow.addEventListener('click', (e) => {
-            // Empêche le clic de se propager de manière indésirable
             e.stopPropagation(); 
 
-            // Retirer l'éventuel contour de l'ancienne bille sélectionnée sur le tapis
-            if (window.billeSelectionneeCourante) {
-                window.billeSelectionneeCourante.style.outline = 'none';
+            if (ball.style.display === 'none') {
+                // ACTION : Ramener la bille sur la table !
+                ball.style.display = 'flex';
+                
+                // On la sélectionne automatiquement pour que l'utilisateur sache qu'elle est active
+                if (window.billeSelectionneeCourante) {
+                    window.billeSelectionneeCourante.style.outline = 'none';
+                }
+                window.billeSelectionneeCourante = ball;
+                ball.style.outline = '2px solid #ffffff';
+                ball.style.outlineOffset = '2px';
+            } else {
+                // ACTION COMPORTEMENT D'ORIGINE : Sélection classique
+                if (window.billeSelectionneeCourante) {
+                    window.billeSelectionneeCourante.style.outline = 'none';
+                }
+                window.billeSelectionneeCourante = ball;
+                ball.style.outline = '2px solid #ffffff';
+                ball.style.outlineOffset = '2px';
             }
 
-            // Mémoriser cette bille comme sélectionnée de façon permanente
-            window.billeSelectionneeCourante = ball;
-
-            // Ajouter le repère visuel (contour blanc) sur la bille du tapis
-            ball.style.outline = '2px solid #ffffff';
-            ball.style.outlineOffset = '2px';
-
-            // Relancer le rafraîchissement pour déplacer la surbrillance verte instantanément
+            // Relancer le rafraîchissement pour mettre à jour les opacités et les coordonnées
             rafraichirListeLateraleBilles();
         });
 
@@ -426,15 +437,20 @@ function rafraichirListeLateraleBilles() {
             miniBall.appendChild(miniNum);
         }
 
-        // 3. Récupération des coordonnées courantes de la grille
+        // 3. Récupération ou simulation des coordonnées courantes de la grille
         const pixelX = parseFloat(ball.style.left) || 0;
         const pixelY = parseFloat(ball.style.top) || 0;
         const coords = obtenirCoordonneesGrille(pixelX, pixelY, ball);
 
-        // 4. Création du texte descriptif (Uniquement les coordonnées)
+        // 4. Création du texte descriptif (On écrit "Masquée" si la bille n'est pas sur le tapis)
         const coordsText = document.createElement('div');
         coordsText.classList.add('sidebar-ball-coords');
-        coordsText.innerHTML = `X = ${coords.x}, Y = ${coords.y}`;
+        
+        if (estMasquee) {
+            coordsText.innerHTML = `<span style="font-style: italic; opacity: 0.6;">(enlevée)</span>`;
+        } else {
+            coordsText.innerHTML = `X = ${coords.x}, Y = ${coords.y}`;
+        }
 
         // Assemblage
         itemRow.appendChild(miniBall);
@@ -442,6 +458,7 @@ function rafraichirListeLateraleBilles() {
         sidebarList.appendChild(itemRow);
     });
 }
+
 
 
 
