@@ -43,6 +43,59 @@ if (btnResetLogo && tableLogoOverlay) {
     });
 }
 
+
+const modalGuide = document.getElementById('modal-guide');
+const btnOuvrirGuide = document.getElementById('btn-ouvrir-guide');
+const btnFermerGuide = document.getElementById('btn-fermer-guide');
+
+if (btnOuvrirGuide && modalGuide) {
+    btnOuvrirGuide.addEventListener('click', () => modalGuide.showModal());
+}
+if (btnFermerGuide && modalGuide) {
+    btnFermerGuide.addEventListener('click', () => modalGuide.close());
+}
+
+// Nouvelle gestion de la fenêtre modale des Options
+const modalOptions = document.getElementById('modal-options');
+const btnOuvrirOptions = document.getElementById('btn-ouvrir-options');
+const btnFermerOptions = document.getElementById('btn-fermer-options');
+
+if (btnOuvrirOptions && modalOptions) {
+    btnOuvrirOptions.addEventListener('click', () => modalOptions.showModal());
+}
+if (btnFermerOptions && modalOptions) {
+    btnFermerOptions.addEventListener('click', () => modalOptions.close());
+}
+
+// Fonction générique pour détecter précisément un clic à l'extérieur du cadre visible
+function configurerFermetureExterieure(modalElement) {
+    if (!modalElement) return;
+    
+    modalElement.addEventListener('click', (e) => {
+        const rect = modalElement.getBoundingClientRect();
+        const clicExterieur = (
+            e.clientX < rect.left ||
+            e.clientX > rect.right ||
+            e.clientY < rect.top ||
+            e.clientY > rect.bottom
+        );
+        
+        if (clicExterieur) {
+            modalElement.close();
+        }
+    });
+}
+
+// Activation de la fermeture au clic extérieur pour les deux modales
+configurerFermetureExterieure(modalGuide);
+configurerFermetureExterieure(modalOptions);
+
+
+
+
+
+
+
 document.addEventListener("DOMContentLoaded", () => {
 	
 	
@@ -655,10 +708,9 @@ if (importTriggerBtn && fileImportInput) {
 
                 alert(`Configuration "${titreImported}" restaurée avec succès !`);
                 
-                const controlsAccordion = document.querySelector('.controls-accordion');
-                if (controlsAccordion) {
-                    controlsAccordion.open = false; 
-                }
+                if (modalGuide) {
+					modalGuide.close();
+				}
 
             } catch (error) {
                 alert("Erreur lors de la lecture du fichier JSON. Vérifiez sa structure.");
