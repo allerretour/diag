@@ -89,18 +89,19 @@ const feltRadios = document.querySelectorAll('input[name="felt-color"]');
 
 // Définition des palettes de couleurs selon les essences demandées
 const palettesTapis = {
-    vert: {
+        vert: {
         "--tapis-couleur-principale": "#1e7e43",
         "--tapis-eclat-centre":       "#27ae60",
         "--tapis-ombre-profonde":     "#165b30",
         "--bande-dessus-lumineux":    "#22924e",
         "--bande-ombre-exterieure":   "#1a633a",
         "--bande-ombre-interieure":   "#1d6f40",
-        // BOIS CHÊNE FONCÉ
-        "--bois-clair":               "#52321a", // Chêne foncé éclairé
-        "--bois-fonce":               "#301d0f", // Teinte de fond chêne
-        "--bois-bordure":             "#1f120a"
+        // BOIS CHÂTAIGNIER CUIVRÉ (Auburn & Intense)
+        "--bois-clair":               "#a0532d", // Cuivre chaud / Sienne brillant
+        "--bois-fonce":               "#783616", // Brun auburn de fond
+        "--bois-bordure":             "#4a1f0a"  // Liseré terre d'ombre brûlée
     },
+
     bleu: {
         "--tapis-couleur-principale": "#1f4e79",
         "--tapis-eclat-centre":       "#2a6ba2",
@@ -108,10 +109,10 @@ const palettesTapis = {
         "--bande-dessus-lumineux":    "#245c8f",
         "--bande-ombre-exterieure":   "#1c4469",
         "--bande-ombre-interieure":   "#204d77",
-        // BOIS PÂLE (Érable / Frêne)
-        "--bois-clair":               "#e8ccad", // Bois naturel clair
-        "--bois-fonce":               "#c7a783", // Ombres douces dorées
-        "--bois-bordure":             "#9e815f"
+        // BOIS NOYER (Chocolat & Élégant)
+        "--bois-clair":               "#4a3321", // Noyer satiné éclairé
+        "--bois-fonce":               "#2d1e13", // Brun chocolat de fond
+        "--bois-bordure":             "#19100a"  // Contour ultra sombre
     },
     gris: {
         "--tapis-couleur-principale": "#5d6d7e",
