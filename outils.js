@@ -653,42 +653,38 @@ function genererGrille() {
     const rows = mode16x8 ? 8 : 4;
     
     gridOverlay.style.position = 'absolute';
-    gridOverlay.style.left = '19px';      // Bordure gauche d'origine
-    gridOverlay.style.top = '17px';       // Bordure haute d'origine
-    gridOverlay.style.width = '754px';    // Largeur totale de la zone de jeu
-    gridOverlay.style.height = '364px';   // Hauteur totale de la zone de jeu
+    gridOverlay.style.left = '19px';      
+    gridOverlay.style.top = '17px';       
+    gridOverlay.style.width = '754px';    
+    gridOverlay.style.height = '364px';   
     gridOverlay.style.border = 'none';
-    gridOverlay.style.overflow = 'visible'; // Permet aux chiffres de déborder sur les diamants extérieurs
     
-    // === CRITIQUE : FORCER LA PRIORITÉ DE L'OVERLAY GLOBAL AU-DESSUS DE TOUT ===
-    gridOverlay.style.zIndex = '1';   // Passe au-dessus du tapis, des billes et du canvas de dessin
+    // On permet aux chiffres de déborder librement autour du cadre
+    gridOverlay.style.overflow = 'visible'; 
+    
+    // ÉTAPE 1 : On force l'overlay global à passer au-dessus de la structure en bois et des poches
+    gridOverlay.style.zIndex = '5'; 
 
-    // Répartition dynamique des colonnes et rangées
     gridOverlay.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
     gridOverlay.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
 
-    // Nettoyage et injection des cases avec lignes intérieures uniquement
     gridOverlay.innerHTML = '';
     gridOverlay.style.pointerEvents = 'none'; 
     
-    // === MODIFICATION : ON LAISSE LES DIAMANTS TOUJOURS VISIBLES ===
     const anciensDiamants = document.querySelectorAll('.diamond, .repere, [class*="diamond"]');
     anciensDiamants.forEach(d => {
-        d.style.visibility = 'visible'; // Forcé à toujours visible, peu importe le mode de grille
+        d.style.visibility = 'visible'; 
     });
 
-    // 1. Génération des lignes de repère intérieures uniquement
+    // 2. Génération des lignes de repère intérieures (Grille)
     for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
             const cell = document.createElement('div');
             cell.style.boxSizing = 'border-box';
             
-            // On applique la ligne verticale SEULEMENT si ce n'est pas la dernière colonne à droite
             if (c < cols - 1) {
                 cell.style.borderRight = '1px dashed rgba(255, 255, 255, 0.25)';
             }
-            
-            // On applique la ligne horizontale SEULEMENT si ce n'est pas la dernière rangée en bas
             if (r < rows - 1) {
                 cell.style.borderBottom = '1px dashed rgba(255, 255, 255, 0.25)';
             }
@@ -697,9 +693,7 @@ function genererGrille() {
         }
     }
 
-    // ====================================================================
-    // 2. GENERATION DES CHIFFRES SUR L'OVERLAY GLOBAL (PREMIÈRE LAYER)
-    // ====================================================================
+    // 3. Génération des chiffres sur les bandes (Toujours dans l'overlay de niveau 5)
     if (mode16x8) {
         const styleChiffreCommun = `
             position: absolute;
@@ -708,56 +702,54 @@ function genererGrille() {
             font-weight: bold;
             font-size: 12px; 
             transform: translate(-50%, -50%);
-            z-index: 100000;
-            background-color: #000000; /* Couleur de fond de votre frame bois */
+            z-index: 6; 
+            background-color: #000000; 
             padding: 3px 6px;
             border-radius: 4px;
         `;
 
-        const pasX = 754 / cols; // Espacement physique horizontal d'une cellule
-        const pasY = 364 / rows; // Espacement physique vertical d'une cellule
+        const pasX = 754 / cols; 
+        const pasY = 364 / rows; 
 
-        // --- AXE HORIZONTAL (Bandes du haut et du bas) ---
         const valeursX = { 0: "0", 1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8", 9: "9", 10: "10", 11: "11", 12: "12", 13: "13", 14: "14", 15: "15", 16: "16" };
         
         Object.keys(valeursX).forEach(index => {
             const indexGrilleX = parseInt(index, 10);
-            const posX = indexGrilleX * pasX; // Coordonnée X précise sur la grille
+            const posX = indexGrilleX * pasX; 
 
-            // Label Bas
             const labelBas = document.createElement('div');
             labelBas.style.cssText = styleChiffreCommun + `top: 364px; left: ${posX}px; margin-top: 32px;`;
             labelBas.innerText = valeursX[index];
             gridOverlay.appendChild(labelBas);
-
-            // Label Haut
-          //  const labelHaut = document.createElement('div');
-          //  labelHaut.style.cssText = styleChiffreCommun + `top: 0px; left: ${posX}px; margin-top: -31px;`;
-          //  labelHaut.innerText = valeursX[index];
-          //  gridOverlay.appendChild(labelHaut);
         });
 
-        // --- AXE VERTICAL (Bandes de gauche et de droite) ---
         const valeursY = { 0: "0", 1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8" };
         
         Object.keys(valeursY).forEach(index => {
             const indexGrilleY = parseInt(index, 10);
-            // Inversion pour calculer la position Y en partant du bas gauche vers le haut
             const posY = (rows - indexGrilleY) * pasY; 
 
-            // Label Gauche
             const labelGauche = document.createElement('div');
             labelGauche.style.cssText = styleChiffreCommun + `top: ${posY}px; left: 0px; margin-left: -34px;`;
             labelGauche.innerText = valeursY[index];
             gridOverlay.appendChild(labelGauche);
-
-            // Label Droite
-         //   const labelDroite = document.createElement('div');
-         //   labelDroite.style.cssText = styleChiffreCommun + `top: ${posY}px; left: 754px; margin-left: 34px;`;
-         //   labelDroite.innerText = valeursY[index];
-         //   gridOverlay.appendChild(labelDroite);
         });
     }
+
+    // ====================================================================
+    // ÉTAPE 2 : APPLIQUER LA PRIORITÉ AUX ANCIENS ÉLÉMENTS DE LA TABLE
+    // ====================================================================
+    // On recule la structure des poches et le tapis en arrière-plan (Niveau 0)
+    if (poolTable) {
+        poolTable.style.position = "relative";
+        poolTable.style.zIndex = "0";
+    }
+
+    // On s'assure que toutes les billes restent tout en haut (Niveau 10)
+    activeBalls.forEach(ball => {
+        ball.style.position = "absolute";
+        ball.style.zIndex = "10";
+    });
 }
 
 
