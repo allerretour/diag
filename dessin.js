@@ -758,213 +758,211 @@ if (dessin.estZoneGrille) {
         undoBtn.addEventListener('click', annulerDernierTrace);
     }
 
-    // --- LOGIQUE DE CLAVIER ET RACCOURCIS CORRIGÉE ---
-     // --- LOGIQUE DE CLAVIER ET RACCOURCIS CORRIGÉE ---
-    document.addEventListener('keydown', (e) => {
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
-            return; 
-        }
-
-        // 1. Gestion de l'annulation
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
-            e.preventDefault(); 
-            annulerDernierTrace();
-            return; 
-        }
-
-        if (e.key === 'Shift') {
-            isShiftPressed = true;
-            canvas.style.pointerEvents = 'auto';
-        }
-        if (e.key === 'Control') {
-            isCtrlPressed = true;
-        }
-
-        if (e.key.toLowerCase() === 't') {
-			e.preventDefault();
-    
-			if (outilActif === 'cible') {
-			// Si l'outil est déjà actif, on passe au quadrant suivant (0 ➔ 1 ➔ 2 ➔ 3 ➔ 0)
-			window.quadrantCibleCourant = (window.quadrantCibleCourant + 1) % 4;
-		} else {
-        // Si l'outil n'était pas actif, on l'active
-			outilActif = 'cible';
-    }
-
-    if (outilActif) canvas.style.pointerEvents = 'auto';
-    window.redessinerToutesLesLignes();
-}
-
-
+   // ====================================================================
+// GESTION AUTONOME DE LA CASE À COCHER "DESSINS/TRACÉS"
 // ====================================================================
-// DÉPLACEMENT MICRO-MÉTRIQUE DES BILLES AUX FLÈCHES DU CLAVIER
-// ====================================================================
-if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-    // Si aucune bille n'est sélectionnée, on ne fait rien
-    if (!window.billeSelectionneeCourante || window.billeSelectionneeCourante.style.display === 'none') {
-        return;
-    }
-
-    // Bloque le défilement par défaut de la page web dans le navigateur
-    e.preventDefault();
-
-    // 1. Récupération des positions physiques actuelles en pixels
-    let currentX = parseFloat(window.billeSelectionneeCourante.style.left) || 0;
-    let currentY = parseFloat(window.billeSelectionneeCourante.style.top) || 0;
-
-    // 2. Définition des pas géométriques basés sur votre grille 16x8
-    const gridWidth = 754;
-    const gridHeight = 364;
-    const pasX = gridWidth / 16;  // ~47.12px (1 unité de grille X)
-    const pasY = gridHeight / 8;  // ~45.5px  (1 unité de grille Y)
-
-    // Si SHIFT est enfoncé, on déplace d'une case entière, sinon d'un micro-pas (1/10ème de case)
-    const multiplicateur = e.shiftKey ? 1.0 : 0.1;
-    const incrementX = pasX * multiplicateur;
-    const incrementY = pasY * multiplicateur;
-
-    // 3. Calcul des nouvelles coordonnées selon la flèche pressée
-    switch (e.key) {
-        case 'ArrowLeft':
-            currentX -= incrementX;
-            break;
-        case 'ArrowRight':
-            currentX += incrementX;
-            break;
-        case 'ArrowUp':
-            currentY -= incrementY; // En CSS, diminuer 'top' fait monter l'élément
-            break;
-        case 'ArrowDown':
-            currentY += incrementY; // Augmenter 'top' fait descendre l'élément
-            break;
-    }
-
-    // 4. Sécurité anti-débordement des bandes et poches
-    const positionClampee = clampPosition(currentX, currentY);
-
-    // 5. Application directe des coordonnées physiques (sans snap magnétique forcé pour permettre le hors-piste au millimètre)
-    window.billeSelectionneeCourante.style.left = `${positionClampee.x}px`;
-    window.billeSelectionneeCourante.style.top = `${positionClampee.y}px`;
-
-    // 6. Résolution des collisions à la volée avec les autres billes du tapis
-    if (typeof resolveCollisions === "function") {
-        resolveCollisions(window.billeSelectionneeCourante);
-    }
-
-    // 7. Rafraîchissement des modules d'information (HUD latéral et affichage texte)
-    if (typeof rafraichirListeLateraleBilles === "function") {
-        rafraichirListeLateraleBilles();
-    }
-}
-
-
-// === MODIFICATION DE LA LOGIQUE TOUCHE H & ADAPTATION CASE À COCHER ===
-    if (toggleDrawingsCheck) {
-        toggleDrawingsCheck.addEventListener('change', () => {
-            canvas.style.visibility = toggleDrawingsCheck.checked ? 'visible' : 'hidden';
-        });
-    }
-
-
-
-// Raccourci pour masquer / afficher le canvas (Touche H)
-        if (e.key.toLowerCase() === 'h') {
-            e.preventDefault();
-            if (canvas.style.visibility === 'hidden') {
-                canvas.style.visibility = 'visible';
-                if (toggleDrawingsCheck) toggleDrawingsCheck.checked = true;
-            } else {
-                canvas.style.visibility = 'hidden';
-                if (toggleDrawingsCheck) toggleDrawingsCheck.checked = false;
-            }
-        }
-
-
-
-        if (e.key.toLowerCase() === 'z' && !e.ctrlKey && !e.metaKey) {
-    e.preventDefault();
-    
-    if (outilActif === 'carre') {
-        // Si l'outil est déjà actif, on fait tourner les dimensions (3 tailles)
-        if (window.tailleCarreCourante === 95) window.tailleCarreCourante = 135;
-        else if (window.tailleCarreCourante === 135) window.tailleCarreCourante = 180;
-        else window.tailleCarreCourante = 95; // Retour au début du cycle
-		} else {
-        // Si l'outil n'était pas actif, on l'active
-        outilActif = 'carre';
-		}
-
-		if (outilActif) canvas.style.pointerEvents = 'auto';
-		window.redessinerToutesLesLignes();
-	}
-
-
-       if (e.key === '9') {
-    e.preventDefault();
-    
-    if (outilActif === 'repereX') {
-        if (window.repereXEstUnCercle) {
-            // Si c'était un cercle, on repasse sur une étoile à 4 branches
-            window.repereXEstUnCercle = false;
-            window.nombreBranchesRepereX = 4;
-        } else if (window.nombreBranchesRepereX === 4) window.nombreBranchesRepereX = 6;
-        else {
-            // Après l'étoile à 6 branches, on bascule sur le mode cercle
-            window.repereXEstUnCercle = true;
-        }
-    } else {
-        outilActif = 'repereX';
-    }
-
-    if (outilActif) canvas.style.pointerEvents = 'auto';
-    window.redessinerToutesLesLignes();
-}
-
-
-
-        if (e.key === '0') {
-            e.preventDefault();
-            outilActif = (outilActif === 'effetBlanche') ? null : 'effetBlanche';
-            if (outilActif) canvas.style.pointerEvents = 'auto';
-            window.redessinerToutesLesLignes();
-        }
-
-        // Touche Échap pour annuler l'aperçu en cours
-        if (e.key === 'Escape') {
-            outilActif = null;
-            window.redessinerToutesLesLignes();
-        }
-
-        if (e.key.toLowerCase() === 'e' || e.key === 'Delete') {
-            window.detecterEtEffacerDessin(mouseX, mouseY);
-        }
-
-        // 3. Gestion des zones de grille (1 à 8)
-        if (e.key >= '1' && e.key <= '8') {
-            const zoneId = parseInt(e.key, 10);
-            const indexZoneExistante = window.dessinsSauvegardes.findIndex(dessin => dessin.estZoneGrille && dessin.zoneId === zoneId);
-
-            if (indexZoneExistante !== -1) {
-                const zoneActive = window.dessinsSauvegardes[indexZoneExistante];
-                if (!zoneActive.mode || zoneActive.mode === 'standard') {
-                    zoneActive.mode = 'alternatif';
-                } else {
-                    window.dessinsSauvegardes.splice(indexZoneExistante, 1);
-                }
-            } else {
-                const couleurActive = colorSelect ? colorSelect.value : '#ffffff';
-                const nouvelleZone = {
-                    couleur: couleurActive,
-                    estZoneGrille: true,
-                    zoneId: zoneId,
-                    mode: 'standard',
-                    points: [] 
-                };
-                window.dessinsSauvegardes.push(nouvelleZone);
-            }
-            window.redessinerToutesLesLignes();
-        }
+if (toggleDrawingsCheck) {
+    toggleDrawingsCheck.addEventListener('change', () => {
+        canvas.style.visibility = toggleDrawingsCheck.checked ? 'visible' : 'hidden';
     });
+}
+
+// --- LOGIQUE DE CLAVIER ET RACCOURCIS CORRIGÉE ---
+document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+        return; 
+    }
+
+    // 1. Gestion de l'annulation
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault(); 
+        annulerDernierTrace();
+        return; 
+    }
+
+    if (e.key === 'Shift') {
+        isShiftPressed = true;
+        canvas.style.pointerEvents = 'auto';
+    }
+    if (e.key === 'Control') {
+        isCtrlPressed = true;
+    }
+
+    if (e.key.toLowerCase() === 't') {
+        e.preventDefault();
+
+        if (outilActif === 'cible') {
+            // Si l'outil est déjà actif, on passe au quadrant suivant (0 ➔ 1 ➔ 2 ➔ 3 ➔ 0)
+            window.quadrantCibleCourant = (window.quadrantCibleCourant + 1) % 4;
+        } else {
+            // Si l'outil n'était pas actif, on l'active
+            outilActif = 'cible';
+        }
+
+        if (outilActif) canvas.style.pointerEvents = 'auto';
+        window.redessinerToutesLesLignes();
+    }
+
+
+    // ====================================================================
+    // DÉPLACEMENT MICRO-MÉTRIQUE DES BILLES AUX FLÈCHES DU CLAVIER
+    // ====================================================================
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        // Si aucune bille n'est sélectionnée, on ne fait rien
+        if (!window.billeSelectionneeCourante || window.billeSelectionneeCourante.style.display === 'none') {
+            return;
+        }
+
+        // Bloque le défilement par défaut de la page web dans le navigateur
+        e.preventDefault();
+
+        // 1. Récupération des positions physiques actuelles en pixels
+        let currentX = parseFloat(window.billeSelectionneeCourante.style.left) || 0;
+        let currentY = parseFloat(window.billeSelectionneeCourante.style.top) || 0;
+
+        // 2. Définition des pas géométriques basés sur votre grille 16x8
+        const gridWidth = 754;
+        const gridHeight = 364;
+        const pasX = gridWidth / 16;  // ~47.12px (1 unité de grille X)
+        const pasY = gridHeight / 8;  // ~45.5px  (1 unité de grille Y)
+
+        // Si SHIFT est enfoncé, on déplace d'une case entière, sinon d'un micro-pas (1/10ème de case)
+        const multiplicateur = e.shiftKey ? 1.0 : 0.1;
+        const incrementX = pasX * multiplicateur;
+        const incrementY = pasY * multiplicateur;
+
+        // 3. Calcul des nouvelles coordonnées selon la flèche pressée
+        switch (e.key) {
+            case 'ArrowLeft':
+                currentX -= incrementX;
+                break;
+            case 'ArrowRight':
+                currentX += incrementX;
+                break;
+            case 'ArrowUp':
+                currentY -= incrementY; // En CSS, diminuer 'top' fait monter l'élément
+                break;
+            case 'ArrowDown':
+                currentY += incrementY; // Augmenter 'top' fait descendre l'élément
+                break;
+        }
+
+        // 4. Sécurité anti-débordement des bandes et poches
+        const positionClampee = clampPosition(currentX, currentY);
+
+        // 5. Application directe des coordonnées physiques (sans snap magnétique forcé pour permettre le hors-piste au millimètre)
+        window.billeSelectionneeCourante.style.left = `${positionClampee.x}px`;
+        window.billeSelectionneeCourante.style.top = `${positionClampee.y}px`;
+
+        // 6. Résolution des collisions à la volée avec les autres billes du tapis
+        if (typeof resolveCollisions === "function") {
+            resolveCollisions(window.billeSelectionneeCourante);
+        }
+
+        // 7. Rafraîchissement des modules d'information (HUD latéral et affichage texte)
+        if (typeof rafraichirListeLateraleBilles === "function") {
+            rafraichirListeLateraleBilles();
+        }
+    }
+
+
+    // === LOGIQUE DU RACCOURCI TOUCHE H SYNCED AVEC LA CASE À COCHER ===
+    if (e.key.toLowerCase() === 'h') {
+        e.preventDefault();
+        if (canvas.style.visibility === 'hidden') {
+            canvas.style.visibility = 'visible';
+            if (toggleDrawingsCheck) toggleDrawingsCheck.checked = true;
+        } else {
+            canvas.style.visibility = 'hidden';
+            if (toggleDrawingsCheck) toggleDrawingsCheck.checked = false;
+        }
+    }
+
+
+    if (e.key.toLowerCase() === 'z' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+
+        if (outilActif === 'carre') {
+            // Si l'outil est déjà actif, on fait tourner les dimensions (3 tailles)
+            if (window.tailleCarreCourante === 95) window.tailleCarreCourante = 135;
+            else if (window.tailleCarreCourante === 135) window.tailleCarreCourante = 180;
+            else window.tailleCarreCourante = 95; // Retour au début du cycle
+        } else {
+            // Si l'outil n'était pas actif, on l'active
+            outilActif = 'carre';
+        }
+
+        if (outilActif) canvas.style.pointerEvents = 'auto';
+        window.redessinerToutesLesLignes();
+    }
+
+
+    if (e.key === '9') {
+        e.preventDefault();
+
+        if (outilActif === 'repereX') {
+            if (window.repereXEstUnCercle) {
+                // Si c'était un cercle, on repasse sur une étoile à 4 branches
+                window.repereXEstUnCercle = false;
+                window.nombreBranchesRepereX = 4;
+            } else if (window.nombreBranchesRepereX === 4) window.nombreBranchesRepereX = 6;
+            else {
+                // Après l'étoile à 6 branches, on bascule sur le mode cercle
+                window.repereXEstUnCercle = true;
+            }
+        } else {
+            outilActif = 'repereX';
+        }
+
+        if (outilActif) canvas.style.pointerEvents = 'auto';
+        window.redessinerToutesLesLignes();
+    }
+
+
+    if (e.key === '0') {
+        e.preventDefault();
+        outilActif = (outilActif === 'effetBlanche') ? null : 'effetBlanche';
+        if (outilActif) canvas.style.pointerEvents = 'auto';
+        window.redessinerToutesLesLignes();
+    }
+
+    // Touche Échap pour annuler l'aperçu en cours
+    if (e.key === 'Escape') {
+        outilActif = null;
+        window.redessinerToutesLesLignes();
+    }
+
+    if (e.key.toLowerCase() === 'e' || e.key === 'Delete') {
+        window.detecterEtEffacerDessin(mouseX, mouseY);
+    }
+
+    // 3. Gestion des zones de grille (1 à 8)
+    if (e.key >= '1' && e.key <= '8') {
+        const zoneId = parseInt(e.key, 10);
+        const indexZoneExistante = window.dessinsSauvegardes.findIndex(dessin => dessin.estZoneGrille && dessin.zoneId === zoneId);
+
+        if (indexZoneExistante !== -1) {
+            const zoneActive = window.dessinsSauvegardes[indexZoneExistante];
+            if (!zoneActive.mode || zoneActive.mode === 'standard') {
+                zoneActive.mode = 'alternatif';
+            } else {
+                window.dessinsSauvegardes.splice(indexZoneExistante, 1);
+            }
+        } else {
+            const couleurActive = colorSelect ? colorSelect.value : '#ffffff';
+            const nouvelleZone = {
+                couleur: couleurActive,
+                estZoneGrille: true,
+                zoneId: zoneId,
+                mode: 'standard',
+                points: [] 
+            };
+            window.dessinsSauvegardes.push(nouvelleZone);
+        }
+        window.redessinerToutesLesLignes();
+    }
+});
+
 
 
     document.addEventListener('keyup', (e) => {
