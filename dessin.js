@@ -3,11 +3,21 @@ window.dessinsSauvegardes = [];
 // Variable globale pour suivre le nombre de pointes du repère X (ex: alterne entre 4, 6)
 window.nombreBranchesRepereX = 6; // Garde la mémoire des branches
 window.repereXEstUnCercle = false; // Permet de savoir si on bascule en mode cercle
+
+// NOUVEAU : Liste ordonnée pour le cycle de la touche 9
+window.repereXTexte = null; 
+const cycleCaracteres = ["A", "B", "C", "D", "E", "F", "1", "2", "3", "4", "5", "6"];
  
 // Variable globale pour suivre la dimension actuelle du carré (3 tailles en pixels)
 window.tailleCarreCourante = 95; 
 // Variable globale pour suivre le quadrant d'affichage des chiffres (0: Bas-Droite, 1: Bas-Gauche, 2: Haut-Gauche, 3: Haut-Droite)
-window.quadrantCibleCourant = 0; 
+window.quadrantCibleCourant = 0;
+
+// Variable globale pour suivre la force du coup (0: désactivé, 1: 25%, 2: 50%, 3: 75%, 4: 100%)
+window.niveauForceCourant = 0; 
+const labelsForce = { 1: "DOUX", 2: "MOYEN", 3: "FORT", 4: "MAX" };
+const couleursForce = { 1: "#2ecc71", 2: "#f1c40f", 3: "#e67e22", 4: "#e74c3c" }; // Vert, Jaune, Orange, Rouge
+
 
 
 
@@ -91,9 +101,8 @@ let outilActif = null; // Peut valoir: 'cible', 'carre', 'effetBlanche', 'repere
     }
 }
 
-// Dessine un GRAND diagramme d'effets de bille blanche TOUJOURS NOIR (cercles vides + réticule complet) à la position (x, y)
-function dessinerEffetsBilleBlanche(x, y, couleur) {
-    ctx.save(); // Sauvegarde l'état global du canvas
+function dessinerEffetsBilleBlanche(x, y, couleur, forceFige) {
+    ctx.save(); 
 
     // --- 1. CONFIGURATION DES BANDES DE SÉCURITÉ ---
     const marge = 18;
@@ -104,85 +113,64 @@ function dessinerEffetsBilleBlanche(x, y, couleur) {
 
     ctx.beginPath();
     ctx.rect(zoneUtileX, zoneUtileY, zoneUtileLargeur, zoneUtileHauteur);
-    // ctx.clip(); // Tronque si la forme déborde sur les bandes
 
-    // ====================================================================
-    // AJOUT : CONTOUR RECTANGULAIRE GLOBAL (BOÎTE DE CONTENEUR DU BLOC)
-    // ====================================================================
-    ctx.save();
-    const rayonBille = 60;
+    const forceActuelle = (forceFige !== undefined) ? forceFige : window.niveauForceCourant;
+    const jaugeActive = forceActuelle > 0;
     
-    // Dimensions calculées pour envelopper le texte supérieur ET la bille
-    const largeurCadre = 150;
+    // Proportions du panneau adaptées
+    const largeurCadre = jaugeActive ? 210 : 150; 
     const hauteurCadre = 175;
     const demiLargeur = largeurCadre / 2;
+    const rayonBille = 60;
     
-    // Positionnement du coin haut-gauche pour que l'ensemble soit centré sur (x, y)
     const cadreX = x - demiLargeur;
-    const cadreY = y - rayonBille - 32; // Incorpore l'espace du texte au-dessus
-    const arrondiCoins = 10;
+    const cadreY = y - rayonBille - 32; 
+    const arronsCoins = 12; 
 
-    // Tracé du fond de la boîte (Noir translucide pour détacher du tapis)
+    // 1. Fond du cadre (Teinte anthracite sombre translucide)
     ctx.beginPath();
-    ctx.roundRect(cadreX, cadreY, largeurCadre, hauteurCadre, arrondiCoins);
-    ctx.fillStyle = "rgba(0, 0, 0, 0.15)"; 
+    ctx.roundRect(cadreX, cadreY, largeurCadre, hauteurCadre, arronsCoins);
+    ctx.fillStyle = "rgba(16, 20, 30, 0.85)"; 
     ctx.fill();
 
-    // Tracé de la bordure extérieure de la boîte
-    // ctx.strokeStyle = "#ffffff";
-    // ctx.lineWidth = 1.5;
-    // ctx.stroke();
+    // Décalage de la bille vers la gauche si la jauge s'affiche
+    const shiftX = jaugeActive ? -20 : 0;
+    const billeX = x + shiftX;
+
+    // 2. Corps de la bille blanche
+    ctx.save();
+    ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetX = 3;
+    ctx.shadowOffsetY = 4;
+    ctx.fillStyle = "#ffffff"; 
+    ctx.beginPath();
+    ctx.arc(billeX, y, rayonBille, 0, 2 * Math.PI);
+    ctx.fill(); 
     ctx.restore();
 
-    // --- 2. DESSIN DU CORPS DE LA BILLE BLANCHE (EFFET BILLARD SANS CONTOUR + OMBRE) ---
-    // Configuration de l'ombre portée de la bille
-    ctx.shadowColor = "rgba(0, 0, 0, 0.35)"; // Ombre douce noire transparente
-    ctx.shadowBlur = 10;                     // Flou de l'ombre
-    ctx.shadowOffsetX = 3;                   // Décalage horizontal (lumière venant du haut/gauche)
-    ctx.shadowOffsetY = 3;                   // Décalage vertical
-
-    ctx.fillStyle = "#ffffff"; // Fond blanc opaque de la bille
-    
-    ctx.beginPath();
-    ctx.arc(x, y, rayonBille, 0, 2 * Math.PI);
-    ctx.fill(); // Remplissage uniquement (pas de stroke pour éviter le contour)
-
-    // Désactivation de l'ombre pour éviter qu'elle ne bave sur les tracés internes
-    ctx.shadowColor = "transparent";
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 0;
-
-    // --- 3. DESSIN DES LIGNES RÉTICULAIRES JUSQU'AU BORD ---
-    ctx.strokeStyle = "#e0e0e0"; 
+    // 3. Réticule (lignes en pointillés fins)
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.15)"; 
     ctx.lineWidth = 1;
-    ctx.setLineDash([2, 3]); // Petits pointillés fins alternés précis
+    ctx.setLineDash([2, 3]); 
     
-    // Calcul des coordonnées exactes sur le cercle extérieur (Trigonométrie)
-    const cos45 = Math.cos(Math.PI / 4); // ~0.707
-    const décalageDiag = rayonBille * cos45;
+    const cos45 = Math.cos(Math.PI / 4);
+    const decalageDiag = rayonBille * cos45;
 
     ctx.beginPath();
-    // Axe vertical complet (Du bord haut au bord bas)
-    ctx.moveTo(x, y - rayonBille); ctx.lineTo(x, y + rayonBille);
-    // Axe horizontal complet (Du bord gauche au bord droite)
-    ctx.moveTo(x - rayonBille, y); ctx.lineTo(x + rayonBille, y);
-    // Diagonale 1 complète (Haut/Gauche - Bas/Droite)
-    ctx.moveTo(x - décalageDiag, y - décalageDiag); ctx.lineTo(x + décalageDiag, y + décalageDiag);
-    // Diagonale 2 complète (Bas/Gauche - Haut/Droite)
-    ctx.moveTo(x - décalageDiag, y + décalageDiag); ctx.lineTo(x + décalageDiag, y - décalageDiag);
+    ctx.moveTo(billeX, y - rayonBille); ctx.lineTo(billeX, y + rayonBille);
+    ctx.moveTo(billeX - rayonBille, y); ctx.lineTo(billeX + rayonBille, y);
+    ctx.moveTo(billeX - decalageDiag, y - decalageDiag); ctx.lineTo(billeX + decalageDiag, y + decalageDiag);
+    ctx.moveTo(billeX - decalageDiag, y + decalageDiag); ctx.lineTo(billeX + decalageDiag, y - decalageDiag);
     ctx.stroke();
-
-    // Réinitialisation des pointillés pour tracer les cercles proprement
     ctx.setLineDash([]);
 
-    // --- 4. DESSIN DES 9 CERCLES SANS COULEUR (CONTOURS NOIRS FORCÉS) ---
-    const rayonPointExterieur = 4.5; // Taille adaptée au ratio de la bille
-    const rayonPointCentral = 6.5;   // Centre d'effet plus grand
-    const distanceCentre = 42;       // Éloignement proportionnel des points extérieurs
+    // 4. Points d'effets (Rond central et extérieurs)
+    const rayonPointExterieur = 4.5;
+    const rayonPointCentral = 6.5;
+    const distanceCentre = 42;
     const diagPoint = distanceCentre * cos45;
 
-    // Coordonnées relatives des 9 repères
     const pointsEffets = [
         { dx: 0, dy: 0, estCentre: true },                                
         { dx: 0, dy: -distanceCentre, estCentre: false },                 
@@ -195,49 +183,113 @@ function dessinerEffetsBilleBlanche(x, y, couleur) {
         { dx: diagPoint, dy: diagPoint, estCentre: false }        
     ];
 
-    // Remplissage des ronds blancs pour effacer les pointillés en dessous
     ctx.fillStyle = "#ffffff"; 
     pointsEffets.forEach(pt => {
         const rayonActuel = pt.estCentre ? rayonPointCentral : rayonPointExterieur;
         ctx.beginPath();
-        ctx.arc(x + pt.dx, y + pt.dy, rayonActuel, 0, 2 * Math.PI);
+        ctx.arc(billeX + pt.dx, y + pt.dy, rayonActuel, 0, 2 * Math.PI);
         ctx.fill();
     });
 
-    // Application des bordures grises internes sur les repères
-    ctx.strokeStyle = "#e0e0e0";
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.2)";
     pointsEffets.forEach(pt => {
         const rayonActuel = pt.estCentre ? rayonPointCentral : rayonPointExterieur;
-        ctx.lineWidth = pt.estCentre ? 1.5 : 1.3;
+        ctx.lineWidth = pt.estCentre ? 1.5 : 1.2;
         ctx.beginPath();
-        ctx.arc(x + pt.dx, y + pt.dy, rayonActuel, 0, 2 * Math.PI);
+        ctx.arc(billeX + pt.dx, y + pt.dy, rayonActuel, 0, 2 * Math.PI);
         ctx.stroke();
     });
 
-    ctx.restore(); // Restaure le clip géométrique initial
-	
-	// ====================================================================
-    // ÉTIQUETTE "POINT DE CONTACT" : TEXTE BLANC
-    // ====================================================================
-    ctx.save();
-    
-    // Le texte profite désormais du fond sombre du conteneur pour sa lisibilité
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 12px sans-serif";
+    // Label 1 : "CONTACT" (Fluide et épuré au-dessus de la bille blanche)
+    ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+    ctx.font = "bold 10px sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
-    
-    // Positionné à 12 pixels au-dessus du sommet de la bille blanche
-    ctx.fillText("POINT DE CONTACT", x, y - rayonBille - 12);
-    
-    ctx.restore();
+    ctx.fillText("CONTACT", billeX, y - rayonBille - 12);
+
+    // ====================================================================
+    // JAUGE DE PUISSANCE MODERNISÉE
+    // ====================================================================
+    if (jaugeActive) {
+        const jaugeWidth = 14;
+        const jaugeHeight = rayonBille * 2; // 120px
+        const jaugeX = cadreX + largeurCadre - 32;
+        const jaugeY = y - rayonBille;
+
+        // Label 2 : "FORCE" ou "PUISSANCE" placé de façon symétrique au-dessus du curseur
+        ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+        ctx.font = "bold 10px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        ctx.fillText("FORCE", jaugeX + (jaugeWidth / 2), jaugeY - 12);
+
+        // Dégradé linéaire vertical fluide
+        const grad = ctx.createLinearGradient(jaugeX, jaugeY + jaugeHeight, jaugeX, jaugeY);
+        grad.addColorStop(0, "#2ecc71");   // Vert
+        grad.addColorStop(0.4, "#f1c40f"); // Jaune
+        grad.addColorStop(0.7, "#e67e22"); // Orange
+        grad.addColorStop(1, "#e74c3c");   // Rouge
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(jaugeX, jaugeY, jaugeWidth, jaugeHeight, 6);
+        ctx.fillStyle = grad;
+        ctx.fill();
+        ctx.restore();
+
+        // Effet vitré par-dessus la jauge
+        ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+        ctx.beginPath();
+        ctx.roundRect(jaugeX, jaugeY, jaugeWidth / 2, jaugeHeight, { topLeft: 6, bottomLeft: 6 });
+        ctx.fill();
+
+        // Calcul de l'emplacement vertical de l'indicateur
+        const hauteurCibleY = jaugeY + jaugeHeight - ((forceActuelle / 4) * jaugeHeight);
+
+        // Aiguille indicatrice (Triangle blanc)
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.moveTo(jaugeX - 6, hauteurCibleY);       
+        ctx.lineTo(jaugeX - 12, hauteurCibleY - 4);  
+        ctx.lineTo(jaugeX - 12, hauteurCibleY + 4);  
+        ctx.closePath();
+        
+        ctx.save();
+        ctx.shadowColor = "rgba(0,0,0,0.4)";
+        ctx.shadowBlur = 4;
+        ctx.fill();
+        ctx.restore();
+
+        // Ligne de coupe sur la jauge
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(jaugeX, hauteurCibleY);
+        ctx.lineTo(jaugeX + jaugeWidth, hauteurCibleY);
+        ctx.stroke();
+
+        // Contour extérieur discret
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.3)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(jaugeX, jaugeY, jaugeWidth, jaugeHeight, 6);
+        ctx.stroke();
+
+        // Label numérique en pourcentage (ex: 25%, 50%, etc.)
+        const valeurPourcentage = forceActuelle * 25;
+        ctx.fillStyle = couleursForce[forceActuelle];
+        ctx.font = "bold 12px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillText(`${valeurPourcentage}%`, jaugeX + (jaugeWidth / 2), jaugeY + jaugeHeight + 8);
+    }
+
+    ctx.restore(); 
 }
 
 
-
-// Dessine un repère en forme d'étoile stylisée, très grasse et opaque à 60% à la position (x, y)
-function dessinerRepereXGras(x, y, couleur) {
-    ctx.save(); // Sauvegarde l'état global du canvas
+function dessinerRepereXGras(x, y, couleur, texteFige) {
+    ctx.save(); 
 
     // --- 1. CONFIGURATION DES BANDES DE SÉCURITÉ ---
     const marge = 18;
@@ -246,34 +298,66 @@ function dessinerRepereXGras(x, y, couleur) {
     let zoneUtileLargeur = ctx.canvas.width - (marge * 2);
     let zoneUtileHauteur = ctx.canvas.height - (marge * 2);
 
+    ctx.save();
     ctx.beginPath();
     ctx.rect(zoneUtileX, zoneUtileY, zoneUtileLargeur, zoneUtileHauteur);
+    ctx.clip(); 
+    ctx.restore();
 
-    // --- 2. CONFIGURATION DU STYLE EXTRA-GRAS ---
+    // --- 2. CONFIGURATION DU STYLE EXTRA-GRAS ALIGNÉ SUR LES BILLES ---
     const couleurTrace = couleur || (colorSelect ? colorSelect.value : '#ffffff');
-    ctx.strokeStyle = couleurTrace;
-    ctx.lineWidth = 2;         // Épaisseur de ligne pour un contour bien visible
-    ctx.lineCap = 'round';     // Extrémités arrondies pour le style
-    ctx.lineJoin = 'round';    // Angles adoucis
-    ctx.setLineDash([]);       // Lignes pleines
+    ctx.setLineDash([]);       
 
-    ctx.beginPath();
+    // Extraction du texte à afficher (figé ou dynamique pour l'aperçu)
+    const texteAAfficher = (texteFige !== undefined) ? texteFige : window.repereXTexte;
 
-    // === 3. CAS DU CERCLE (TAILLE RÉDUITE À 10PX) ===
-    if (window.repereXEstUnCercle) {
-        const rayonCercle = 8; // Réduit de 13px à 10px
-        ctx.arc(x, y, rayonCercle, 0, 2 * Math.PI);
+    // === CAS 1 : DU TEXTE (A-F, 1-6) ===
+    if (texteAAfficher) {
+        ctx.fillStyle = couleurTrace;
+        ctx.font = "bold 18px sans-serif"; // Ajusté pour s'inscrire harmonieusement dans les 24px
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(texteAAfficher, x, y);
     } 
-    // === CAS DE L'ÉTOILE (TAILLE RÉDUITE) ===
-    else {
-        const branches = window.nombreBranchesRepereX || 8; 
-        const rayonExterne = 12;   // Réduit de 13px à 10px
-        const rayonInterne = 5;  // Réduit de 6.2px à 4.5px pour garder de belles proportions cambrées
+        // === CAS 2 : DU CERCLE (0 pointe) ===
+    else if ((texteFige === undefined && window.repereXEstUnCercle) || (texteFige === null && window.repereXEstUnCercle)) {
+        ctx.beginPath(); 
+        ctx.arc(x, y, 12, 0, 2 * Math.PI); // Diamètre de 24px (Taille d'une bille)
+        ctx.closePath();
+        
+        // 1. REMPLISSAGE DU FOND (Identique aux étoiles, lignes pleines)
+        ctx.globalAlpha = 0.80;
+        ctx.fillStyle = couleurTrace;
+        ctx.fill();
 
-        // Calcul géométrique des pointes et des creux de l'étoile
+        // 2. TRACÉ DU CONTOUR EN POINTILLÉ PLUS FIN
+        ctx.strokeStyle = couleurTrace;
+        ctx.lineWidth = 1.5; // Ligne plus fine pour un rendu plus précis
+        ctx.setLineDash([2, 2]); // Pointillés serrés (2px de tiret, 2px d'espace)
+        ctx.globalAlpha = 1.0;
+        ctx.stroke();
+        
+        // RECONSTRUCTION DU CANVAS : Réinitialise pour les autres formes
+        ctx.setLineDash([]); 
+    }
+
+
+    // === CAS 3 : DE L'ÉTOILE (4 ou 6 branches) ===
+    else {
+        ctx.strokeStyle = couleurTrace;
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        
+        ctx.beginPath(); 
+
+        const branches = (texteFige === undefined) ? window.nombreBranchesRepereX : (window.nombreBranchesRepereX || 4); 
+        const rayonExterne = 12; // Le rayon maximal passe à 12px (Enveloppe de 24px de large)  
+        const rayonInterne = 5.5; // Ajusté proportionnellement pour conserver un bel effet visuel
+
         for (let i = 0; i < 2 * branches; i++) {
             const rayon = (i % 2 === 0) ? rayonExterne : rayonInterne;
-            const angle = (i * Math.PI) / branches - (Math.PI / 2); // Pointe vers le haut
+            const angle = (i * Math.PI) / branches - (Math.PI / 2);
             
             const coordX = x + Math.cos(angle) * rayon;
             const coordY = y + Math.sin(angle) * rayon;
@@ -284,22 +368,17 @@ function dessinerRepereXGras(x, y, couleur) {
                 ctx.lineTo(coordX, coordY);
             }
         }
+        ctx.closePath();
+        
+        ctx.globalAlpha = 0.80;
+        ctx.fillStyle = couleurTrace;
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+        ctx.stroke();
     }
-
-    ctx.closePath();
     
-    // --- 4. RAPPORT D'OPACITÉ AJUSTÉ POUR LE REMPLISSAGE ---
-    ctx.globalAlpha = 0.80; // Remplissage opaque à 80%
-    ctx.fillStyle = couleurTrace;
-    ctx.fill();
-    
-    // --- 5. CONTOUR ET NETTETÉ À 100% ---
-    ctx.globalAlpha = 1.0;  // Le contour reste entièrement opaque pour la visibilité
-    ctx.stroke();
-    
-    ctx.restore(); // Restaure l'état du canvas
+    ctx.restore(); 
 }
-
 
 
 
@@ -608,100 +687,72 @@ matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`).addEventListener('cha
         
         window.dessinsSauvegardes.forEach(dessin => {
             
-			if (dessin.estCible) {
-    if (dessin.points && dessin.points.length > 0) {
-        const centre = dessin.points[0];
-        
-        // Sauvegarde temporaire de l'outil fantôme
-        const tempQuadrant = window.quadrantCibleCourant;
-        
-        // Application du quadrant enregistré pour cette cible précise
-        window.quadrantCibleCourant = dessin.hasOwnProperty('quadrant') ? dessin.quadrant : 0;
-        
-        dessinerCible(centre.x, centre.y, dessin.couleur);
-        
-        // Restauration pour l'aperçu dynamique sous le curseur
-        window.quadrantCibleCourant = tempQuadrant;
-    }
-    return;
-}
-
+            if (dessin.estCible) {
+                if (dessin.points && dessin.points.length > 0) {
+                    const centre = dessin.points[0];
+                    const tempQuadrant = window.quadrantCibleCourant;
+                    window.quadrantCibleCourant = dessin.hasOwnProperty('quadrant') ? dessin.quadrant : 0;
+                    dessinerCible(centre.x, centre.y, dessin.couleur);
+                    window.quadrantCibleCourant = tempQuadrant;
+                }
+                return;
+            }
 			
-			if (dessin.estCarre) {
-    if (dessin.points && dessin.points.length > 0) {
-        const centre = dessin.points[0];
-        
-        // Sauvegarde temporaire de l'outil fantôme
-        const tempTaille = window.tailleCarreCourante;
-        
-        // Application de la taille enregistrée pour ce carré précis
-        window.tailleCarreCourante = dessin.taille || 95;
-        
-        dessinerCarre(centre.x, centre.y, dessin.couleur);
-        
-        // Restauration de la dimension pour l'aperçu sous le curseur
-        window.tailleCarreCourante = tempTaille;
-    }
-    return;
-}
+            if (dessin.estCarre) {
+                if (dessin.points && dessin.points.length > 0) {
+                    const centre = dessin.points[0];
+                    const tempTaille = window.tailleCarreCourante;
+                    window.tailleCarreCourante = dessin.taille || 95;
+                    dessinerCarre(centre.x, centre.y, dessin.couleur);
+                    window.tailleCarreCourante = tempTaille;
+                }
+                return;
+            }
 
+            // === GESTION DE LA FORME D'EFFETS BILLE BLANCHE SAUVEGARDÉE ===
+            if (dessin.estEffetBlanche) {
+                if (dessin.points && dessin.points.length > 0) {
+                    const centre = dessin.points[0];
+                    // On passe dessin.force qui a été figé au moment du clic
+                    dessinerEffetsBilleBlanche(centre.x, centre.y, dessin.couleur, dessin.force);
+                }
+                return;
+            }
 
-// === AJOUT ICI : Gestion exclusive de la forme d'effets bille blanche ===
-if (dessin.estEffetBlanche) {
-    if (dessin.points && dessin.points.length > 0) {
-        const centre = dessin.points[0];
-        dessinerEffetsBilleBlanche(centre.x, centre.y, dessin.couleur);
-    }
-    return;
-}
+            if (dessin.estRepereX) {
+                if (dessin.points && dessin.points[0]) {
+                    const centre = dessin.points[0];
+                    const tempCercle = window.repereXEstUnCercle;
+                    const tempBranches = window.nombreBranchesRepereX;
+                    window.repereXEstUnCercle = dessin.hasOwnProperty('estUnCercle') ? dessin.estUnCercle : false;
+                    window.nombreBranchesRepereX = dessin.branches || 8;
+                    
+                    dessinerRepereXGras(centre.x, centre.y, dessin.couleur, dessin.texte);
+                    
+                    window.repereXEstUnCercle = tempCercle;
+                    window.nombreBranchesRepereX = tempBranches;
+                }
+                return;
+            }
 
-if (dessin.estRepereX) {
-    if (dessin.points && dessin.points[0]) {
-        const centre = dessin.points[0];
-        
-        // Sauvegarde temporaire du mode actif pour l'aperçu fantôme
-        const tempCercle = window.repereXEstUnCercle;
-        const tempBranches = window.nombreBranchesRepereX;
-        
-        // Application des propriétés figées du dessin
-        window.repereXEstUnCercle = dessin.hasOwnProperty('estUnCercle') ? dessin.estUnCercle : false;
-        window.nombreBranchesRepereX = dessin.branches || 8;
-        
-        dessinerRepereXGras(centre.x, centre.y, dessin.couleur);
-        
-        // Restauration pour l'aperçu sous la souris
-        window.repereXEstUnCercle = tempCercle;
-        window.nombreBranchesRepereX = tempBranches;
-    }
-    return;
-}
-
-
-
-
-
-// === AJOUT ICI : Gestion exclusive des formes de Zone de Grille ===
-if (dessin.estZoneGrille) {
-    dessinerZoneGrille(dessin.zoneId, dessin.couleur, dessin.mode);
-    return;
-}
-
-
+            if (dessin.estZoneGrille) {
+                dessinerZoneGrille(dessin.zoneId, dessin.couleur, dessin.mode);
+                return;
+            }
 
             // Gestion des tracés standards et lignes droites
             if (dessin.points.length < 2) return;
-            // MODIFICATION : On transmet la propriété "estPointille" sauvegardée dans l'objet
             configurerStyleDessin(dessin.couleur, dessin.estPointille);
             ctx.beginPath();
             ctx.moveTo(dessin.points[0].x, dessin.points[0].y);
             
             if (dessin.estDroite) {
-                const dernierPoint = dessin.points[dessin.points.length - 1];
-                ctx.lineTo(dernierPoint.x, dernierPoint.y);
+                const d_point = dessin.points[dessin.points.length - 1];
+                ctx.lineTo(d_point.x, d_point.y);
                 ctx.stroke();
                 
                 if (dessin.avecFleche) {
-                    dessinerPointeFleche(dessin.points[0].x, dessin.points[0].y, dernierPoint.x, dernierPoint.y, dessin.couleur);
+                    dessinerPointeFleche(dessin.points[0].x, dessin.points[0].y, d_point.x, d_point.y, dessin.couleur);
                 }
             } else {
                 for (let i = 1; i < dessin.points.length; i++) {
@@ -711,28 +762,32 @@ if (dessin.estZoneGrille) {
             }
         });
 
-        // === AJOUT ICI : RENDU DE L'APERÇU FANTÔME ===
-    if (outilActif) {
-        ctx.save();
-        ctx.globalAlpha = 0.40; // Rapproche la forme d'un aspect "fantôme" translucide
-        
-        let couleurActive = colorSelect ? colorSelect.value : '#ffffff';
-        if (window.billeSelectionneeCourante) {
-            couleurActive = window.billeSelectionneeCourante.style.backgroundColor;
-        }
+        // === RENDU EN DIRECT DE L'APERÇU FANTÔME (SOUS LE CURSEUR) ===
+        if (outilActif) {
+            ctx.save();
+            ctx.globalAlpha = 0.40; // Translucide pour l'aperçu dynamique
+            
+            let couleurActive = colorSelect ? colorSelect.value : '#ffffff';
+            if (window.billeSelectionneeCourante) {
+                couleurActive = window.billeSelectionneeCourante.style.backgroundColor;
+            }
 
-        // Dessine la bonne forme en temps réel sous le curseur
-        if (outilActif === 'cible') dessinerCible(mouseX, mouseY, couleurActive);
-        if (outilActif === 'carre') dessinerCarre(mouseX, mouseY, couleurActive);
-        if (outilActif === 'repereX') dessinerRepereXGras(mouseX, mouseY, couleurActive);
-        if (outilActif === 'effetBlanche') dessinerEffetsBilleBlanche(mouseX, mouseY, couleurActive);
-        
-        ctx.restore();
-    }
+            if (outilActif === 'cible') dessinerCible(mouseX, mouseY, couleurActive);
+            if (outilActif === 'carre') dessinerCarre(mouseX, mouseY, couleurActive);
+            if (outilActif === 'repereX') dessinerRepereXGras(mouseX, mouseY, couleurActive);
+            
+            // MODIFICATION ICI : On envoie la variable de force globale pour l'aperçu sous la souris
+            if (outilActif === 'effetBlanche') {
+                dessinerEffetsBilleBlanche(mouseX, mouseY, couleurActive, window.niveauForceCourant);
+            }
+            
+            ctx.restore();
+        }
 
         const modeDashed = dashedCheck ? dashedCheck.checked : false;
         configurerStyleDessin(null, modeDashed); 
     };
+
 
     function annulerDernierTrace() {
         if (window.dessinsSauvegardes.length > 0) {
@@ -897,21 +952,43 @@ document.addEventListener('keydown', (e) => {
     }
 
 
-    if (e.key === '9') {
+
+    
+           if (e.key === '9') {
         e.preventDefault();
 
         if (outilActif === 'repereX') {
-            if (window.repereXEstUnCercle) {
-                // Si c'était un cercle, on repasse sur une étoile à 4 branches
-                window.repereXEstUnCercle = false;
-                window.nombreBranchesRepereX = 4;
-            } else if (window.nombreBranchesRepereX === 4) window.nombreBranchesRepereX = 6;
-            else {
-                // Après l'étoile à 6 branches, on bascule sur le mode cercle
+            if (!window.repereXEstUnCercle && window.nombreBranchesRepereX === 4 && window.repereXTexte === null) {
+                // Étoile 4 -> Étoile 6
+                window.nombreBranchesRepereX = 6;
+            } 
+            else if (!window.repereXEstUnCercle && window.nombreBranchesRepereX === 6 && window.repereXTexte === null) {
+                // Étoile 6 -> Cercle
                 window.repereXEstUnCercle = true;
+            } 
+            else if (window.repereXEstUnCercle && window.repereXTexte === null) {
+                // Cercle -> Lettre A (On désactive le cercle instantanément)
+                window.repereXEstUnCercle = false;
+                window.repereXTexte = cycleCaracteres[0]; // "A"
+            } 
+            else if (window.repereXTexte !== null) {
+                // Progression dans le tableau des caractères (A-F, 1-6)
+                const indexActuel = cycleCaracteres.indexOf(window.repereXTexte);
+                if (indexActuel >= 0 && indexActuel < cycleCaracteres.length - 1) {
+                    window.repereXTexte = cycleCaracteres[indexActuel + 1];
+                } else {
+                    // Fin de la liste -> Retour à la configuration de départ
+                    window.repereXTexte = null;
+                    window.nombreBranchesRepereX = 4;
+                    window.repereXEstUnCercle = false;
+                }
             }
         } else {
+            // Premier appui sur la touche : Initialisation de l'outil fantôme
             outilActif = 'repereX';
+            window.nombreBranchesRepereX = 4;
+            window.repereXEstUnCercle = false;
+            window.repereXTexte = null;
         }
 
         if (outilActif) canvas.style.pointerEvents = 'auto';
@@ -919,12 +996,31 @@ document.addEventListener('keydown', (e) => {
     }
 
 
-    if (e.key === '0') {
+
+
+        if (e.key === '0') {
         e.preventDefault();
-        outilActif = (outilActif === 'effetBlanche') ? null : 'effetBlanche';
+
+        if (outilActif !== 'effetBlanche') {
+            // 1er appui : On ouvre l'outil (Bille Blanche seule, pas de jauge)
+            outilActif = 'effetBlanche';
+            window.niveauForceCourant = 0;
+        } else {
+            // Appuis suivants : On incrémente la puissance (de 1 à 4)
+            window.niveauForceCourant++;
+            
+            // Si on dépasse le niveau MAX (4), on ferme l'outil
+            if (window.niveauForceCourant > 4) {
+                outilActif = null;
+                window.niveauForceCourant = 0;
+            }
+        }
+
         if (outilActif) canvas.style.pointerEvents = 'auto';
+        // RECOLLÉ : Correction de la fonction de rafraîchissement
         window.redessinerToutesLesLignes();
     }
+
 
     // Touche Échap pour annuler l'aperçu en cours
     if (e.key === 'Escape') {
@@ -1018,13 +1114,19 @@ function commencerDessin(e) {
 		}
 
         if (outilActif === 'repereX') {
-			nouvelElement.estRepereX = true;
-		// On sauvegarde l'état exact (étoile ou cercle) pour ce dessin
-			nouvelElement.estUnCercle = window.repereXEstUnCercle;
-			nouvelElement.branches = window.nombreBranchesRepereX;
-		}
+            nouvelElement.estRepereX = true;
+            // On fige l'état exact au moment du clic
+            nouvelElement.estUnCercle = window.repereXEstUnCercle;
+            nouvelElement.branches = window.nombreBranchesRepereX;
+            nouvelElement.texte = window.repereXTexte; // <--- AJOUT : Sauvegarde le texte posé
+        }
 
-        if (outilActif === 'effetBlanche') nouvelElement.estEffetBlanche = true;
+
+                if (outilActif === 'effetBlanche') {
+            nouvelElement.estEffetBlanche = true;
+            nouvelElement.force = window.niveauForceCourant; // <--- SÉCURISÉ : On fige la force choisie !
+        }
+
 
         window.dessinsSauvegardes.push(nouvelElement);
         outilActif = null; // Désactive l'outil après la pose
