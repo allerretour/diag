@@ -314,81 +314,102 @@ function dessinerRepereXGras(x, y, couleur, texteFige) {
     ctx.clip(); 
     ctx.restore();
 
-    // --- 2. CONFIGURATION DU STYLE EXTRA-GRAS ALIGNÉ SUR LES BILLES ---
+    // --- 2. CONFIGURATION DU STYLE ET SÉLECTION DU MODE ---
     const couleurTrace = couleur || (colorSelect ? colorSelect.value : '#ffffff');
     ctx.setLineDash([]);       
 
-    // Extraction du texte à afficher (figé ou dynamique pour l'aperçu)
+    // Extraction du texte à afficher (figé pour sauvegarde ou dynamique pour l'aperçu)
     const texteAAfficher = (texteFige !== undefined) ? texteFige : window.repereXTexte;
+    const estUnCercle = (texteFige === undefined) ? window.repereXEstUnCercle : (texteFige === null && window.repereXEstUnCercle);
 
-    // === CAS 1 : DU TEXTE (A-F, 1-6) ===
+    // --- 3. AIGUILLAGE LOGIQUE NETTOYÉ ---
     if (texteAAfficher) {
-        ctx.fillStyle = couleurTrace;
-        ctx.font = "bold 18px sans-serif"; // Ajusté pour s'inscrire harmonieusement dans les 24px
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(texteAAfficher, x, y);
+        // CAS 1 : Affichage de texte (A-F, 1-6)
+        rendreTexteRepere(x, y, texteAAfficher, couleurTrace);
     } 
-        // === CAS 2 : DU CERCLE (0 pointe) ===
-    else if ((texteFige === undefined && window.repereXEstUnCercle) || (texteFige === null && window.repereXEstUnCercle)) {
-        ctx.beginPath(); 
-        ctx.arc(x, y, 12, 0, 2 * Math.PI); // Diamètre de 24px (Taille d'une bille)
-        ctx.closePath();
-        
-        // 1. REMPLISSAGE DU FOND (Identique aux étoiles, lignes pleines)
-        ctx.globalAlpha = 0.80;
-        ctx.fillStyle = couleurTrace;
-        ctx.fill();
-
-        // 2. TRACÉ DU CONTOUR EN POINTILLÉ PLUS FIN
-        ctx.strokeStyle = couleurTrace;
-        ctx.lineWidth = 1.5; // Ligne plus fine pour un rendu plus précis
-        ctx.setLineDash([2, 2]); // Pointillés serrés (2px de tiret, 2px d'espace)
-        ctx.globalAlpha = 1.0;
-        ctx.stroke();
-        
-        // RECONSTRUCTION DU CANVAS : Réinitialise pour les autres formes
-        ctx.setLineDash([]); 
+    else if (estUnCercle) {
+        // CAS 2 : Affichage du cercle pointillé (0 pointe)
+        rendreCercleRepere(x, y, couleurTrace);
     }
-
-
-    // === CAS 3 : DE L'ÉTOILE (4 ou 6 branches) ===
     else {
-        ctx.strokeStyle = couleurTrace;
-        ctx.lineWidth = 2.5;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        
-        ctx.beginPath(); 
-
-        const branches = (texteFige === undefined) ? window.nombreBranchesRepereX : (window.nombreBranchesRepereX || 4); 
-        const rayonExterne = 12; // Le rayon maximal passe à 12px (Enveloppe de 24px de large)  
-        const rayonInterne = 5.5; // Ajusté proportionnellement pour conserver un bel effet visuel
-
-        for (let i = 0; i < 2 * branches; i++) {
-            const rayon = (i % 2 === 0) ? rayonExterne : rayonInterne;
-            const angle = (i * Math.PI) / branches - (Math.PI / 2);
-            
-            const coordX = x + Math.cos(angle) * rayon;
-            const coordY = y + Math.sin(angle) * rayon;
-
-            if (i === 0) {
-                ctx.moveTo(coordX, coordY);
-            } else {
-                ctx.lineTo(coordX, coordY);
-            }
-        }
-        ctx.closePath();
-        
-        ctx.globalAlpha = 0.80;
-        ctx.fillStyle = couleurTrace;
-        ctx.fill();
-        ctx.globalAlpha = 1.0;
-        ctx.stroke();
+        // CAS 3 : Affichage de l'étoile (4 ou 6 branches)
+        const branches = (texteFige === undefined) ? window.nombreBranchesRepereX : (window.nombreBranchesRepereX || 4);
+        rendreEtoileRepere(x, y, couleurTrace, branches);
     }
     
     ctx.restore(); 
 }
+
+
+// === SOUS-FONCTIONS DE RENDU SPÉCIALISÉES POUR LE REPÈRE X ===
+
+function rendreTexteRepere(x, y, texte, couleur) {
+    ctx.fillStyle = couleur;
+    ctx.font = "bold 18px sans-serif"; 
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(texte, x, y);
+}
+
+function rendreCercleRepere(x, y, couleur) {
+    const rayon = 12; // Équivalent à 12px
+    ctx.beginPath(); 
+    ctx.arc(x, y, rayon, 0, 2 * Math.PI);
+    ctx.closePath();
+    
+    // Remplissage du fond opaque à 80%
+    ctx.globalAlpha = 0.80;
+    ctx.fillStyle = couleur;
+    ctx.fill();
+
+    // Tracé du contour en pointillés fins serrés
+    ctx.strokeStyle = couleur;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([2, 2]); 
+    ctx.globalAlpha = 1.0;
+    ctx.stroke();
+    
+    ctx.setLineDash([]); // Réinitialisation
+}
+
+function rendreEtoileRepere(x, y, couleur, branches) {
+    ctx.strokeStyle = couleur;
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    ctx.beginPath(); 
+
+    const rayonExterne = 12; // 12px
+    const rayonInterne = 5.5; 
+
+    for (let i = 0; i < 2 * branches; i++) {
+        const rayon = (i % 2 === 0) ? rayonExterne : rayonInterne;
+        const angle = (i * Math.PI) / branches - (Math.PI / 2);
+        
+        const coordX = x + Math.cos(angle) * rayon;
+        const coordY = y + Math.sin(angle) * rayon;
+
+        if (i === 0) {
+            ctx.moveTo(coordX, coordY);
+        } else {
+            ctx.lineTo(coordX, coordY);
+        }
+    }
+    ctx.closePath();
+    
+    ctx.globalAlpha = 0.80;
+    ctx.fillStyle = couleur;
+    ctx.fill();
+    ctx.globalAlpha = 1.0;
+    ctx.stroke();
+}
+
+
+
+
+
+
 
 
 
@@ -422,6 +443,11 @@ function dessinerPointeFleche(fromX, fromY, toX, toY, couleur) {
     ctx.fill(); 
     ctx.restore();
 }
+
+
+
+
+
 
 
 
