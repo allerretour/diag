@@ -580,11 +580,11 @@
 
 #table-title-overlay {
     position: absolute;
-    top: 12%;
-    left: 50%;
-    transform: translate(-50%, -30%);
+    top: 10%;
+    left: 45px;           /* Aligne à gauche (laisse ~45px de marge pour éviter la poche de coin gauche) */
+    transform: translateY(-30%); /* Retire le -50% horizontal pour annuler le centrage */
     font-family: sans-serif;
-    font-size: 20px;
+    font-size: 18px;
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 2px;
@@ -594,11 +594,12 @@
     /* Couleur très discrète : blanc avec une très forte transparence */
     color: rgba(255, 255, 255, 0.08); 
     
-        
-    /* MODIFICATIONS POUR LE RETOUR À LA LIGNE */
+    /* MODIFICATIONS POUR LE RETOUR À LA LIGNE + ALIGNEMENT GAUCHE */
     white-space: normal;    /* Autorise le changement de ligne */
-    text-align: center;     /* Centre le texte sur les nouvelles lignes */
-    width: 100%;            /* Limite la largeur pour forcer le retour à la ligne avant les bords */
+    text-align: left;       /* CHANGÉ : Aligne le texte à gauche sur les nouvelles lignes */
+    
+    /* Pour la largeur, on utilise calc() pour forcer le texte à s'arrêter avant le bord droit de la table */
+    width: calc(100% - 90px); /* 100% moins les marges gauche et droite */
     max-width: 1200px;       /* Optionnel : empêche le conteneur de devenir trop large sur grand écran */
     user-select: none;
 }
