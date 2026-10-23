@@ -419,6 +419,32 @@ function rafraichirListeLateraleBilles() {
             rafraichirListeLateraleBilles();
         });
 
+
+        // ====================================================================
+// AJOUT : ÉCOUTEUR DE DOUBLE-CLIC POUR MASQUER / RETIRER LA BILLE
+// ====================================================================
+itemRow.addEventListener('dblclick', (e) => {
+    e.stopPropagation(); // Empêche le clic simple de s'exécuter en parallèle
+
+    // On masque la bille sur le tapis
+    ball.style.display = 'none';
+
+    // Si la bille masquée était celle sélectionnée, on réinitialise la sélection globale
+    if (window.billeSelectionneeCourante === ball) {
+        ball.style.outline = 'none';
+        window.billeSelectionneeCourante = null;
+
+        const displayEl = document.getElementById('ball-position-display');
+        if (displayEl) {
+            displayEl.innerText = "Position de la bille : Aucune sélectionnée";
+        }
+    }
+
+    // Actualise instantanément la liste pour appliquer l'état grisé/enlevé
+    rafraichirListeLateraleBilles();
+});
+
+
         // 2. Duplication et dessin de la bille miniature
         const miniBall = document.createElement('div');
         miniBall.classList.add('ball');
