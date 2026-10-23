@@ -1332,33 +1332,4 @@ table.addEventListener('mousedown', (e) => {
 
 
 
-    // === ADAPTATION DES APPUIS CLAVIER POUR ÉCRAN TACTILE ===
-    document.querySelectorAll('.btn-tactile').forEach(bouton => {
-        bouton.addEventListener('click', (e) => {
-            const toucheSimulee = bouton.getAttribute('data-key');
-            
-            // On recrée un faux événement KeyboardEvent pour réutiliser votre logique existante sans la réécrire !
-            const fauxEvenement = new KeyboardEvent('keydown', { key: toucheSimulee });
-            document.dispatchEvent(fauxEvenement);
-        });
-    });
-
-    // Gestion spécifique pour alterner entre Ligne droite et Flèche sans la touche Shift :
-    const btnArrowMode = document.getElementById('btn-ipad-arrow-mode');
-    if (btnArrowMode) {
-        btnArrowMode.addEventListener('click', () => {
-            // Alterne l'état Shift simulé
-            isShiftPressed = !isShiftPressed;
-            canvas.style.pointerEvents = isShiftPressed ? 'auto' : 'none';
-            
-            btnArrowMode.style.backgroundColor = isShiftPressed ? '#e67e22' : '';
-            btnArrowMode.innerText = isShiftPressed ? "🏹 Dessiner : Mode Flèche" : "🔀 Dessiner : Mode Ligne";
-        });
-    }
-
-
-
-
-
-
 });
