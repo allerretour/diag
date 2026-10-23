@@ -63,17 +63,27 @@ let outilActif = null; // Peut valoir: 'cible', 'carre', 'effetBlanche', 'repere
     let mouseX = 0;
     let mouseY = 0;
 
-    // Suivi permanent de la souris pour positionner la cible au pixel près
-    table.addEventListener('mousemove', (e) => {
-    const rect = table.getBoundingClientRect();
-    mouseX = Math.round(e.clientX - rect.left);
-    mouseY = Math.round(e.clientY - rect.top);
+        // === SUIVI EN DIRECT OPTIMISÉ POUR L'APERÇU FANTÔME ===
+    let animationFrameId = null;
 
-    // === AJOUT POUR L'APERÇU FANTÔME ===
-    if (outilActif) {
-        window.redessinerToutesLesLignes();
-    }
-});
+    table.addEventListener('mousemove', (e) => {
+        const rect = table.getBoundingClientRect();
+        mouseX = Math.round(e.clientX - rect.left);
+        mouseY = Math.round(e.clientY - rect.top);
+
+        // Si aucun outil fantôme n'est actif, inutile de surcharger le processeur
+        if (!outilActif) return;
+
+        // Si un rafraîchissement graphique est déjà planifié pour le prochain cycle de l'écran, on attend
+        if (animationFrameId) return;
+
+        // Planification du dessin synchronisé avec l'écran
+        animationFrameId = requestAnimationFrame(() => {
+            window.redessinerToutesLesLignes();
+            animationFrameId = null; // Libère le verrou une fois le rendu terminé
+        });
+    });
+
 
 	
 	
@@ -1022,11 +1032,16 @@ document.addEventListener('keydown', (e) => {
     }
 
 
-    // Touche Échap pour annuler l'aperçu en cours
+        // Touche Échap pour annuler l'aperçu en cours
     if (e.key === 'Escape') {
         outilActif = null;
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+        }
         window.redessinerToutesLesLignes();
     }
+
 
     if (e.key.toLowerCase() === 'e' || e.key === 'Delete') {
         window.detecterEtEffacerDessin(mouseX, mouseY);
