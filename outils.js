@@ -802,63 +802,69 @@ function genererGrille() {
 
     // 2. Génération des lignes de repère intérieures (Grille)
     for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-            const cell = document.createElement('div');
-            cell.style.boxSizing = 'border-box';
-            
-            if (c < cols - 1) {
-                cell.style.borderRight = '1px dashed rgba(255, 255, 255, 0.25)';
-            }
-            if (r < rows - 1) {
-                cell.style.borderBottom = '1px dashed rgba(255, 255, 255, 0.25)';
-            }
-
-            gridOverlay.appendChild(cell);
+    for (let c = 0; c < cols; c++) {
+        const cell = document.createElement('div');
+        cell.style.boxSizing = 'border-box';
+        
+        // Utilisation d'une opacité à 0.15 et ajout du mix-blend-mode pour fusionner avec le tapis
+        if (c < cols - 1) {
+            cell.style.borderRight = '1px dashed rgba(255, 255, 255, 0.15)';
         }
+        if (r < rows - 1) {
+            cell.style.borderBottom = '1px dashed rgba(255, 255, 255, 0.15)';
+        }
+        cell.style.mixBlendMode = 'overlay'; 
+
+        gridOverlay.appendChild(cell);
     }
+}
 
     // 3. Génération des chiffres sur les bandes (Toujours dans l'overlay de niveau 5)
     if (mode16x8) {
-        const styleChiffreCommun = `
-            position: absolute;
-            color: #ffffff;
-            font-family: sans-serif;
-            font-weight: bold;
-            font-size: 12px; 
-            transform: translate(-50%, -50%);
-            z-index: 6; 
-            background-color: #000000; 
-            padding: 3px 6px;
-            border-radius: 4px;
-        `;
+    const styleChiffreCommun = `
+        position: absolute;
+        color: rgba(255, 255, 255, 0.95);
+        font-family: sans-serif;
+        font-weight: bold;
+        font-size: 11px; 
+        transform: translate(-50%, -50%);
+        z-index: 6; 
+        /* Remplacement du noir uni par un anthracite élégant et semi-transparent */
+        background-color: rgba(26, 26, 26, 0.85); 
+        padding: 2px 5px;
+        border-radius: 4px;
+        /* Léger liseré pour détacher le chiffre du cadre en bois */
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    `;
 
-        const pasX = 754 / cols; 
-        const pasY = 364 / rows; 
+    const pasX = 754 / cols; 
+    const pasY = 364 / rows; 
 
-        const valeursX = { 0: "0", 1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8", 9: "9", 10: "10", 11: "11", 12: "12", 13: "13", 14: "14", 15: "15", 16: "16" };
-        
-        Object.keys(valeursX).forEach(index => {
-            const indexGrilleX = parseInt(index, 10);
-            const posX = indexGrilleX * pasX; 
+    const valeursX = { 0: "0", 1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8", 9: "9", 10: "10", 11: "11", 12: "12", 13: "13", 14: "14", 15: "15", 16: "16" };
+    
+    Object.keys(valeursX).forEach(index => {
+        const indexGrilleX = parseInt(index, 10);
+        const posX = indexGrilleX * pasX; 
 
-            const labelBas = document.createElement('div');
-            labelBas.style.cssText = styleChiffreCommun + `top: 364px; left: ${posX}px; margin-top: 32px;`;
-            labelBas.innerText = valeursX[index];
-            gridOverlay.appendChild(labelBas);
-        });
+        const labelBas = document.createElement('div');
+        labelBas.style.cssText = styleChiffreCommun + `top: 364px; left: ${posX}px; margin-top: 32px;`;
+        labelBas.innerText = valeursX[index];
+        gridOverlay.appendChild(labelBas);
+    });
 
-        const valeursY = { 0: "0", 1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8" };
-        
-        Object.keys(valeursY).forEach(index => {
-            const indexGrilleY = parseInt(index, 10);
-            const posY = (rows - indexGrilleY) * pasY; 
+    const valeursY = { 0: "0", 1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8" };
+    
+    Object.keys(valeursY).forEach(index => {
+        const indexGrilleY = parseInt(index, 10);
+        const posY = (rows - indexGrilleY) * pasY; 
 
-            const labelGauche = document.createElement('div');
-            labelGauche.style.cssText = styleChiffreCommun + `top: ${posY}px; left: 0px; margin-left: -34px;`;
-            labelGauche.innerText = valeursY[index];
-            gridOverlay.appendChild(labelGauche);
-        });
-    }
+        const labelGauche = document.createElement('div');
+        labelGauche.style.cssText = styleChiffreCommun + `top: ${posY}px; left: 0px; margin-left: -34px;`;
+        labelGauche.innerText = valeursY[index];
+        gridOverlay.appendChild(labelGauche);
+    });
+}
 
     // ====================================================================
     // ÉTAPE 2 : APPLIQUER LA PRIORITÉ AUX ANCIENS ÉLÉMENTS DE LA TABLE
