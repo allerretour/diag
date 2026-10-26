@@ -19,6 +19,11 @@ const labelsForce = { 1: "DOUX", 2: "MOYEN", 3: "FORT", 4: "MAX" };
 const couleursForce = { 1: "#2ecc71", 2: "#f1c40f", 3: "#e67e22", 4: "#e74c3c" }; // Vert, Jaune, Orange, Rouge
 
 
+window.pourcentageContactCourant = 100; 
+window.coteContactCourant = 1; // 1 = Frappe par la gauche, -1 = Frappe par la droite
+
+
+
 
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -87,6 +92,101 @@ let outilActif = null; // Peut valoir: 'cible', 'carre', 'effetBlanche', 'repere
 
 	
 	
+function dessinerPointContact(x, y, couleur, pctFige, coteFige) {
+    ctx.save();
+
+    // 1. EXTRACTION DES PARAMÈTRES FIGÉS OU DYNAMIQUES
+    const pct = (pctFige !== undefined) ? pctFige : window.pourcentageContactCourant;
+    const cote = (coteFige !== undefined) ? coteFige : window.coteContactCourant;
+    const couleurMarqueur = couleur || (colorSelect ? colorSelect.value : '#ffffff');
+
+    // 2. DIMENSIONS ET HABILLAGE DU PANNEAU (Style effetsBilleBlanche)
+    const largeurCadre = 180;
+    const hauteurCadre = 110;
+    const cadreX = x - (largeurCadre / 2);
+    const cadreY = y - hauteurCadre - 25; // Positionné élégamment au-dessus du curseur
+    const arrondiCoins = 12;
+
+    // Fond du cadre noir/anthracite translucide
+    ctx.beginPath();
+    ctx.roundRect(cadreX, cadreY, largeurCadre, hauteurCadre, arrondiCoins);
+    ctx.fillStyle = "rgba(16, 20, 30, 0.88)";
+    ctx.fill();
+
+    // Liseré subtil autour du cadre
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // 3. CONFIGURATION DES BILLES AGRANDIES DANS LE CADRE
+    const centreCadreX = cadreX + (largeurCadre / 2);
+    const centreCadreY = cadreY + (hauteurCadre / 2) + 8; // Décalé vers le bas pour laisser la place aux titres
+    const rayonBilleAgrandie = 22; // Multiplié par deux par rapport à la table
+    const diametreAgrandie = rayonBilleAgrandie * 2;
+
+    // Calcul du décalage horizontal de la blanche selon la fente
+    const decalageX = diametreAgrandie * (1 - (pct / 100));
+
+    // Rendu : Bille Objet Virtuelle (Prend la couleur du marqueur)
+    ctx.beginPath();
+    ctx.arc(centreCadreX, centreCadreY, rayonBilleAgrandie, 0, 2 * Math.PI);
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = couleurMarqueur;
+    ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle = couleurMarqueur;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Rendu : Bille Blanche d'impact (Décalée à gauche ou à droite selon le côté choisi)
+    const blancheX = centreCadreX - (decalageX * cote);
+    ctx.beginPath();
+    ctx.arc(blancheX, centreCadreY, rayonBilleAgrandie, 0, 2 * Math.PI);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+    ctx.fill();
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Ligne de visée centrale en pointillés très fins dans l'aperçu
+    ctx.beginPath();
+    ctx.setLineDash([2, 4]);
+    ctx.moveTo(centreCadreX - (rayonBilleAgrandie * 2) - 10, centreCadreY);
+    ctx.lineTo(centreCadreX + (rayonBilleAgrandie * 2) + 10, centreCadreY);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.setLineDash([]); // Reset des pointillés
+
+// 4. LABELS ET ENTÊTES DU PANNEAU DE CONTRÔLE
+// Label de gauche : CÔTÉ (GAUCHE / DROITE) - Devient invisible à 100% (Plein)
+ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+ctx.font = "bold 12px sans-serif";
+ctx.textAlign = "left";
+ctx.textBaseline = "top";
+
+if (pct !== 100) {
+    ctx.fillText(cote === 1 ? "IMPACT GAUCHE" : "IMPACT DROITE", cadreX + 12, cadreY + 12);
+}
+
+// Label principal de droite : Conserve sa position, ses dimensions et remplace la valeur par le texte à 100%
+ctx.fillStyle = "#ffffff";
+ctx.textAlign = "right";
+ctx.textBaseline = "top";
+
+if (pct === 100) {
+    ctx.fillText("IMPACT PLEIN", cadreX + largeurCadre - 12, cadreY + 10); 
+} else {
+    ctx.fillText(`${pct}%`, cadreX + largeurCadre - 12, cadreY + 10);
+}
+
+
+
+
+    ctx.restore();
+}
+
 	
 	
 	
@@ -212,7 +312,7 @@ function dessinerEffetsBilleBlanche(x, y, couleur, forceFige) {
 
     // Label 1 : "CONTACT" (Fluide et épuré au-dessus de la bille blanche)
     ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
-    ctx.font = "bold 10px sans-serif";
+    ctx.font = "bold 12px sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
     ctx.fillText("CONTACT", billeX, y - rayonBille - 12);
@@ -228,7 +328,7 @@ function dessinerEffetsBilleBlanche(x, y, couleur, forceFige) {
 
         // Label 2 : "FORCE" ou "PUISSANCE" placé de façon symétrique au-dessus du curseur
         ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
-        ctx.font = "bold 10px sans-serif";
+        ctx.font = "bold 12px sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "bottom";
         ctx.fillText("FORCE", jaugeX + (jaugeWidth / 2), jaugeY - 12);
@@ -733,6 +833,17 @@ matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`).addEventListener('cha
                 }
                 return;
             }
+
+            if (dessin.estPointContact) {
+    if (dessin.points && dessin.points.length > 0) {
+        const centre = dessin.points[0]; // Extraction du premier point du tableau [{x, y}]
+        dessinerPointContact(centre.x, centre.y, dessin.couleur, dessin.pourcentage, dessin.cote);
+    }
+    return;
+}
+
+
+
 			
             if (dessin.estCarre) {
                 if (dessin.points && dessin.points.length > 0) {
@@ -816,6 +927,11 @@ matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`).addEventListener('cha
             if (outilActif === 'effetBlanche') {
                 dessinerEffetsBilleBlanche(mouseX, mouseY, couleurActive, window.niveauForceCourant);
             }
+
+            if (outilActif === 'pointContact') {
+                dessinerPointContact(mouseX, mouseY, couleurActive, window.pourcentageContactCourant, window.coteContactCourant);
+            }
+
             
             ctx.restore();
         }
@@ -893,6 +1009,39 @@ document.addEventListener('keydown', (e) => {
         if (outilActif) canvas.style.pointerEvents = 'auto';
         window.redessinerToutesLesLignes();
     }
+
+
+
+      if (e.key.toLowerCase() === 'p') {
+    e.preventDefault();
+
+    if (outilActif !== 'pointContact') {
+        outilActif = 'pointContact';
+        window.pourcentageContactCourant = 100;
+        window.coteContactCourant = 1; // Commence par défaut à gauche
+    } else {
+        window.pourcentageContactCourant -= 10;
+        if (window.pourcentageContactCourant < 0) {
+            outilActif = null;
+            window.pourcentageContactCourant = 100;
+        }
+    }
+    if (outilActif) canvas.style.pointerEvents = 'auto';
+    window.redessinerToutesLesLignes();
+}
+
+// Changement de côté à la volée
+if (e.key === 'Shift' && outilActif === 'pointContact') {
+    e.preventDefault();
+    // Alterne entre 1 (gauche) et -1 (droite)
+    window.coteContactCourant = window.coteContactCourant * -1;
+    window.redessinerToutesLesLignes();
+}
+
+
+
+
+
 
 
     // ====================================================================
@@ -1070,8 +1219,20 @@ document.addEventListener('keydown', (e) => {
 
 
     if (e.key.toLowerCase() === 'e' || e.key === 'Delete') {
-        window.detecterEtEffacerDessin(mouseX, mouseY);
+    e.preventDefault();
+    
+    // Force la réactivation temporaire des événements pour lire la position sous le curseur
+    canvas.style.pointerEvents = 'auto';
+    
+    // Exécute la fonction maîtresse d'effacement
+    const aEteEfface = window.detecterEtEffacerDessin(mouseX, mouseY);
+    
+    // Remet le canevas en mode passif si aucune action n'est requise
+    if (!aEteEfface) {
+        canvas.style.pointerEvents = 'none';
     }
+}
+
 
     // 3. Gestion des zones de grille (1 à 8)
     if (e.key >= '1' && e.key <= '8') {
@@ -1153,6 +1314,14 @@ function commencerDessin(e) {
 		// On fige la taille sélectionnée au moment précis du clic
 			nouvelElement.taille = window.tailleCarreCourante || 95; 
 		}
+
+        if (outilActif === 'pointContact') {
+    nouvelElement.estPointContact = true;
+    nouvelElement.pourcentage = window.pourcentageContactCourant;
+    nouvelElement.cote = window.coteContactCourant; // Sauvegarde du côté (gauche ou droite)
+}
+
+
 
         if (outilActif === 'repereX') {
             nouvelElement.estRepereX = true;

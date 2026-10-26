@@ -583,24 +583,44 @@ function estProcheLigne(clicX, clicY, p1, p2, tolerance = 5) {
     return Math.sqrt(dx * dx + dy * dy) <= tolerance;
 }
 
-// Fonction maîtresse pour trouver et effacer un dessin au clic
 window.detecterEtEffacerDessin = function(clicX, clicY) {
-    // On parcourt à l'envers (du plus récent au plus ancien)
     for (let i = window.dessinsSauvegardes.length - 1; i >= 0; i--) {
         const dessin = window.dessinsSauvegardes[i];
 
-        // 1. Cas des formes ponctuelles (Cible, Carré, Bille Blanche, Repère X)
+                // 1. Cas des formes ponctuelles standards
         if (dessin.estCible || dessin.estCarre || dessin.estEffetBlanche || dessin.estRepereX) {
-            if (dessin.points && dessin.points[0]) {
-                if (estProchePoint(clicX, clicY, dessin.points[0].x, dessin.points[0].y, 20)) {
-                    window.dessinsSauvegardes.splice(i, 1); // Supprime l'élément
-                    window.redessinerToutesLesLignes();     // Actualise le canvas
-                    return true; // Forme trouvée et effacée
+            if (dessin.points) {
+                const pt = Array.isArray(dessin.points) ? dessin.points[0] : dessin.points;
+                if (pt && estProchePoint(clicX, clicY, pt.x, pt.y, 30)) {
+                    window.dessinsSauvegardes.splice(i, 1);
+                    window.redessinerToutesLesLignes();
+                    return true;
                 }
             }
         }
         
-        // 2. Cas des lignes droites ou flèches
+        // 2. CAS SPÉCIFIQUE : Point de Contact (Détection centrée sur le grand panneau visuel)
+        else if (dessin.estPointContact) {
+            if (dessin.points) {
+                const pt = Array.isArray(dessin.points) ? dessin.points[0] : dessin.points;
+                if (pt) {
+                    // On recalcule le centre exact du grand cadre visuel noir
+                    // Le cadre fait 110px de haut et est placé 25px au-dessus du point d'impact (pt.y)
+                    // Son centre vertical est donc décalé vers le haut de : 25 + (110 / 2) = 80 pixels
+                    const centreCadreX = pt.x;
+                    const centreCadreY = pt.y - 80;
+
+                    // On applique une zone de détection large (tolérance de 60px) pour couvrir tout le cadre
+                    if (estProchePoint(clicX, clicY, centreCadreX, centreCadreY, 60)) {
+                        window.dessinsSauvegardes.splice(i, 1);
+                        window.redessinerToutesLesLignes();
+                        return true;
+                    }
+                }
+            }
+        }
+
+        
         else if (dessin.estDroite && dessin.points.length >= 2) {
             if (estProcheLigne(clicX, clicY, dessin.points[0], dessin.points[dessin.points.length - 1], 6)) {
                 window.dessinsSauvegardes.splice(i, 1);
@@ -609,7 +629,6 @@ window.detecterEtEffacerDessin = function(clicX, clicY) {
             }
         }
 
-        // 3. Cas du dessin libre (Tracé continu)
         else if (dessin.points && dessin.points.length >= 2) {
             for (let j = 0; j < dessin.points.length - 1; j++) {
                 if (estProcheLigne(clicX, clicY, dessin.points[j], dessin.points[j+1], 6)) {
@@ -620,6 +639,7 @@ window.detecterEtEffacerDessin = function(clicX, clicY) {
             }
         }
     }
-    return false; // Rien n'était assez proche
+    return false;
 };
+
 
