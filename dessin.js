@@ -1323,5 +1323,125 @@ table.addEventListener('mousedown', (e) => {
 
 
 
+// ====================================================================
+// AJOUT GESTION APPLE PENCIL / MODE CRAYON TACTILE
+// ====================================================================
+let modeCrayonActif = false;
+const btnModeCrayon = document.getElementById('btn-mode-crayon');
+
+if (btnModeCrayon) {
+    btnModeCrayon.addEventListener('click', (e) => {
+        e.preventDefault();
+        modeCrayonActif = !modeCrayonActif;
+        
+        if (modeCrayonActif) {
+            btnModeCrayon.style.background = "#e67e22"; // Orange : Mode dessin actif
+            btnModeCrayon.innerText = "🛑 Quitter Crayon";
+            canvas.style.pointerEvents = 'auto'; // Force le canvas à écouter le Pencil
+        } else {
+            btnModeCrayon.style.background = "#27ae60"; // Vert : Mode normal (déplacement des billes)
+            btnModeCrayon.innerText = "✏️ Dessiner (Pencil)";
+            canvas.style.pointerEvents = 'none';
+        }
+    });
+}
+
+// MODIFICATION de votre fonction commencerDessin d'origine
+function commencerDessin(e) {
+    // 1. Placer une forme fantôme existante (Cible, Carré, etc.)
+    if (outilActif && e.button === 0) {
+        const couleurActive = window.billeSelectionneeCourante ? 
+            window.billeSelectionneeCourante.style.backgroundColor : 
+            (colorSelect ? colorSelect.value : '#ffffff');
+
+        let nouvelElement = {
+            couleur: couleurActive,
+            points: [{ x: mouseX, y: mouseY }]
+        };
+
+        if (outilActif === 'cible') { nouvelElement.estCible = true; nouvelElement.quadrant = window.quadrantCibleCourant || 0; }
+        if (outilActif === 'carre') { nouvelElement.estCarre = true; nouvelElement.taille = window.tailleCarreCourante || 95; }
+        if (outilActif === 'repereX') { nouvelElement.estRepereX = true; nouvelElement.estUnCercle = window.repereXEstUnCercle; nouvelElement.branches = window.nombreBranchesRepereX; nouvelElement.texte = window.repereXTexte; }
+        if (outilActif === 'effetBlanche') { nouvelElement.estEffetBlanche = true; nouvelElement.force = window.niveauForceCourant; }
+
+        window.dessinsSauvegardes.push(nouvelElement);
+        outilActif = null;
+        window.redessinerToutesLesLignes();
+        return;
+    }
+
+    const rect = table.getBoundingClientRect();
+    const x = Math.round(e.clientX - rect.left);
+    const y = Math.round(e.clientY - rect.top);
+    
+    // Vérification de l'autorisation de dessiner (Clic droit, Shift, ou Mode Crayon activé pour iPad)
+    const dessinAutorise = (e.button === 2 || e.shiftKey || modeCrayonActif);
+    if (!dessinAutorise) return; // Si aucun n'est vrai, on quitte (permet le drag standard des billes)
+
+    isDrawing = true;
+    
+    // On cherche s'il y a une bille sous le Pencil
+    canvas.style.pointerEvents = 'none';
+    const elementSousCurseur = document.elementFromPoint(e.clientX, e.clientY);
+    canvas.style.pointerEvents = 'auto';
+
+    let billeSousCurseur = elementSousCurseur ? elementSousCurseur.closest('.ball') : null;
+    let couleurActive;
+
+    if (billeSousCurseur) {
+        if (window.billeSelectionneeCourante && window.billeSelectionneeCourante !== billeSousCurseur) {
+            window.billeSelectionneeCourante.style.outline = 'none';
+        }
+        window.billeSelectionneeCourante = billeSousCurseur;
+        billeSousCurseur.style.outline = '2px solid #ffffff';
+        billeSousCurseur.style.outlineOffset = '2px';
+        couleurActive = billeSousCurseur.style.backgroundColor;
+    } else {
+        if (window.billeSelectionneeCourante) {
+            couleurActive = window.billeSelectionneeCourante.style.backgroundColor;
+        } else {
+            couleurActive = colorSelect ? colorSelect.value : '#ffffff';
+        }
+    }
+    
+    const modeDashed = dashedCheck ? dashedCheck.checked : false;
+    configurerStyleDessin(couleurActive, modeDashed);
+    
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    startPoint = { x, y }; 
+
+    const forceLigneDroite = e.ctrlKey || e.metaKey || isCtrlPressed;
+    const forceFleche = forceLigneDroite && (e.shiftKey || isShiftPressed);
+
+    currentLine = {
+        couleur: couleurActive,
+        estDroite: forceLigneDroite, 
+        avecFleche: forceFleche,
+        estPointille: modeDashed, 
+        points: [{ x, y }]
+    };
+}
+
+// MODIFICATION de vos écouteurs mousedown pour intercepter le Pencil (Clic gauche / Touch)
+table.addEventListener('mousedown', (e) => {
+    if (e.button === 2 || modeCrayonActif) {
+        canvas.style.pointerEvents = 'auto';
+        commencerDessin(e);
+    }
+});
+
+canvas.addEventListener('mousedown', (e) => {
+    if (outilActif && e.button === 0) {
+        commencerDessin(e);
+    } 
+    else if (e.shiftKey || e.button === 2 || modeCrayonActif) {
+        commencerDessin(e);
+    }
+});
+
+
+
+
 
 });
