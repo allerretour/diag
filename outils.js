@@ -14,9 +14,38 @@ if (inputLogoFile && tableLogoOverlay) {
 
         const reader = new FileReader();
         reader.onload = (event) => {
-            window.logoBase64Courant = event.target.result; // Contient la chaîne Base64 de l'image
-            tableLogoOverlay.src = window.logoBase64Courant; // L'affiche instantanément sur le tapis
-            tableLogoOverlay.style.display = 'block';
+            const img = new Image();
+            img.onload = () => {
+                const canvasTemp = document.createElement('canvas');
+                const ctxTemp = canvasTemp.getContext('2d');
+
+                // --- BRIDAGE STRICT À 300X300 ---
+                const MAX_DIMENSION = 300;
+                let largeur = img.width;
+                let hauteur = img.height;
+
+                if (largeur > MAX_DIMENSION || hauteur > MAX_DIMENSION) {
+                    const ratio = Math.min(MAX_DIMENSION / largeur, MAX_DIMENSION / hauteur);
+                    largeur = Math.round(largeur * ratio);
+                    hauteur = Math.round(hauteur * ratio);
+                }
+
+                canvasTemp.width = largeur;
+                canvasTemp.height = hauteur;
+                ctxTemp.drawImage(img, 0, 0, largeur, hauteur);
+
+                // --- DOUBLE SÉCURITÉ POUR L'EXPORTATION ---
+                const logoOptimiseBase64 = canvasTemp.toDataURL('image/png');
+                
+                // 1. On écrase la variable globale lue par l'export JSON simple
+                window.logoBase64Courant = logoOptimiseBase64;
+                
+                // 2. On écrase le .src HTML lu par l'export de séries ZIP/TXT
+                tableLogoOverlay.src = logoOptimiseBase64;
+                
+                tableLogoOverlay.style.display = 'block';
+            };
+            img.src = event.target.result;
         };
         reader.readAsDataURL(file);
     });
