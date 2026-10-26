@@ -7,49 +7,54 @@ const tableLogoOverlay = document.getElementById('table-logo-overlay');
 const btnResetLogo = document.getElementById('btn-reset-logo');
 
 // 1. ÉCOUTEUR : Convertir l'image locale en Base64 au moment du choix
+// 1. ÉCOUTEUR OPTIMISÉ : Traitement instantané du logo via ObjectURL
 if (inputLogoFile && tableLogoOverlay) {
     inputLogoFile.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvasTemp = document.createElement('canvas');
-                const ctxTemp = canvasTemp.getContext('2d');
+        // --- QUICK WIN : Génération d'une URL de flux mémoire directe sans FileReader ---
+        const imageObjectUrl = URL.createObjectURL(file);
+        const img = new Image();
 
-                // --- BRIDAGE STRICT À 300X300 ---
-                const MAX_DIMENSION = 300;
-                let largeur = img.width;
-                let hauteur = img.height;
+        img.onload = () => {
+            const canvasTemp = document.createElement('canvas');
+            const ctxTemp = canvasTemp.getContext('2d');
 
-                if (largeur > MAX_DIMENSION || hauteur > MAX_DIMENSION) {
-                    const ratio = Math.min(MAX_DIMENSION / largeur, MAX_DIMENSION / hauteur);
-                    largeur = Math.round(largeur * ratio);
-                    hauteur = Math.round(hauteur * ratio);
-                }
+            // --- BRIDAGE STRICT À 300X300 ---
+            const MAX_DIMENSION = 300;
+            let largeur = img.width;
+            let hauteur = img.height;
 
-                canvasTemp.width = largeur;
-                canvasTemp.height = hauteur;
-                ctxTemp.drawImage(img, 0, 0, largeur, hauteur);
+            if (largeur > MAX_DIMENSION || hauteur > MAX_DIMENSION) {
+                const ratio = Math.min(MAX_DIMENSION / largeur, MAX_DIMENSION / hauteur);
+                largeur = Math.round(largeur * ratio);
+                hauteur = Math.round(hauteur * ratio);
+            }
 
-                // --- DOUBLE SÉCURITÉ POUR L'EXPORTATION ---
-                const logoOptimiseBase64 = canvasTemp.toDataURL('image/png');
-                
-                // 1. On écrase la variable globale lue par l'export JSON simple
-                window.logoBase64Courant = logoOptimiseBase64;
-                
-                // 2. On écrase le .src HTML lu par l'export de séries ZIP/TXT
-                tableLogoOverlay.src = logoOptimiseBase64;
-                
-                tableLogoOverlay.style.display = 'block';
-            };
-            img.src = event.target.result;
+            canvasTemp.width = largeur;
+            canvasTemp.height = hauteur;
+            ctxTemp.drawImage(img, 0, 0, largeur, hauteur);
+
+            // Exportation finale propre pour la sauvegarde JSON
+            const logoOptimiseBase64 = canvasTemp.toDataURL('image/png');
+            
+            // 1. On écrase la variable globale lue par l'export JSON simple
+            window.logoBase64Courant = logoOptimiseBase64;
+            
+            // 2. On écrase le .src HTML lu par l'export de séries ZIP/TXT
+            tableLogoOverlay.src = logoOptimiseBase64;
+            tableLogoOverlay.style.display = 'block';
+
+            // --- NETTOYAGE : Libération immédiate de la ressource mémoire ---
+            URL.revokeObjectURL(imageObjectUrl);
         };
-        reader.readAsDataURL(file);
+
+        // On affecte l'adresse virtuelle locale, le chargement est immédiat
+        img.src = imageObjectUrl;
     });
 }
+
 
 // NOUVEAU : ÉCOUTEUR pour restaurer le logo original
 if (btnResetLogo && tableLogoOverlay) {

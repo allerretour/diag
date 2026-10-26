@@ -214,7 +214,8 @@ function resolveCollisions(currentBall) {
         collisionDetected = false;
 
         for (let otherBall of activeBalls) {
-            if (otherBall === currentBall || otherBall.style.display === 'none') continue;
+            // === SÉCURITÉ ULTRA-RAPIDE : Évite les accès au DOM inutiles ===
+            if (otherBall.style.display === 'none' || otherBall === currentBall) continue;
 
             let otherX = parseFloat(otherBall.style.left);
             let otherY = parseFloat(otherBall.style.top);
@@ -235,8 +236,6 @@ function resolveCollisions(currentBall) {
     }
 
     const clamped = clampPosition(currentX, currentY);
-    
-    // Alignement magnétique basé sur le centre de la bille et la grille active
     const finalPos = calculerSnapGrille(clamped.x, clamped.y, currentBall);
 
     currentBall.style.left = finalPos.x + 'px';
@@ -244,6 +243,9 @@ function resolveCollisions(currentBall) {
     
     return finalPos;
 }
+
+
+
 
 function makeDraggable(element) {
     let currentX, currentY, initialX, initialY;
@@ -362,10 +364,9 @@ function rafraichirListeLateraleBilles() {
     const sidebarList = document.getElementById('visible-balls-list');
     if (!sidebarList) return;
 
-    // Vider la liste précédente
-    sidebarList.innerHTML = "";
+    // --- OPTIMISATION : Utilisation d'un fragment d'architecture invisible ---
+    const fragment = document.createDocumentFragment();
 
-    // Parcourir TOUTES les billes actives (visibles et masquées)
     activeBalls.forEach(ball => {
         const ballId = ball.getAttribute('data-id');
         const numEl = ball.querySelector('.ball-num');
@@ -373,89 +374,54 @@ function rafraichirListeLateraleBilles() {
         const couleurBille = ball.style.backgroundColor;
         const estMasquee = ball.style.display === 'none';
 
-        // 1. Création de la ligne d'item
         const itemRow = document.createElement('div');
         itemRow.classList.add('sidebar-ball-item');
         itemRow.style.cursor = 'pointer'; 
 
-        // Gestion de la surbrillance (Uniquement si la bille est actuellement affichée)
         if (window.billeSelectionneeCourante === ball && !estMasquee) {
             itemRow.classList.add('active-highlight');
         }
 
-        // ÉTAPE CLÉ : Si la bille a été enlevée par double-clic, on applique un style visuel grisé
         if (estMasquee) {
             itemRow.classList.add('is-hidden-ball');
         }
 
-        // ====================================================================
-        // ÉCOUTEUR DE CLIC UNIQUE (SÉLECTION OU RÉAPPARITION)
-        // ====================================================================
         itemRow.addEventListener('click', (e) => {
             e.stopPropagation(); 
-
             if (ball.style.display === 'none') {
-                // ACTION : Ramener la bille sur la table !
                 ball.style.display = 'flex';
-                
-                // On la sélectionne automatiquement pour que l'utilisateur sache qu'elle est active
-                if (window.billeSelectionneeCourante) {
-                    window.billeSelectionneeCourante.style.outline = 'none';
-                }
+                if (window.billeSelectionneeCourante) window.billeSelectionneeCourante.style.outline = 'none';
                 window.billeSelectionneeCourante = ball;
                 ball.style.outline = '2px solid #ffffff';
                 ball.style.outlineOffset = '2px';
             } else {
-                // ACTION COMPORTEMENT D'ORIGINE : Sélection classique
-                if (window.billeSelectionneeCourante) {
-                    window.billeSelectionneeCourante.style.outline = 'none';
-                }
+                if (window.billeSelectionneeCourante) window.billeSelectionneeCourante.style.outline = 'none';
                 window.billeSelectionneeCourante = ball;
                 ball.style.outline = '2px solid #ffffff';
                 ball.style.outlineOffset = '2px';
             }
-
-            // Relancer le rafraîchissement pour mettre à jour les opacités et les coordonnées
             rafraichirListeLateraleBilles();
         });
 
+        itemRow.addEventListener('dblclick', (e) => {
+            e.stopPropagation(); 
+            ball.style.display = 'none';
+            if (window.billeSelectionneeCourante === ball) {
+                ball.style.outline = 'none';
+                window.billeSelectionneeCourante = null;
+                const displayEl = document.getElementById('ball-position-display');
+                if (displayEl) displayEl.innerText = "Position de la bille : Aucune sélectionnée";
+            }
+            rafraichirListeLateraleBilles();
+        });
 
-        // ====================================================================
-// AJOUT : ÉCOUTEUR DE DOUBLE-CLIC POUR MASQUER / RETIRER LA BILLE
-// ====================================================================
-itemRow.addEventListener('dblclick', (e) => {
-    e.stopPropagation(); // Empêche le clic simple de s'exécuter en parallèle
-
-    // On masque la bille sur le tapis
-    ball.style.display = 'none';
-
-    // Si la bille masquée était celle sélectionnée, on réinitialise la sélection globale
-    if (window.billeSelectionneeCourante === ball) {
-        ball.style.outline = 'none';
-        window.billeSelectionneeCourante = null;
-
-        const displayEl = document.getElementById('ball-position-display');
-        if (displayEl) {
-            displayEl.innerText = "Position de la bille : Aucune sélectionnée";
-        }
-    }
-
-    // Actualise instantanément la liste pour appliquer l'état grisé/enlevé
-    rafraichirListeLateraleBilles();
-});
-
-
-        // 2. Duplication et dessin de la bille miniature
         const miniBall = document.createElement('div');
         miniBall.classList.add('ball');
         miniBall.style.backgroundColor = couleurBille;
         miniBall.style.setProperty('--ball-color', couleurBille);
 
-        if (estRayee) {
-            miniBall.classList.add('striped');
-        }
+        if (estRayee) miniBall.classList.add('striped');
 
-        // Ajout du numéro si ce n'est pas la blanche
         if (ballId !== '0' && numEl) {
             const miniNum = document.createElement('div');
             miniNum.classList.add('ball-num');
@@ -463,12 +429,10 @@ itemRow.addEventListener('dblclick', (e) => {
             miniBall.appendChild(miniNum);
         }
 
-        // 3. Récupération ou simulation des coordonnées courantes de la grille
         const pixelX = parseFloat(ball.style.left) || 0;
         const pixelY = parseFloat(ball.style.top) || 0;
         const coords = obtenirCoordonneesGrille(pixelX, pixelY, ball);
 
-        // 4. Création du texte descriptif (On écrit "Masquée" si la bille n'est pas sur le tapis)
         const coordsText = document.createElement('div');
         coordsText.classList.add('sidebar-ball-coords');
         
@@ -478,11 +442,16 @@ itemRow.addEventListener('dblclick', (e) => {
             coordsText.innerHTML = `X = ${coords.x}, Y = ${coords.y}`;
         }
 
-        // Assemblage
         itemRow.appendChild(miniBall);
         itemRow.appendChild(coordsText);
-        sidebarList.appendChild(itemRow);
+        
+        // On attache au fragment en mémoire plutôt qu'au DOM direct
+        fragment.appendChild(itemRow);
     });
+
+    // --- EXPÉDITION UNIQUE AU DOM ---
+    sidebarList.innerHTML = ""; // Vider l'ancien contenu
+    sidebarList.appendChild(fragment); // Injecter l'arbre complet d'un coup
 }
 
 
