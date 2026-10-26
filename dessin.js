@@ -67,22 +67,21 @@ let outilActif = null; // Peut valoir: 'cible', 'carre', 'effetBlanche', 'repere
     let animationFrameId = null;
 
     table.addEventListener('mousemove', (e) => {
-        const rect = table.getBoundingClientRect();
-        mouseX = Math.round(e.clientX - rect.left);
-        mouseY = Math.round(e.clientY - rect.top);
+    // Si aucun outil fantôme n'est actif, on quitte immédiatement l'écouteur
+    if (!outilActif) return; 
 
-        // Si aucun outil fantôme n'est actif, inutile de surcharger le processeur
-        if (!outilActif) return;
+    const rect = table.getBoundingClientRect();
+    mouseX = Math.round(e.clientX - rect.left);
+    mouseY = Math.round(e.clientY - rect.top);
 
-        // Si un rafraîchissement graphique est déjà planifié pour le prochain cycle de l'écran, on attend
-        if (animationFrameId) return;
+    if (animationFrameId) return;
 
-        // Planification du dessin synchronisé avec l'écran
-        animationFrameId = requestAnimationFrame(() => {
-            window.redessinerToutesLesLignes();
-            animationFrameId = null; // Libère le verrou une fois le rendu terminé
-        });
+    animationFrameId = requestAnimationFrame(() => {
+        window.redessinerToutesLesLignes();
+        animationFrameId = null; 
     });
+});
+
 
 
 	
@@ -114,7 +113,7 @@ let outilActif = null; // Peut valoir: 'cible', 'carre', 'effetBlanche', 'repere
 function dessinerEffetsBilleBlanche(x, y, couleur, forceFige) {
     ctx.save(); 
 
-    // --- 1. CONFIGURATION DES BANDES DE SÉCURITÉ ---
+    // --- 1. CONFIGURATION DE LA ZONE DE SÉCURITÉ ---
     const marge = 18;
     let zoneUtileX = marge;
     let zoneUtileY = marge;
@@ -127,175 +126,170 @@ function dessinerEffetsBilleBlanche(x, y, couleur, forceFige) {
     const forceActuelle = (forceFige !== undefined) ? forceFige : window.niveauForceCourant;
     const jaugeActive = forceActuelle > 0;
     
-    // Proportions du panneau adaptées
-    const largeurCadre = jaugeActive ? 210 : 150; 
-    const hauteurCadre = 175;
+    // Proportions et structure rigoureusement centrées
+    const largeurCadre = jaugeActive ? 220 : 160; 
+    const hauteurCadre = 160;
     const demiLargeur = largeurCadre / 2;
-    const rayonBille = 60;
+    const rayonBille = 48; // Calibré pour un ajustement parfait dans les 160px de haut
     
     const cadreX = x - demiLargeur;
-    const cadreY = y - rayonBille - 32; 
-    const arronsCoins = 12; 
+    const cadreY = y - (hauteurCadre / 2) - 20; // Centrage vertical global équilibré
+    const arronsCoins = 16; 
 
-    // 1. Fond du cadre (Teinte anthracite sombre translucide)
+    // 1. Fond du cadre : Style "Glassmorphism"
     ctx.beginPath();
     ctx.roundRect(cadreX, cadreY, largeurCadre, hauteurCadre, arronsCoins);
-    ctx.fillStyle = "rgba(16, 20, 30, 0.85)"; 
+    ctx.fillStyle = "rgba(19, 23, 34, 0.90)"; 
     ctx.fill();
 
-    // Décalage de la bille vers la gauche si la jauge s'affiche
-    const shiftX = jaugeActive ? -20 : 0;
-    const billeX = x + shiftX;
+    // Fine bordure d'accentuation
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
 
-    // 2. Corps de la bille blanche
+    // --- REPERES D'ALIGNEMENT LOGIQUES ---
+    // Si la jauge est active, on sépare le cadre en deux zones : la bille à gauche, la jauge à droite
+    const billeX = jaugeActive ? (cadreX + 75) : x; 
+    const jaugeX = cadreX + largeurCadre - 45;
+    
+    // Alignement vertical commun parfait pour les centres de la bille et de la jauge
+    const centreVerticalY = cadreY + (hauteurCadre / 2) + 8; 
+
+    // 2. Ombre portée diffuse sous la bille blanche
     ctx.save();
-    ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
-    ctx.shadowBlur = 12;
-    ctx.shadowOffsetX = 3;
-    ctx.shadowOffsetY = 4;
-    ctx.fillStyle = "#ffffff"; 
+    ctx.shadowColor = "rgba(0, 0, 0, 0.4)";
+    ctx.shadowBlur = 14;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 5;
+
+    // Corps de la bille blanche avec dégradé radial (Volume 3D)
+    const dgdBille = ctx.createRadialGradient(
+        billeX - (rayonBille * 0.3), centreVerticalY - (rayonBille * 0.3), rayonBille * 0.1,
+        billeX, centreVerticalY, rayonBille
+    );
+    dgdBille.addColorStop(0, "#ffffff");
+    dgdBille.addColorStop(0.6, "#f4f5f7");
+    dgdBille.addColorStop(1, "#dcdfe4");
+
     ctx.beginPath();
-    ctx.arc(billeX, y, rayonBille, 0, 2 * Math.PI);
+    ctx.arc(billeX, centreVerticalY, rayonBille, 0, 2 * Math.PI);
+    ctx.fillStyle = dgdBille;
     ctx.fill(); 
     ctx.restore();
 
-    // 3. Réticule (lignes en pointillés fins)
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.15)"; 
+    // 3. Réticule technique ultra-fin aligné sur le nouveau centre
+    ctx.strokeStyle = "rgba(19, 23, 34, 0.15)"; 
     ctx.lineWidth = 1;
-    ctx.setLineDash([2, 3]); 
     
     const cos45 = Math.cos(Math.PI / 4);
     const decalageDiag = rayonBille * cos45;
 
     ctx.beginPath();
-    ctx.moveTo(billeX, y - rayonBille); ctx.lineTo(billeX, y + rayonBille);
-    ctx.moveTo(billeX - rayonBille, y); ctx.lineTo(billeX + rayonBille, y);
-    ctx.moveTo(billeX - decalageDiag, y - decalageDiag); ctx.lineTo(billeX + decalageDiag, y + decalageDiag);
-    ctx.moveTo(billeX - decalageDiag, y + decalageDiag); ctx.lineTo(billeX + decalageDiag, y - decalageDiag);
+    ctx.moveTo(billeX, centreVerticalY - rayonBille); ctx.lineTo(billeX, centreVerticalY + rayonBille);
+    ctx.moveTo(billeX - rayonBille, centreVerticalY); ctx.lineTo(billeX + rayonBille, centreVerticalY);
+    ctx.moveTo(billeX - decalageDiag, centreVerticalY - decalageDiag); ctx.lineTo(billeX + decalageDiag, centreVerticalY + decalageDiag);
+    ctx.moveTo(billeX - decalageDiag, centreVerticalY + decalageDiag); ctx.lineTo(billeX + decalageDiag, centreVerticalY - decalageDiag);
     ctx.stroke();
-    ctx.setLineDash([]);
 
-    // 4. Points d'effets (Rond central et extérieurs)
-    const rayonPointExterieur = 4.5;
-    const rayonPointCentral = 6.5;
-    const distanceCentre = 42;
+    // 4. Points d'effets (Design épuré "Core-Ring")
+    const rayonPointExterieur = 4;
+    const rayonPointCentral = 5.5;
+    const distanceCentre = 32;
     const diagPoint = distanceCentre * cos45;
 
     const pointsEffets = [
         { dx: 0, dy: 0, estCentre: true },                                
-        { dx: 0, dy: -distanceCentre, estCentre: false },                 
-        { dx: 0, dy: distanceCentre, estCentre: false },                  
-        { dx: -distanceCentre, dy: 0, estCentre: false },                 
-        { dx: distanceCentre, dy: 0, estCentre: false },                  
-        { dx: -diagPoint, dy: -diagPoint, estCentre: false },     
-        { dx: diagPoint, dy: -diagPoint, estCentre: false },      
-        { dx: -diagPoint, dy: diagPoint, estCentre: false },      
-        { dx: diagPoint, dy: diagPoint, estCentre: false }        
+        { dx: 0, dy: -distanceCentre },                 
+        { dx: 0, dy: distanceCentre },                  
+        { dx: -distanceCentre, dy: 0 },                 
+        { dx: distanceCentre, dy: 0 },                  
+        { dx: -diagPoint, dy: -diagPoint },     
+        { dx: diagPoint, dy: -diagPoint },      
+        { dx: -diagPoint, dy: diagPoint },      
+        { dx: diagPoint, dy: diagPoint }        
     ];
 
-    ctx.fillStyle = "#ffffff"; 
     pointsEffets.forEach(pt => {
         const rayonActuel = pt.estCentre ? rayonPointCentral : rayonPointExterieur;
+        
         ctx.beginPath();
-        ctx.arc(billeX + pt.dx, y + pt.dy, rayonActuel, 0, 2 * Math.PI);
+        ctx.arc(billeX + pt.dx, centreVerticalY + pt.dy, rayonActuel, 0, 2 * Math.PI);
+        ctx.fillStyle = pt.estCentre ? "rgba(19, 23, 34, 0.65)" : "rgba(19, 23, 34, 0.35)";
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(billeX + pt.dx, centreVerticalY + pt.dy, pt.estCentre ? 1.5 : 1, 0, 2 * Math.PI);
+        ctx.fillStyle = "#ffffff";
         ctx.fill();
     });
 
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.2)";
-    pointsEffets.forEach(pt => {
-        const rayonActuel = pt.estCentre ? rayonPointCentral : rayonPointExterieur;
-        ctx.lineWidth = pt.estCentre ? 1.5 : 1.2;
-        ctx.beginPath();
-        ctx.arc(billeX + pt.dx, y + pt.dy, rayonActuel, 0, 2 * Math.PI);
-        ctx.stroke();
-    });
-
-    // Label 1 : "CONTACT" (Fluide et épuré au-dessus de la bille blanche)
-    ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
-    ctx.font = "bold 10px sans-serif";
+    // Label : "EFFET" parfaitement axé au-dessus de la bille blanche
+    ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+    ctx.font = "bold 9px sans-serif";
+    if (ctx.hasOwnProperty('letterSpacing')) ctx.letterSpacing = "2px";
     ctx.textAlign = "center";
-    ctx.textBaseline = "bottom";
-    ctx.fillText("CONTACT", billeX, y - rayonBille - 12);
+    ctx.textBaseline = "top";
+    ctx.fillText("EFFET", billeX, cadreY + 16);
 
     // ====================================================================
-    // JAUGE DE PUISSANCE MODERNISÉE
+    // JAUGE DE PUISSANCE ALIGNÉE
     // ====================================================================
     if (jaugeActive) {
-        const jaugeWidth = 14;
-        const jaugeHeight = rayonBille * 2; // 120px
-        const jaugeX = cadreX + largeurCadre - 32;
-        const jaugeY = y - rayonBille;
+        const jaugeWidth = 10;
+        const jaugeHeight = rayonBille * 1.6; // Harmonisé avec la taille de la bille
+        const jaugeTopY = centreVerticalY - (jaugeHeight / 2);
 
-        // Label 2 : "FORCE" ou "PUISSANCE" placé de façon symétrique au-dessus du curseur
-        ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
-        ctx.font = "bold 10px sans-serif";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "bottom";
-        ctx.fillText("FORCE", jaugeX + (jaugeWidth / 2), jaugeY - 12);
+        // Label "PUISSANCE" axé sur le milieu de la jauge
+        ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+        ctx.font = "bold 9px sans-serif";
+        ctx.fillText("PUISSANCE", jaugeX + (jaugeWidth / 2), cadreY + 16);
 
-        // Dégradé linéaire vertical fluide
-        const grad = ctx.createLinearGradient(jaugeX, jaugeY + jaugeHeight, jaugeX, jaugeY);
-        grad.addColorStop(0, "#2ecc71");   // Vert
-        grad.addColorStop(0.4, "#f1c40f"); // Jaune
-        grad.addColorStop(0.7, "#e67e22"); // Orange
-        grad.addColorStop(1, "#e74c3c");   // Rouge
-
-        ctx.save();
+        // Rail de fond de la jauge
         ctx.beginPath();
-        ctx.roundRect(jaugeX, jaugeY, jaugeWidth, jaugeHeight, 6);
+        ctx.roundRect(jaugeX, jaugeTopY, jaugeWidth, jaugeHeight, 5);
+        ctx.fillStyle = "rgba(255, 255, 255, 0.06)";
+        ctx.fill();
+
+        // Remplissage linéaire du vert au rouge
+        const grad = ctx.createLinearGradient(jaugeX, jaugeTopY + jaugeHeight, jaugeX, jaugeTopY);
+        grad.addColorStop(0, "#2ecc71");   
+        grad.addColorStop(0.5, "#f1c40f"); 
+        grad.addColorStop(0.8, "#e67e22"); 
+        grad.addColorStop(1, "#e74c3c");   
+
+        const ratioForce = forceActuelle / 4;
+        const hauteurRemplissage = jaugeHeight * ratioForce;
+        const remplissageY = jaugeTopY + jaugeHeight - hauteurRemplissage;
+
+        ctx.beginPath();
+        ctx.roundRect(jaugeX, remplissageY, jaugeWidth, hauteurRemplissage, 5);
         ctx.fillStyle = grad;
         ctx.fill();
-        ctx.restore();
 
-        // Effet vitré par-dessus la jauge
-        ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
-        ctx.beginPath();
-        ctx.roundRect(jaugeX, jaugeY, jaugeWidth / 2, jaugeHeight, { topLeft: 6, bottomLeft: 6 });
-        ctx.fill();
-
-        // Calcul de l'emplacement vertical de l'indicateur
-        const hauteurCibleY = jaugeY + jaugeHeight - ((forceActuelle / 4) * jaugeHeight);
-
-        // Aiguille indicatrice (Triangle blanc)
-        ctx.fillStyle = "#ffffff";
-        ctx.beginPath();
-        ctx.moveTo(jaugeX - 6, hauteurCibleY);       
-        ctx.lineTo(jaugeX - 12, hauteurCibleY - 4);  
-        ctx.lineTo(jaugeX - 12, hauteurCibleY + 4);  
-        ctx.closePath();
-        
+        // Curseur indicateur flottant
         ctx.save();
-        ctx.shadowColor = "rgba(0,0,0,0.4)";
-        ctx.shadowBlur = 4;
+        ctx.shadowColor = "rgba(0, 0, 0, 0.3)";
+        ctx.shadowBlur = 6;
+        ctx.shadowOffsetY = 2;
+
+        ctx.beginPath();
+        ctx.arc(jaugeX + (jaugeWidth / 2), remplissageY, 6, 0, 2 * Math.PI);
+        ctx.fillStyle = "#ffffff";
         ctx.fill();
         ctx.restore();
 
-        // Ligne de coupe sur la jauge
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(jaugeX, hauteurCibleY);
-        ctx.lineTo(jaugeX + jaugeWidth, hauteurCibleY);
-        ctx.stroke();
-
-        // Contour extérieur discret
-        ctx.strokeStyle = "rgba(0, 0, 0, 0.3)";
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.roundRect(jaugeX, jaugeY, jaugeWidth, jaugeHeight, 6);
-        ctx.stroke();
-
-        // Label numérique en pourcentage (ex: 25%, 50%, etc.)
+        // Badge numérique (%) aligné sous la jauge
         const valeurPourcentage = forceActuelle * 25;
         ctx.fillStyle = couleursForce[forceActuelle];
-        ctx.font = "bold 12px sans-serif";
+        ctx.font = "bold 11px sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
-        ctx.fillText(`${valeurPourcentage}%`, jaugeX + (jaugeWidth / 2), jaugeY + jaugeHeight + 8);
+        ctx.fillText(`${valeurPourcentage}%`, jaugeX + (jaugeWidth / 2), jaugeTopY + jaugeHeight + 10);
     }
 
     ctx.restore(); 
 }
+
 
 
 function dessinerRepereXGras(x, y, couleur, texteFige) {
@@ -624,27 +618,25 @@ function dessinerZoneGrille(zoneIndex, couleur, mode) {
     const couleurBlanche = "#ffffff";
 
     if (mode === 'alternatif') {
-        // === CAS ZONE ARRIVÉE (ZA) : REMPLISSAGE HACHURES ÉPAISSES & LÉGÈRES ===
-        ctx.save();
-        const patternCanvas = document.createElement('canvas');
-        const pCtx = patternCanvas.getContext('2d');
-        
-        patternCanvas.width = 16;
-        patternCanvas.height = 16;
-        
-        pCtx.strokeStyle = couleurBlanche;
-        pCtx.lineWidth = 4; 
-        pCtx.beginPath();
-        pCtx.moveTo(0, 16);
-        pCtx.lineTo(16, 0);
-        pCtx.stroke();
-        
-        const pattern = ctx.createPattern(patternCanvas, 'repeat');
-        ctx.fillStyle = pattern;
-        ctx.globalAlpha = 0.18; 
-        ctx.fill();
-        ctx.restore();
-    } else {
+    // === CAS ZONE ARRIVÉE (ZA) : RENDU SANS CRÉATION DE CANVAS TEMPORAIRE ===
+    ctx.save();
+    ctx.globalAlpha = 0.18;
+    ctx.strokeStyle = couleurBlanche;
+    ctx.lineWidth = 4;
+    
+    // Découpe la zone pour ne pas faire baver les lignes à l'extérieur des arrondis
+    ctx.clip(); 
+    
+    // Trace des lignes diagonales simples espacées de 16px sur l'étendue de la zone
+    ctx.beginPath();
+    for (let offset = -pasY; offset < pasX + pasY; offset += 16) {
+        ctx.moveTo(x + offset, y);
+        ctx.lineTo(x + offset + pasY, y + pasY);
+    }
+    ctx.stroke();
+    ctx.restore();
+}
+ else {
         // === CAS ZONE DÉPART (ZD) : REMPLISSAGE SOLIDE BLANC PÂLE ===
         ctx.globalAlpha = 0.18; 
         ctx.fillStyle = couleurBlanche;

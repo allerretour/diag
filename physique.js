@@ -144,17 +144,15 @@ function clampPosition(x, y) {
 }
 
 /**
- * Calcule la position magnétique alignée sur les lignes de la grille
- * en centrant le milieu de la bille sur les intersections.
- * Empêche le débordement sur les lignes de contour en repoussant la bille vers l'intérieur.
+ * Calcule la position magnétique alignée sur les lignes de la grille.
+ * Si l'intersection la plus proche est occupée, cherche l'emplacement autorisé
+ * libre le plus proche pour y envoyer la bille.
  */
 function calculerSnapGrille(x, y, element) {
-    // Si le magnétisme existe et qu'elle est décochée, on n'applique aucun filtre
     if (chkMagnetism && !chkMagnetism.checked) {
         return { x, y };
     }
 
-    // Vraies dimensions du tapis de jeu (Source 1 & 2)
     const gridLeft = 19;
     const gridTop = 17;
     const gridWidth = 754;
@@ -166,60 +164,91 @@ function calculerSnapGrille(x, y, element) {
 
     const pasX = gridWidth / cols;  
     const pasY = gridHeight / rows; 
-
-    // Calcul du rayon de la bille (utilise sa taille réelle ou 12px par défaut)
     const rayonBille = element ? element.offsetWidth / 2 : 12;
 
-    // 1. Coordonnées théoriques du CENTRE de la bille
-    const centreX = x + rayonBille;
-    const centreY = y + rayonBille;
-
-    // 2. Position locale par rapport à la grille de jeu
-    const localCentreX = centreX - gridLeft;
-    const localCentreY = centreY - gridTop;
-
-    // 3. Magnétisme du CENTRE sur l'intersection la plus proche
-    let snappedLocalCentreX = Math.round(localCentreX / pasX) * pasX;
-    let snappedLocalCentreY = Math.round(localCentreY / pasY) * pasY;
-
-    // 4. MODIFICATION : Empêcher le chevauchement sur les bandes extérieures
-    // Si le centre est aimanté sur le bord 0, on le repousse vers l'intérieur d'un rayon de bille.
-    // Si le centre est aimanté sur le bord maximum, on le ramène vers l'intérieur d'un rayon de bille.
-    if (snappedLocalCentreX <= 0) {
-        snappedLocalCentreX = rayonBille;
-    } else if (snappedLocalCentreX >= gridWidth) {
-        snappedLocalCentreX = gridWidth - rayonBille;
+    // 1. Liste des positions occupées par les AUTRES billes (en pixels top/left)
+    const emplacementsOccupes = [];
+    if (element) {
+        activeBalls.forEach(otherBall => {
+            if (otherBall !== element && otherBall.style.display !== 'none') {
+                emplacementsOccupes.push({
+                    x: Math.round(parseFloat(otherBall.style.left) || 0),
+                    y: Math.round(parseFloat(otherBall.style.top) || 0)
+                });
+            }
+        });
     }
 
-    if (snappedLocalCentreY <= 0) {
-        snappedLocalCentreY = rayonBille;
-    } else if (snappedLocalCentreY >= gridHeight) {
-        snappedLocalCentreY = gridHeight - rayonBille;
+    // 2. Générer et tester toutes les intersections de la grille, triées par distance avec la souris
+    const intersectionsCandidat = [];
+
+    for (let gX = 0; gX <= cols; gX++) {
+        for (let gY = 0; gY <= rows; gY++) {
+            let localX = gX * pasX;
+            let localY = gY * pasY;
+
+            // Sécurité anti-débordement des bandes
+            if (gX === 0) localX = rayonBille;
+            if (gX === cols) localX = gridWidth - rayonBille;
+            if (gY === 0) localY = rayonBille;
+            if (gY === rows) localY = gridHeight - rayonBille;
+
+            const pixelX = (gridLeft + localX) - rayonBille;
+            const pixelY = (gridTop + localY) - rayonBille;
+
+            // Calcul de la distance brute entre cette intersection et le curseur (x, y)
+            const dx = pixelX - x;
+            const dy = pixelY - y;
+            const distanceCurseur = dx * dx + dy * dy; // Pas besoin de Math.sqrt pour comparer des carrés (gain de performance)
+
+            intersectionsCandidat.push({ x: pixelX, y: pixelY, dist: distanceCurseur });
+        }
     }
 
-    // 5. Reconvertir en coordonnées CSS de positionnement (Top/Left de la bille)
-    const finalX = (gridLeft + snappedLocalCentreX) - rayonBille;
-    const finalY = (gridTop + snappedLocalCentreY) - rayonBille;
+    // Tri des intersections de la plus proche à la plus lointaine du curseur
+    intersectionsCandidat.sort((a, b) => a.dist - b.dist);
 
-    return { x: finalX, y: finalY };
+    // 3. Trouver la première intersection la plus proche qui n'est PAS occupée
+    for (let candidat of intersectionsCandidat) {
+        const estOccupe = emplacementsOccupes.some(occupe => 
+            Math.abs(occupe.x - Math.round(candidat.x)) < 5 && 
+            Math.abs(occupe.y - Math.round(candidat.y)) < 5
+        );
+
+        if (!estOccupe) {
+            // Emplacement autorisé libre le plus proche trouvé !
+            return { x: candidat.x, y: candidat.y };
+        }
+    }
+
+    // Si par un cas extrême tout est occupé, on retourne la position initiale clampée
+    return { x, y };
 }
 
 function resolveCollisions(currentBall) {
-    let currentX = parseFloat(currentBall.style.left);
-    let currentY = parseFloat(currentBall.style.top);
+    let currentX = parseFloat(currentBall.style.left) || 0;
+    let currentY = parseFloat(currentBall.style.top) || 0;
     let collisionDetected = true;
     let iterations = 0;
 
-    while (collisionDetected && iterations < 20) { 
+    // 1. MISE EN CACHE UNIQUE : On extrait les données numériques des autres billes AVANT le while
+    const otherBallsCache = [];
+    for (let otherBall of activeBalls) {
+        if (otherBall === currentBall || otherBall.style.display === 'none') continue;
+        
+        otherBallsCache.push({
+            x: parseFloat(otherBall.style.left) || 0, // Lecture unique ici
+            y: parseFloat(otherBall.style.top) || 0
+        });
+    }
+
+    // 2. BOUCLE DE CALCUL GÉOMÉTRIQUE PUREMENT MATHÉMATIQUE (Zéro lecture DOM à l'intérieur)
+    while (collisionDetected && iterations < 15) { 
         collisionDetected = false;
 
-        for (let otherBall of activeBalls) {
-            if (otherBall === currentBall || otherBall.style.display === 'none') continue;
-
-            let otherX = parseFloat(otherBall.style.left);
-            let otherY = parseFloat(otherBall.style.top);
-            let dx = currentX - otherX;
-            let dy = currentY - otherY;
+        for (let other of otherBallsCache) {
+            let dx = currentX - other.x;
+            let dy = currentY - other.y;
             let distance = Math.sqrt(dx * dx + dy * dy);
 
             if (distance < ballDiameter) {
@@ -234,9 +263,8 @@ function resolveCollisions(currentBall) {
         iterations++;
     }
 
+    // 3. ÉCRITURE UNIQUE DANS LE DOM : On applique les styles une seule fois à la toute fin
     const clamped = clampPosition(currentX, currentY);
-    
-    // Alignement magnétique basé sur le centre de la bille et la grille active
     const finalPos = calculerSnapGrille(clamped.x, clamped.y, currentBall);
 
     currentBall.style.left = finalPos.x + 'px';
@@ -362,10 +390,14 @@ function rafraichirListeLateraleBilles() {
     const sidebarList = document.getElementById('visible-balls-list');
     if (!sidebarList) return;
 
-    // Vider la liste précédente
-    sidebarList.innerHTML = "";
+    // 1. MÉMOIRE TAMPON : Création d'un fragment invisible pour stocker le rendu en mémoire RAM
+    const fragment = document.createDocumentFragment();
 
-    // Parcourir TOUTES les billes actives (visibles et masquées)
+    // Cache des variables globales fréquemment accédées pour éviter les lookups répétés
+    const currentSelectedBall = window.billeSelectionneeCourante;
+    const isMagnetismActive = chkMagnetism ? chkMagnetism.checked : false;
+
+    // 2. CONSTRUCIION VISUELLE SYNCHRONE
     activeBalls.forEach(ball => {
         const ballId = ball.getAttribute('data-id');
         const numEl = ball.querySelector('.ball-num');
@@ -373,17 +405,15 @@ function rafraichirListeLateraleBilles() {
         const couleurBille = ball.style.backgroundColor;
         const estMasquee = ball.style.display === 'none';
 
-        // 1. Création de la ligne d'item
+        // Création de la ligne d'item
         const itemRow = document.createElement('div');
         itemRow.classList.add('sidebar-ball-item');
         itemRow.style.cursor = 'pointer'; 
 
-        // Gestion de la surbrillance (Uniquement si la bille est actuellement affichée)
-        if (window.billeSelectionneeCourante === ball && !estMasquee) {
+        // Gestion des classes d'état optimisée (sans duplication)
+        if (currentSelectedBall === ball && !estMasquee) {
             itemRow.classList.add('active-highlight');
         }
-
-        // ÉTAPE CLÉ : Si la bille a été enlevée par double-clic, on applique un style visuel grisé
         if (estMasquee) {
             itemRow.classList.add('is-hidden-ball');
         }
@@ -395,10 +425,7 @@ function rafraichirListeLateraleBilles() {
             e.stopPropagation(); 
 
             if (ball.style.display === 'none') {
-                // ACTION : Ramener la bille sur la table !
                 ball.style.display = 'flex';
-                
-                // On la sélectionne automatiquement pour que l'utilisateur sache qu'elle est active
                 if (window.billeSelectionneeCourante) {
                     window.billeSelectionneeCourante.style.outline = 'none';
                 }
@@ -406,7 +433,6 @@ function rafraichirListeLateraleBilles() {
                 ball.style.outline = '2px solid #ffffff';
                 ball.style.outlineOffset = '2px';
             } else {
-                // ACTION COMPORTEMENT D'ORIGINE : Sélection classique
                 if (window.billeSelectionneeCourante) {
                     window.billeSelectionneeCourante.style.outline = 'none';
                 }
@@ -414,38 +440,29 @@ function rafraichirListeLateraleBilles() {
                 ball.style.outline = '2px solid #ffffff';
                 ball.style.outlineOffset = '2px';
             }
-
-            // Relancer le rafraîchissement pour mettre à jour les opacités et les coordonnées
             rafraichirListeLateraleBilles();
         });
 
-
         // ====================================================================
-// AJOUT : ÉCOUTEUR DE DOUBLE-CLIC POUR MASQUER / RETIRER LA BILLE
-// ====================================================================
-itemRow.addEventListener('dblclick', (e) => {
-    e.stopPropagation(); // Empêche le clic simple de s'exécuter en parallèle
+        // ÉCOUTEUR DE DOUBLE-CLIC POUR MASQUER / RETIRER LA BILLE
+        // ====================================================================
+        itemRow.addEventListener('dblclick', (e) => {
+            e.stopPropagation(); 
+            ball.style.display = 'none';
 
-    // On masque la bille sur le tapis
-    ball.style.display = 'none';
+            if (window.billeSelectionneeCourante === ball) {
+                ball.style.outline = 'none';
+                window.billeSelectionneeCourante = null;
 
-    // Si la bille masquée était celle sélectionnée, on réinitialise la sélection globale
-    if (window.billeSelectionneeCourante === ball) {
-        ball.style.outline = 'none';
-        window.billeSelectionneeCourante = null;
+                const displayEl = document.getElementById('ball-position-display');
+                if (displayEl) {
+                    displayEl.innerText = "Position de la bille : Aucune sélectionnée";
+                }
+            }
+            rafraichirListeLateraleBilles();
+        });
 
-        const displayEl = document.getElementById('ball-position-display');
-        if (displayEl) {
-            displayEl.innerText = "Position de la bille : Aucune sélectionnée";
-        }
-    }
-
-    // Actualise instantanément la liste pour appliquer l'état grisé/enlevé
-    rafraichirListeLateraleBilles();
-});
-
-
-        // 2. Duplication et dessin de la bille miniature
+        // Duplication et dessin de la bille miniature
         const miniBall = document.createElement('div');
         miniBall.classList.add('ball');
         miniBall.style.backgroundColor = couleurBille;
@@ -455,7 +472,6 @@ itemRow.addEventListener('dblclick', (e) => {
             miniBall.classList.add('striped');
         }
 
-        // Ajout du numéro si ce n'est pas la blanche
         if (ballId !== '0' && numEl) {
             const miniNum = document.createElement('div');
             miniNum.classList.add('ball-num');
@@ -463,28 +479,34 @@ itemRow.addEventListener('dblclick', (e) => {
             miniBall.appendChild(miniNum);
         }
 
-        // 3. Récupération ou simulation des coordonnées courantes de la grille
+        // 3. OPTIMISATION GÉOMÉTRIQUE : Extraction directe des styles existants
         const pixelX = parseFloat(ball.style.left) || 0;
         const pixelY = parseFloat(ball.style.top) || 0;
+        
+        // On passe directement l'état du magnétisme en paramètre si nécessaire,
+        // ou on laisse la fonction obtenirCoordonneesGrille s'exécuter en lisant notre cache
         const coords = obtenirCoordonneesGrille(pixelX, pixelY, ball);
 
-        // 4. Création du texte descriptif (On écrit "Masquée" si la bille n'est pas sur le tapis)
         const coordsText = document.createElement('div');
         coordsText.classList.add('sidebar-ball-coords');
         
         if (estMasquee) {
             coordsText.innerHTML = `<span style="font-style: italic; opacity: 0.6;">(enlevée)</span>`;
         } else {
-            coordsText.innerHTML = `X = ${coords.x}, Y = ${coords.y}`;
+            coordsText.textContent = `X = ${coords.x}, Y = ${coords.y}`; // textContent est plus rapide que innerHTML
         }
 
-        // Assemblage
         itemRow.appendChild(miniBall);
         itemRow.appendChild(coordsText);
-        sidebarList.appendChild(itemRow);
+        
+        // Ajout dans la mémoire tampon (zéro impact sur l'affichage pour le moment)
+        fragment.appendChild(itemRow);
     });
-}
 
+    // 4. ÉCRITURE ATOMIQUE UNIQUE DANS LE DOM
+    sidebarList.innerHTML = ""; // Vidage rapide de l'ancien contenu
+    sidebarList.appendChild(fragment); // Injection instantanée de la nouvelle liste
+}
 
 
 

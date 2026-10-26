@@ -7,6 +7,9 @@ const tableLogoOverlay = document.getElementById('table-logo-overlay');
 const btnResetLogo = document.getElementById('btn-reset-logo');
 
 // 1. ÉCOUTEUR : Convertir l'image locale en Base64 au moment du choix
+// ====================================================================
+// CHARGEMENT ET COMPRESSION DYNAMIQUE DU LOGO (MAX 300x300px)
+// ====================================================================
 if (inputLogoFile && tableLogoOverlay) {
     inputLogoFile.addEventListener('change', (e) => {
         const file = e.target.files[0];
@@ -14,13 +17,52 @@ if (inputLogoFile && tableLogoOverlay) {
 
         const reader = new FileReader();
         reader.onload = (event) => {
-            window.logoBase64Courant = event.target.result; // Contient la chaîne Base64 de l'image
-            tableLogoOverlay.src = window.logoBase64Courant; // L'affiche instantanément sur le tapis
-            tableLogoOverlay.style.display = 'block';
+            // 1. Création d'un objet Image temporaire en mémoire RAM
+            const imgTemp = new Image();
+            imgTemp.src = event.target.result;
+
+            imgTemp.onload = () => {
+                // Dimensions d'origine de l'image de l'utilisateur
+                let largeurCible = imgTemp.width;
+                let hauteurCible = imgTemp.height;
+                const limiteMax = 300; // Limite stricte requise
+
+                // 2. Calcul des proportions (Garde le ratio d'aspect original)
+                if (largeurCible > limiteMax || hauteurCible > limiteMax) {
+                    if (largeurCible > hauteurCible) {
+                        hauteurCible = Math.round((hauteurCible * limiteMax) / largeurCible);
+                        largeurCible = limiteMax;
+                    } else {
+                        largeurCible = Math.round((largeurCible * limiteMax) / hauteurCible);
+                        hauteurCible = limiteMax;
+                    }
+                }
+
+                // 3. Création et configuration d'un Canvas invisible de traitement
+                const canvasCompresseur = document.createElement('canvas');
+                canvasCompresseur.width = largeurCible;
+                canvasCompresseur.height = hauteurCible;
+                const ctxCompresseur = canvasCompresseur.getContext('2d');
+
+                // 4. Rendu de l'image redimensionnée dans le sous-calque
+                ctxCompresseur.drawImage(imgTemp, 0, 0, largeurCible, hauteurCible);
+
+                // 5. Extraction en Base64 compressé (JPEG à 80% de qualité pour un ratio poids/visuel parfait)
+                // Note : Si vous tenez absolument à la transparence du PNG, utilisez 'image/png' sans le paramètre 0.8
+                const base64Alege = canvasCompresseur.toDataURL('image/jpeg', 0.8);
+
+                // 6. Stockage et mise à jour de l'affichage UI
+                window.logoBase64Courant = base64Alege; 
+                tableLogoOverlay.src = window.logoBase64Courant; 
+                tableLogoOverlay.style.display = 'block';
+                
+                console.log(`[Optimisation] Logo compressé avec succès en ${largeurCible}x${hauteurCible}px`);
+            };
         };
         reader.readAsDataURL(file);
     });
 }
+
 
 // NOUVEAU : ÉCOUTEUR pour restaurer le logo original
 if (btnResetLogo && tableLogoOverlay) {
@@ -767,36 +809,44 @@ function genererGrille() {
     });
 
     // 2. Génération des lignes de repère intérieures (Grille)
-    for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-            const cell = document.createElement('div');
-            cell.style.boxSizing = 'border-box';
-            
-            if (c < cols - 1) {
-                cell.style.borderRight = '1px dashed rgba(255, 255, 255, 0.25)';
-            }
-            if (r < rows - 1) {
-                cell.style.borderBottom = '1px dashed rgba(255, 255, 255, 0.25)';
-            }
-
-            gridOverlay.appendChild(cell);
+for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+        const cell = document.createElement('div');
+        cell.style.boxSizing = 'border-box';
+        
+        if (c < cols - 1) {
+            // Opacité réduite à 12% pour un guide visuel fin et discret
+            cell.style.borderRight = '1px dashed rgba(255, 255, 255, 0.12)';
         }
+        if (r < rows - 1) {
+            // Opacité réduite à 12% pour un guide visuel fin et discret
+            cell.style.borderBottom = '1px dashed rgba(255, 255, 255, 0.12)';
+        }
+
+        gridOverlay.appendChild(cell);
     }
+}
+
 
     // 3. Génération des chiffres sur les bandes (Toujours dans l'overlay de niveau 5)
     if (mode16x8) {
         const styleChiffreCommun = `
-            position: absolute;
-            color: #ffffff;
-            font-family: sans-serif;
-            font-weight: bold;
-            font-size: 12px; 
-            transform: translate(-50%, -50%);
-            z-index: 6; 
-            background-color: #000000; 
-            padding: 3px 6px;
-            border-radius: 4px;
-        `;
+    position: absolute;
+    color: #ffffff;
+    font-family: system-ui, -apple-system, sans-serif;
+    font-weight: bold;
+    font-size: 11px; 
+    transform: translate(-50%, -50%);
+    z-index: 6; 
+    background-color: rgba(19, 23, 34, 0.65); 
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 2px 5px;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+`;
+
 
         const pasX = 754 / cols; 
         const pasY = 364 / rows; 
