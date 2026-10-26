@@ -160,24 +160,23 @@ function dessinerPointContact(x, y, couleur, pctFige, coteFige) {
     ctx.setLineDash([]); // Reset des pointillés
 
 // 4. LABELS ET ENTÊTES DU PANNEAU DE CONTRÔLE
-// Label de gauche : CÔTÉ (GAUCHE / DROITE) - Devient invisible à 100% (Plein)
+// 4. LABELS ET ENTÊTES DU PANNEAU DE CONTRÔLE
 ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
 ctx.font = "bold 12px sans-serif";
-ctx.textAlign = "left";
-ctx.textBaseline = "top";
-
-if (pct !== 100) {
-    ctx.fillText(cote === 1 ? "IMPACT GAUCHE" : "IMPACT DROITE", cadreX + 12, cadreY + 12);
-}
-
-// Label principal de droite : Conserve sa position, ses dimensions et remplace la valeur par le texte à 100%
-ctx.fillStyle = "#ffffff";
-ctx.textAlign = "right";
 ctx.textBaseline = "top";
 
 if (pct === 100) {
-    ctx.fillText("IMPACT PLEIN", cadreX + largeurCadre - 12, cadreY + 10); 
+    // === MODIFICATION : CENTRAGE HORIZONTAL PARFAIT POUR L'IMPACT PLEIN ===
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "center";
+    ctx.fillText("IMPACT PLEIN", cadreX + (largeurCadre / 2), cadreY + 10); 
 } else {
+    // Comportement d'origine pour les autres pourcentages
+    ctx.textAlign = "left";
+    ctx.fillText(cote === 1 ? "IMPACT GAUCHE" : "IMPACT DROITE", cadreX + 12, cadreY + 12);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "right";
     ctx.fillText(`${pct}%`, cadreX + largeurCadre - 12, cadreY + 10);
 }
 
@@ -320,13 +319,18 @@ function dessinerEffetsBilleBlanche(x, y, couleur, forceFige) {
     // ====================================================================
     // JAUGE DE PUISSANCE MODERNISÉE
     // ====================================================================
+        // ====================================================================
+    // JAUGE DE PUISSANCE MODERNISÉE (REPOSITIONNÉE ET CENTRÉE)
+    // ====================================================================
     if (jaugeActive) {
         const jaugeWidth = 14;
         const jaugeHeight = rayonBille * 2; // 120px
-        const jaugeX = cadreX + largeurCadre - 32;
+        
+        // CORRECTION : Décalage vers la gauche de l'ensemble de la jauge pour l'intégrer harmonieusement
+        const jaugeX = cadreX + largeurCadre - 48; 
         const jaugeY = y - rayonBille;
 
-        // Label 2 : "FORCE" ou "PUISSANCE" placé de façon symétrique au-dessus du curseur
+        // Label 2 : "FORCE" placé de façon parfaitement symétrique au-dessus de la jauge
         ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
         ctx.font = "bold 12px sans-serif";
         ctx.textAlign = "center";
@@ -356,7 +360,7 @@ function dessinerEffetsBilleBlanche(x, y, couleur, forceFige) {
         // Calcul de l'emplacement vertical de l'indicateur
         const hauteurCibleY = jaugeY + jaugeHeight - ((forceActuelle / 4) * jaugeHeight);
 
-        // Aiguille indicatrice (Triangle blanc)
+        // Aiguille indicatrice (Triangle blanc repositionné par rapport à la nouvelle jauge)
         ctx.fillStyle = "#ffffff";
         ctx.beginPath();
         ctx.moveTo(jaugeX - 6, hauteurCibleY);       
@@ -385,7 +389,7 @@ function dessinerEffetsBilleBlanche(x, y, couleur, forceFige) {
         ctx.roundRect(jaugeX, jaugeY, jaugeWidth, jaugeHeight, 6);
         ctx.stroke();
 
-        // Label numérique en pourcentage (ex: 25%, 50%, etc.)
+        // Label numérique en pourcentage (ex: 25%, 50%, etc.) repositionné sous l'axe de la jauge
         const valeurPourcentage = forceActuelle * 25;
         ctx.fillStyle = couleursForce[forceActuelle];
         ctx.font = "bold 12px sans-serif";
@@ -393,6 +397,7 @@ function dessinerEffetsBilleBlanche(x, y, couleur, forceFige) {
         ctx.textBaseline = "top";
         ctx.fillText(`${valeurPourcentage}%`, jaugeX + (jaugeWidth / 2), jaugeY + jaugeHeight + 8);
     }
+
 
     ctx.restore(); 
 }
@@ -1022,7 +1027,7 @@ document.addEventListener('keydown', (e) => {
     } else {
         window.pourcentageContactCourant -= 10;
         if (window.pourcentageContactCourant < 0) {
-            outilActif = null;
+            
             window.pourcentageContactCourant = 100;
         }
     }
