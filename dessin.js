@@ -44,11 +44,14 @@ function gererLogiquePalette(btn, e) {
     // --- LOGIQUE DE CYCLE MULTI-CLIC (IPAD & SOURIS) ---
     if (window.outilTraceActif === toolSelected) {
         if (toolSelected === 'pointContact') {
-            window.pourcentageContactCourant -= 10;
-            if (window.pourcentageContactCourant < 0) {
-                window.pourcentageContactCourant = 100;
-            }
-        }
+			window.pourcentageContactCourant -= 10;
+			// Si on descend en dessous de 0, on change de côté et on recommence à 90% (impact partiel)
+			if (window.pourcentageContactCourant < 0) {
+				window.coteContactCourant = window.coteContactCourant * -1; // Inverse GAUCHE <-> DROITE
+				window.pourcentageContactCourant = 100; 
+			}
+		}
+
         else if (toolSelected === 'cible') {
             window.quadrantCibleCourant = cyclerOption(window.quadrantCibleCourant, [0, 1, 2, 3]);
         }
@@ -1035,20 +1038,23 @@ document.addEventListener('keydown', (e) => {
     }
 
     if (e.key.toLowerCase() === 'p') {
-        e.preventDefault();
-        if (outilActif !== 'pointContact') {
-            outilActif = 'pointContact';
-            window.pourcentageContactCourant = 100;
-            window.coteContactCourant = 1; 
-        } else {
-            window.pourcentageContactCourant -= 10;
-            if (window.pourcentageContactCourant < 0) {
-                window.pourcentageContactCourant = 100;
-            }
+    e.preventDefault();
+    if (outilActif !== 'pointContact') {
+        outilActif = 'pointContact';
+        window.pourcentageContactCourant = 100;
+        window.coteContactCourant = 1; 
+    } else {
+        window.pourcentageContactCourant -= 10;
+        // Si on descend en dessous de 0, on change de côté et on recommence à 90%
+        if (window.pourcentageContactCourant < 0) {
+            window.coteContactCourant = window.coteContactCourant * -1; // Inverse GAUCHE <-> DROITE
+            window.pourcentageContactCourant = 100; 
         }
-        if (outilActif) canvas.style.pointerEvents = 'auto';
-        window.redessinerToutesLesLignes();
     }
+    if (outilActif) canvas.style.pointerEvents = 'auto';
+    window.redessinerToutesLesLignes();
+}
+
 
     if (e.key === 'Shift' && outilActif === 'pointContact') {
         e.preventDefault();
