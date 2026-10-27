@@ -21,19 +21,64 @@ const couleursForce = { 1: "#2ecc71", 2: "#f1c40f", 3: "#e67e22", 4: "#e74c3c" }
 window.pourcentageContactCourant = 100; 
 window.coteContactCourant = 1; // 1 = Frappe par la gauche, -1 = Frappe par la droite
 
-// Variable globale pour suivre l'outil sélectionné dans la palette
-window.outilTraceActif = "select"; // 'select', 'pencil', 'line', 'arrow', 'erase'
 
-// Écouteur pour la palette de boutons
+// Variable globale pour suivre l'outil sélectionné dans la palette
+window.outilTraceActif = "select"; 
+
+// Écouteur mis à jour pour piloter l'intégralité de la palette (P, T, Z, 0, 9)
 const boutonsOutils = document.querySelectorAll('.tool-btn');
 boutonsOutils.forEach(btn => {
     btn.addEventListener('click', (e) => {
+        const toolSelected = btn.getAttribute('data-tool');
+        
+        // --- LOGIQUE DE CYCLE MULTI-CLIC (IPAD & SOURIS) ---
+        if (window.outilTraceActif === toolSelected) {
+            if (toolSelected === 'pointContact') {
+                window.pourcentageContactCourant -= 10;
+                if (window.pourcentageContactCourant < 0) {
+                    window.pourcentageContactCourant = 100;
+                }
+            }
+            else if (toolSelected === 'cible') {
+                window.quadrantCibleCourant = (window.quadrantCibleCourant + 1) % 4;
+            }
+            else if (toolSelected === 'carre') {
+                if (window.tailleCarreCourante === 95) window.tailleCarreCourante = 135;
+                else if (window.tailleCarreCourante === 135) window.tailleCarreCourante = 180;
+                else window.tailleCarreCourante = 95;
+            }
+            else if (toolSelected === 'effetBlanche') {
+                window.niveauForceCourant++;
+                if (window.niveauForceCourant > 4) {
+                    window.niveauForceCourant = 0;
+                    document.querySelector('.tool-btn[data-tool="select"]').click();
+                    return;
+                }
+            }
+            else if (toolSelected === 'repereX') {
+                if (!window.repereXEstUnCercle && window.nombreBranchesRepereX === 6 && window.repereXTexte === null) window.repereXEstUnCercle = true;
+                else if (!window.repereXEstUnCercle && window.nombreBranchesRepereX === 4 && window.repereXTexte === null) window.nombreBranchesRepereX = 6;
+                else if (window.repereXEstUnCercle && window.repereXTexte === null) { window.repereXEstUnCercle = false; window.repereXTexte = cycleCaracteres[0]; }
+                else if (window.repereXTexte !== null) {
+                    const indexActuel = cycleCaracteres.indexOf(window.repereXTexte);
+                    if (indexActuel >= 0 && indexActuel < cycleCaracteres.length - 1) window.repereXTexte = cycleCaracteres[indexActuel + 1];
+                    else { window.repereXTexte = null; window.nombreBranchesRepereX = 4; window.repereXEstUnCercle = false; }
+                }
+            }
+            if (typeof window.redessinerToutesLesLignes === "function") window.redessinerToutesLesLignes();
+            return;
+        }
+
+        // --- APPLIQUE LE CHANGEMENT D'OUTIL ---
         boutonsOutils.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+        window.outilTraceActif = toolSelected;
         
-        window.outilTraceActif = btn.getAttribute('data-tool');
-        
-        // Si on est en mode tracé ou gomme, le canvas intercepte les clics en priorité
+        // Initialisations lors du premier clic
+        if (toolSelected === 'pointContact') { window.pourcentageContactCourant = 100; window.coteContactCourant = 1; }
+        if (toolSelected === 'repereX') { window.nombreBranchesRepereX = 4; window.repereXEstUnCercle = false; window.repereXTexte = null; }
+        if (toolSelected === 'effetBlanche') { window.niveauForceCourant = 0; }
+
         const canvas = document.getElementById('drawing-canvas');
         if (canvas) {
             if (window.outilTraceActif !== "select") {
@@ -42,8 +87,13 @@ boutonsOutils.forEach(btn => {
                 canvas.style.pointerEvents = 'none';
             }
         }
+        if (typeof window.redessinerToutesLesLignes === "function") window.redessinerToutesLesLignes();
     });
 });
+
+
+
+
 
 // Extraction universelle des coordonnées qu'il s'agisse d'un clic (PC) ou d'un Touch (iPad)
 function obtenirCoordonneesEvenement(e, tableElement) {
@@ -1144,7 +1194,6 @@ window.addEventListener('blur', () => {
 });
 
 // === GESTION INTERACTION DESSIN IPAD ET PC ===
-// === GESTION INTERACTION DESSIN IPAD ET PC ===
 function declencherDebutTrace(e) {
     if (window.outilTraceActif !== "select") {
         if (e.cancelable) e.preventDefault();
@@ -1154,7 +1203,7 @@ function declencherDebutTrace(e) {
     const localX = coords.x;
     const localY = coords.y;
 
-    // Mode Gomme Tactile / Clic
+    // Mode Gomme
     if (window.outilTraceActif === "erase") {
         const elementSupprime = window.detecterEtEffacerDessin(localX, localY);
         if (elementSupprime) {
@@ -1164,55 +1213,17 @@ function declencherDebutTrace(e) {
         return; 
     }
 
-    // === GESTION DE LA POSE DE FORMES (CIBLE, CARRÉ, EFFET, REPÈRE, CONTACT) ===
-    // On regarde quel outil est actif (soit via la palette, soit via le clavier)
+    // Armement de la position de départ pour les formes tactiques (Palette ou Clavier)
     const outilTactiqueActif = (window.outilTraceActif !== "select") ? window.outilTraceActif : outilActif;
-
-    // AJOUT DE 'pointContact' DANS LA LISTE DES FORMES AUTORISÉES À ÊTRE DÉPOSÉES
     if (['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact'].includes(outilTactiqueActif)) {
-        // Fixation des coordonnées au point d'impact du clic ou du doigt
+        isDrawing = true; // Active l'état pour autoriser le suivi du mouvement
         mouseX = localX;
         mouseY = localY;
-        
-        const couleurActive = window.billeSelectionneeCourante ? 
-            window.billeSelectionneeCourante.style.backgroundColor : 
-            (colorSelect ? colorSelect.value : '#ffffff');
-
-        // Création de l'objet de dessin avec le premier point d'ancrage
-        let nouvelElement = {
-            couleur: couleurActive,
-            points: [{ x: mouseX, y: mouseY }] // Format [{x, y}] conforme à votre fonction de rendu
-        };
-
-        // Renseignement des propriétés spécifiques à chaque forme
-        if (outilTactiqueActif === 'cible') { nouvelElement.estCible = true; nouvelElement.quadrant = window.quadrantCibleCourant || 0; }
-        if (outilTactiqueActif === 'carre') { nouvelElement.estCarre = true; nouvelElement.taille = window.tailleCarreCourante || 95; }
-        if (outilTactiqueActif === 'repereX') { nouvelElement.estRepereX = true; nouvelElement.estUnCercle = window.repereXEstUnCercle; nouvelElement.branches = window.nombreBranchesRepereX; nouvelElement.texte = window.repereXTexte; }
-        if (outilTactiqueActif === 'effetBlanche') { nouvelElement.estEffetBlanche = true; nouvelElement.force = window.niveauForceCourant; }
-        
-        // AJOUT DU CAS SPÉCIFIQUE : Point de contact
-        if (outilTactiqueActif === 'pointContact') { 
-            nouvelElement.estPointContact = true; 
-            nouvelElement.pourcentage = window.pourcentageContactCourant; 
-            nouvelElement.cote = window.coteContactCourant; 
-        }
-
-        // Sauvegarde immédiate dans votre tableau global
-        window.dessinsSauvegardes.push(nouvelElement);
-        
-        // Nettoyage de l'état clavier
-        outilActif = null;
-        
-        // Auto-retour au mode sélection pour pouvoir déplacer à nouveau les billes
-        const btnSelect = document.querySelector('.tool-btn[data-tool="select"]');
-        if (btnSelect) btnSelect.click();
-        
-        // Forcer le Canvas à se mettre à jour
-        if (typeof window.redessinerToutesLesLignes === "function") window.redessinerToutesLesLignes();
-        return; 
+        window.redessinerToutesLesLignes();
+        return;
     }
 
-    // Dessin Libre / Tracé classique (Crayon, Ligne, Flèche)
+    // Dessin Libre
     if (window.outilTraceActif !== "select") {
         commencerDessin(e);
     }
@@ -1221,12 +1232,33 @@ function declencherDebutTrace(e) {
 
 
 function declencherMouvementTrace(e) {
-    if (!isDrawing || !currentLine) return;
-    if (e.cancelable) e.preventDefault();
-
+    // Extrait les coordonnées exactes sous le doigt ou le stylet de l'iPad
     const coords = obtenirCoordonneesEvenement(e, table);
     const x = coords.x;
     const y = coords.y;
+
+    // === NOUVEAU : EN DIRECT SUR IPAD - RAFRAÎCHIT L'APERÇU FANTÔME AU GLISSEMENT ===
+    const listeFormesTactiques = ['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact'];
+    if (listeFormesTactiques.includes(window.outilTraceActif) || outilActif) {
+        if (e.cancelable) e.preventDefault(); // Empêche la page iPad de trembler ou défiler
+        
+        // Met à jour les positions globales lues par window.redessinerToutesLesLignes()
+        mouseX = x;
+        mouseY = y;
+
+        // Planifie un rendu synchronisé avec le taux de rafraîchissement de l'écran de l'iPad
+        if (!animationFrameId) {
+            animationFrameId = requestAnimationFrame(() => {
+                window.redessinerToutesLesLignes();
+                animationFrameId = null;
+            });
+        }
+        return; // Évite de tracer une ligne au crayon en même temps
+    }
+
+    // === LOGIQUE DE TRACÉ DE LIGNES CLASSIQUE EXISTANTE ===
+    if (!isDrawing || !currentLine) return;
+    if (e.cancelable) e.preventDefault();
 
     if (currentLine.estDroite) {
         window.redessinerToutesLesLignes();
@@ -1238,15 +1270,52 @@ function declencherMouvementTrace(e) {
         if (currentLine.avecFleche) {
             dessinerPointeFleche(startPoint.x, startPoint.y, x, y, currentLine.couleur);
         }
-                currentLine.points = [startPoint, { x, y }];
+        currentLine.points = [startPoint, { x, y }];
     } else {
         ctx.lineTo(x, y);
         ctx.stroke();
-        currentLine.points.push({ x, y }); // <--- RESTAURÉ : Enregistre le tracé libre en continu
+        currentLine.points.push({ x, y });
     }
 }
 
-function declencherFinTrace() {
+
+function declencherFinTrace(e) {
+    // === NOUVEAU : VALIDATION DU DÉPÔT AU RELÂCHEMENT DU DOIGT SUR IPAD ===
+    const outilTactiqueActif = (window.outilTraceActif !== "select") ? window.outilTraceActif : outilActif;
+    const listeFormesTactiques = ['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact'];
+
+    if (listeFormesTactiques.includes(outilTactiqueActif)) {
+        // Au moment où le doigt quitte l'écran, on fige les dernières coordonnées connues (mouseX, mouseY)
+        const couleurActive = window.billeSelectionneeCourante ? 
+            window.billeSelectionneeCourante.style.backgroundColor : 
+            (colorSelect ? colorSelect.value : '#ffffff');
+
+        let nouvelElement = {
+            couleur: couleurActive,
+            points: [{ x: mouseX, y: mouseY }]
+        };
+
+        if (outilTactiqueActif === 'cible') { nouvelElement.estCible = true; nouvelElement.quadrant = window.quadrantCibleCourant || 0; }
+        if (outilTactiqueActif === 'carre') { nouvelElement.estCarre = true; nouvelElement.taille = window.tailleCarreCourante || 95; }
+        if (outilTactiqueActif === 'repereX') { nouvelElement.estRepereX = true; nouvelElement.estUnCercle = window.repereXEstUnCercle; nouvelElement.branches = window.nombreBranchesRepereX; nouvelElement.texte = window.repereXTexte; }
+        if (outilTactiqueActif === 'effetBlanche') { nouvelElement.estEffetBlanche = true; nouvelElement.force = window.niveauForceCourant; }
+        if (outilTactiqueActif === 'pointContact') { nouvelElement.estPointContact = true; nouvelElement.pourcentage = window.pourcentageContactCourant; nouvelElement.cote = window.coteContactCourant; }
+
+        window.dessinsSauvegardes.push(nouvelElement);
+        
+        // Nettoyage des états
+        isDrawing = false;
+        outilActif = null;
+        
+        // Auto-retour au mode sélection
+        const btnSelect = document.querySelector('.tool-btn[data-tool="select"]');
+        if (btnSelect) btnSelect.click();
+        
+        if (typeof window.redessinerToutesLesLignes === "function") window.redessinerToutesLesLignes();
+        return;
+    }
+
+    // Fin de tracé standard (Crayon, Ligne, Flèche) pour PC/iPad
     finTrace();
     if (window.outilTraceActif === "select") {
         canvas.style.pointerEvents = 'none';
@@ -1254,6 +1323,7 @@ function declencherFinTrace() {
         canvas.style.pointerEvents = 'auto'; 
     }
 }
+
 
 function commencerDessin(e) {
     isDrawing = true;
