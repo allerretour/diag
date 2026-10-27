@@ -905,31 +905,29 @@ window.redessinerToutesLesLignes = function() {
         }
     });
 
-    // === RENDU EN DIRECT DE L'APERÇU FANTÔME (SOUS LE CURSEUR) ===
-    if (outilActif) {
-        ctx.save();
-        ctx.globalAlpha = 0.40; // Translucide pour l'aperçu dynamique
-        
-        let couleurActive = colorSelect ? colorSelect.value : '#ffffff';
-        if (window.billeSelectionneeCourante) {
-            couleurActive = window.billeSelectionneeCourante.style.backgroundColor;
-        }
+// === RENDU EN DIRECT DE L'APERÇU FANTÔME (SOUS LE CURSEUR) ===
+// CORRECTION : On détermine l'outil actif qu'il vienne de la palette OU du clavier
+const formeActive = (window.outilTraceActif !== "select") ? window.outilTraceActif : outilActif;
+const listeFormesTactiques = ['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact'];
 
-        if (outilActif === 'cible') dessinerCible(mouseX, mouseY, couleurActive);
-        if (outilActif === 'carre') dessinerCarre(mouseX, mouseY, couleurActive);
-        if (outilActif === 'repereX') dessinerRepereXGras(mouseX, mouseY, couleurActive);
-        
-        // On envoie la variable de force globale pour l'aperçu sous la souris
-        if (outilActif === 'effetBlanche') {
-            dessinerEffetsBilleBlanche(mouseX, mouseY, couleurActive, window.niveauForceCourant);
-        }
-
-        if (outilActif === 'pointContact') {
-            dessinerPointContact(mouseX, mouseY, couleurActive, window.pourcentageContactCourant, window.coteContactCourant);
-        }
-        
-        ctx.restore();
+if (listeFormesTactiques.includes(formeActive)) {
+    ctx.save();
+    ctx.globalAlpha = 0.40; // Translucide pour l'aperçu dynamique
+    
+    let couleurActive = colorSelect ? colorSelect.value : '#ffffff';
+    if (window.billeSelectionneeCourante) {
+        couleurActive = window.billeSelectionneeCourante.style.backgroundColor;
     }
+
+    if (formeActive === 'cible') dessinerCible(mouseX, mouseY, couleurActive);
+    if (formeActive === 'carre') dessinerCarre(mouseX, mouseY, couleurActive);
+    if (formeActive === 'repereX') dessinerRepereXGras(mouseX, mouseY, couleurActive);
+    if (formeActive === 'effetBlanche') dessinerEffetsBilleBlanche(mouseX, mouseY, couleurActive, window.niveauForceCourant);
+    if (formeActive === 'pointContact') dessinerPointContact(mouseX, mouseY, couleurActive, window.pourcentageContactCourant, window.coteContactCourant);
+    
+    ctx.restore();
+}
+
 
     const modeDashed = dashedCheck ? dashedCheck.checked : false;
     configurerStyleDessin(null, modeDashed); 
@@ -1216,10 +1214,19 @@ function declencherDebutTrace(e) {
     // Armement de la position de départ pour les formes tactiques (Palette ou Clavier)
     const outilTactiqueActif = (window.outilTraceActif !== "select") ? window.outilTraceActif : outilActif;
     if (['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact'].includes(outilTactiqueActif)) {
-        isDrawing = true; // Active l'état pour autoriser le suivi du mouvement
+        isDrawing = true; 
+        
+        // CORRECTION CRITIQUE : Armement immédiat des coordonnées globales pour l'iPad
         mouseX = localX;
         mouseY = localY;
-        window.redessinerToutesLesLignes();
+
+        // CORRECTION CONFORT : Force le premier rendu instantané sous le doigt
+        if (!animationFrameId) {
+            animationFrameId = requestAnimationFrame(() => {
+                window.redessinerToutesLesLignes();
+                animationFrameId = null;
+            });
+        }
         return;
     }
 
@@ -1229,15 +1236,13 @@ function declencherDebutTrace(e) {
     }
 }
 
-
-
 function declencherMouvementTrace(e) {
     // Extrait les coordonnées exactes sous le doigt ou le stylet de l'iPad
     const coords = obtenirCoordonneesEvenement(e, table);
     const x = coords.x;
     const y = coords.y;
 
-    // === NOUVEAU : EN DIRECT SUR IPAD - RAFRAÎCHIT L'APERÇU FANTÔME AU GLISSEMENT ===
+    // === EN DIRECT SUR IPAD - RAFRAÎCHIT L'APERÇU FANTÔME AU GLISSEMENT ===
     const listeFormesTactiques = ['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact'];
     if (listeFormesTactiques.includes(window.outilTraceActif) || outilActif) {
         if (e.cancelable) e.preventDefault(); // Empêche la page iPad de trembler ou défiler
@@ -1278,30 +1283,30 @@ function declencherMouvementTrace(e) {
     }
 }
 
-
 function declencherFinTrace(e) {
-    // === NOUVEAU : VALIDATION DU DÉPÔT AU RELÂCHEMENT DU DOIGT SUR IPAD ===
+    // === VALIDATION DU DÉPÔT AU RELÂCHEMENT DU DOIGT SUR IPAD ===
     const outilTactiqueActif = (window.outilTraceActif !== "select") ? window.outilTraceActif : outilActif;
     const listeFormesTactiques = ['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact'];
 
     if (listeFormesTactiques.includes(outilTactiqueActif)) {
-        // Au moment où le doigt quitte l'écran, on fige les dernières coordonnées connues (mouseX, mouseY)
-        const couleurActive = window.billeSelectionneeCourante ? 
-            window.billeSelectionneeCourante.style.backgroundColor : 
-            (colorSelect ? colorSelect.value : '#ffffff');
+        if (isDrawing) {
+            const couleurActive = window.billeSelectionneeCourante ? 
+                window.billeSelectionneeCourante.style.backgroundColor : 
+                (colorSelect ? colorSelect.value : '#ffffff');
 
-        let nouvelElement = {
-            couleur: couleurActive,
-            points: [{ x: mouseX, y: mouseY }]
-        };
+            let nouvelElement = {
+                couleur: couleurActive,
+                points: [{ x: mouseX, y: mouseY }]
+            };
 
-        if (outilTactiqueActif === 'cible') { nouvelElement.estCible = true; nouvelElement.quadrant = window.quadrantCibleCourant || 0; }
-        if (outilTactiqueActif === 'carre') { nouvelElement.estCarre = true; nouvelElement.taille = window.tailleCarreCourante || 95; }
-        if (outilTactiqueActif === 'repereX') { nouvelElement.estRepereX = true; nouvelElement.estUnCercle = window.repereXEstUnCercle; nouvelElement.branches = window.nombreBranchesRepereX; nouvelElement.texte = window.repereXTexte; }
-        if (outilTactiqueActif === 'effetBlanche') { nouvelElement.estEffetBlanche = true; nouvelElement.force = window.niveauForceCourant; }
-        if (outilTactiqueActif === 'pointContact') { nouvelElement.estPointContact = true; nouvelElement.pourcentage = window.pourcentageContactCourant; nouvelElement.cote = window.coteContactCourant; }
+            if (outilTactiqueActif === 'cible') { nouvelElement.estCible = true; nouvelElement.quadrant = window.quadrantCibleCourant || 0; }
+            if (outilTactiqueActif === 'carre') { nouvelElement.estCarre = true; nouvelElement.taille = window.tailleCarreCourante || 95; }
+            if (outilTactiqueActif === 'repereX') { nouvelElement.estRepereX = true; nouvelElement.estUnCercle = window.repereXEstUnCercle; nouvelElement.branches = window.nombreBranchesRepereX; nouvelElement.texte = window.repereXTexte; }
+            if (outilTactiqueActif === 'effetBlanche') { nouvelElement.estEffetBlanche = true; nouvelElement.force = window.niveauForceCourant; }
+            if (outilTactiqueActif === 'pointContact') { nouvelElement.estPointContact = true; nouvelElement.pourcentage = window.pourcentageContactCourant; nouvelElement.cote = window.coteContactCourant; }
 
-        window.dessinsSauvegardes.push(nouvelElement);
+            window.dessinsSauvegardes.push(nouvelElement);
+        }
         
         // Nettoyage des états
         isDrawing = false;
@@ -1324,9 +1329,11 @@ function declencherFinTrace(e) {
     }
 }
 
-
 function commencerDessin(e) {
+    // CORRECTION ESSENTIELLE : Nettoie l'aperçu clavier pour éviter la superposition parasite de formes
+    outilActif = null; 
     isDrawing = true;
+    
     const coords = obtenirCoordonneesEvenement(e, table);
     const x = coords.x;
     const y = coords.y;
