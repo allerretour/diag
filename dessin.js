@@ -27,79 +27,100 @@ window.outilTraceActif = "select";
 
 // Écouteur mis à jour pour piloter l'intégralité de la palette (P, T, Z, 0, 9)
 const boutonsOutils = document.querySelectorAll('.tool-btn');
-boutonsOutils.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        const toolSelected = btn.getAttribute('data-tool');
-        
-        // --- LOGIQUE DE ROTATION UNIVERSELLE ---
-        const cyclerOption = (valeurActuelle, tableauOptions) => {
-            const indexActuel = tableauOptions.indexOf(valeurActuelle);
-            const indexSuivant = (indexActuel + 1) % tableauOptions.length;
-            return tableauOptions[indexSuivant];
-        };
-        
-        // --- LOGIQUE DE CYCLE MULTI-CLIC (IPAD & SOURIS) ---
-        if (window.outilTraceActif === toolSelected) {
-            if (toolSelected === 'pointContact') {
-                window.pourcentageContactCourant -= 10;
-                if (window.pourcentageContactCourant < 0) {
-                    window.pourcentageContactCourant = 100;
-                }
+
+function gererLogiquePalette(btn, e) {
+    // Empêche le comportement par défaut du tactile (évite le zoom ou le défilement parasite)
+    if (e.cancelable) e.preventDefault();
+    
+    const toolSelected = btn.getAttribute('data-tool');
+    
+    // --- LOGIQUE DE ROTATION UNIVERSELLE ---
+    const cyclerOption = (valeurActuelle, tableauOptions) => {
+        const indexActuel = tableauOptions.indexOf(valeurActuelle);
+        const indexSuivant = (indexActuel + 1) % tableauOptions.length;
+        return tableauOptions[indexSuivant];
+    };
+    
+    // --- LOGIQUE DE CYCLE MULTI-CLIC (IPAD & SOURIS) ---
+    if (window.outilTraceActif === toolSelected) {
+        if (toolSelected === 'pointContact') {
+            window.pourcentageContactCourant -= 10;
+            if (window.pourcentageContactCourant < 0) {
+                window.pourcentageContactCourant = 100;
             }
-            else if (toolSelected === 'cible') {
-                // Cycle parfait entre les quadrants 0, 1, 2 et 3
-                window.quadrantCibleCourant = cyclerOption(window.quadrantCibleCourant, [0, 1, 2, 3]);
-            }
-            else if (toolSelected === 'carre') {
-                // Cycle parfait entre les 3 tailles de carré
-                window.tailleCarreCourante = cyclerOption(window.tailleCarreCourante, [95, 135, 180]);
-            }
-            else if (toolSelected === 'effetBlanche') {
-                // Cycle parfait entre les niveaux de force (0 à 4)
-                window.niveauForceCourant = cyclerOption(window.niveauForceCourant, [0, 1, 2, 3, 4]);
-                
-                // Si on boucle et revient à 0 (désactivé), on quitte l'outil
-                if (window.niveauForceCourant === 0) {
-                    const btnSelect = document.querySelector('.tool-btn[data-tool="select"]');
-                    if (btnSelect) btnSelect.click();
-                    return;
-                }
-            }
-            else if (toolSelected === 'repereX') {
-                if (!window.repereXEstUnCercle && window.nombreBranchesRepereX === 6 && window.repereXTexte === null) window.repereXEstUnCercle = true;
-                else if (!window.repereXEstUnCercle && window.nombreBranchesRepereX === 4 && window.repereXTexte === null) window.nombreBranchesRepereX = 6;
-                else if (window.repereXEstUnCercle && window.repereXTexte === null) { window.repereXEstUnCercle = false; window.repereXTexte = cycleCaracteres[0]; }
-                else if (window.repereXTexte !== null) {
-                    const indexActuel = cycleCaracteres.indexOf(window.repereXTexte);
-                    if (indexActuel >= 0 && indexActuel < cycleCaracteres.length - 1) window.repereXTexte = cycleCaracteres[indexActuel + 1];
-                    else { window.repereXTexte = null; window.nombreBranchesRepereX = 4; window.repereXEstUnCercle = false; }
-                }
-            }
-            if (typeof window.redessinerToutesLesLignes === "function") window.redessinerToutesLesLignes();
-            return;
         }
-
-        // --- APPLIQUE LE CHANGEMENT D'OUTIL ---
-        boutonsOutils.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        window.outilTraceActif = toolSelected;
-        
-        // Initialisations lors du premier clic
-        if (toolSelected === 'pointContact') { window.pourcentageContactCourant = 100; window.coteContactCourant = 1; }
-        if (toolSelected === 'repereX') { window.nombreBranchesRepereX = 4; window.repereXEstUnCercle = false; window.repereXTexte = null; }
-        if (toolSelected === 'effetBlanche') { window.niveauForceCourant = 0; }
-
-        const canvas = document.getElementById('drawing-canvas');
-        if (canvas) {
-            if (window.outilTraceActif !== "select") {
-                canvas.style.pointerEvents = 'auto';
-            } else {
-                canvas.style.pointerEvents = 'none';
+        else if (toolSelected === 'cible') {
+            window.quadrantCibleCourant = cyclerOption(window.quadrantCibleCourant, [0, 1, 2, 3]);
+        }
+        else if (toolSelected === 'carre') {
+            window.tailleCarreCourante = cyclerOption(window.tailleCarreCourante, [95, 135, 180]);
+        }
+        else if (toolSelected === 'effetBlanche') {
+            window.niveauForceCourant = cyclerOption(window.niveauForceCourant, [0, 1, 2, 3, 4]);
+            
+            if (window.niveauForceCourant === 0) {
+                const btnSelect = document.querySelector('.tool-btn[data-tool="select"]');
+                if (btnSelect) {
+                    window.outilTraceActif = "select";
+                    boutonsOutils.forEach(b => b.classList.remove('active'));
+                    btnSelect.classList.add('active');
+                    const canvas = document.getElementById('drawing-canvas');
+                    if (canvas) canvas.style.pointerEvents = 'none';
+                }
+                if (typeof window.redessinerToutesLesLignes === "function") window.redessinerToutesLesLignes();
+                return;
+            }
+        }
+        else if (toolSelected === 'repereX') {
+            if (!window.repereXEstUnCercle && window.nombreBranchesRepereX === 6 && window.repereXTexte === null) window.repereXEstUnCercle = true;
+            else if (!window.repereXEstUnCercle && window.nombreBranchesRepereX === 4 && window.repereXTexte === null) window.nombreBranchesRepereX = 6;
+            else if (window.repereXEstUnCercle && window.repereXTexte === null) { window.repereXEstUnCercle = false; window.repereXTexte = cycleCaracteres[0]; }
+            else if (window.repereXTexte !== null) {
+                const indexActuel = cycleCaracteres.indexOf(window.repereXTexte);
+                if (indexActuel >= 0 && indexActuel < cycleCaracteres.length - 1) window.repereXTexte = cycleCaracteres[indexActuel + 1];
+                else { window.repereXTexte = null; window.nombreBranchesRepereX = 4; window.repereXEstUnCercle = false; }
             }
         }
         if (typeof window.redessinerToutesLesLignes === "function") window.redessinerToutesLesLignes();
+        return;
+    }
+
+    // --- APPLIQUE LE CHANGEMENT D'OUTIL ---
+    boutonsOutils.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    window.outilTraceActif = toolSelected;
+    
+    // Initialisations lors du premier clic
+    if (toolSelected === 'pointContact') { window.pourcentageContactCourant = 100; window.coteContactCourant = 1; }
+    if (toolSelected === 'repereX') { window.nombreBranchesRepereX = 4; window.repereXEstUnCercle = false; window.repereXTexte = null; }
+    if (toolSelected === 'effetBlanche') { window.niveauForceCourant = 0; }
+
+    const canvas = document.getElementById('drawing-canvas');
+    if (canvas) {
+        if (window.outilTraceActif !== "select") {
+            canvas.style.pointerEvents = 'auto';
+        } else {
+            canvas.style.pointerEvents = 'none';
+        }
+    }
+    if (typeof window.redessinerToutesLesLignes === "function") window.redessinerToutesLesLignes();
+}
+
+// Double attachement : tactile (touchstart) ET souris (click)
+boutonsOutils.forEach(btn => {
+    // Pour l'iPad / iPhone
+    btn.addEventListener('touchstart', (e) => {
+        gererLogiquePalette(btn, e);
+    }, { passive: false });
+
+    // Pour l'ordinateur de bureau (PC/Mac)
+    btn.addEventListener('click', (e) => {
+        // Si l'événement vient d'un doigt, on ignore le clic fantôme généré par le navigateur
+        if (e.pointerType === 'touch' || (e.clientX === 0 && e.clientY === 0)) return;
+        gererLogiquePalette(btn, e);
     });
 });
+
 
 
 // Fonction universelle pour cycler dans un tableau d'options
