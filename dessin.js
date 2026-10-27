@@ -18,13 +18,51 @@ window.niveauForceCourant = 0;
 const labelsForce = { 1: "DOUX", 2: "MOYEN", 3: "FORT", 4: "MAX" };
 const couleursForce = { 1: "#2ecc71", 2: "#f1c40f", 3: "#e67e22", 4: "#e74c3c" }; // Vert, Jaune, Orange, Rouge
 
-
 window.pourcentageContactCourant = 100; 
 window.coteContactCourant = 1; // 1 = Frappe par la gauche, -1 = Frappe par la droite
 
+// Variable globale pour suivre l'outil sélectionné dans la palette
+window.outilTraceActif = "select"; // 'select', 'pencil', 'line', 'arrow', 'erase'
 
+// Écouteur pour la palette de boutons
+const boutonsOutils = document.querySelectorAll('.tool-btn');
+boutonsOutils.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        boutonsOutils.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        window.outilTraceActif = btn.getAttribute('data-tool');
+        
+        // Si on est en mode tracé ou gomme, le canvas intercepte les clics en priorité
+        const canvas = document.getElementById('drawing-canvas');
+        if (canvas) {
+            if (window.outilTraceActif !== "select") {
+                canvas.style.pointerEvents = 'auto';
+            } else {
+                canvas.style.pointerEvents = 'none';
+            }
+        }
+    });
+});
 
+// Extraction universelle des coordonnées qu'il s'agisse d'un clic (PC) ou d'un Touch (iPad)
+function obtenirCoordonneesEvenement(e, tableElement) {
+    const rect = tableElement.getBoundingClientRect();
+    let clientX, clientY;
 
+    if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+    } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+    }
+
+    return {
+        x: Math.round(clientX - rect.left),
+        y: Math.round(clientY - rect.top)
+    };
+}
 
 document.addEventListener("DOMContentLoaded", () => {
     const canvas = document.getElementById('drawing-canvas');
@@ -35,9 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const colorSelect = document.getElementById('marker-color');
     const clearBtn = document.getElementById('btn-clear-lines');
     const undoBtn = document.getElementById('btn-undo-lines'); 
-    // AJOUT : Récupération de la case à cocher
     const dashedCheck = document.getElementById('chk-dashed-lines');
-	// === AJOUT : Récupération de la nouvelle case à cocher ===
     const toggleDrawingsCheck = document.getElementById('chk-toggle-drawings');
 
     let isDrawing = false;
@@ -46,29 +82,18 @@ document.addEventListener("DOMContentLoaded", () => {
     let isCtrlPressed = false;
     let isShiftPressed = false;
 	
-	// Rafraîchir instantanément les coordonnées de la liste latérale au changement du magnétisme
-if (chkMagnetism) {
-    chkMagnetism.addEventListener('change', () => {
-        if (typeof rafraichirListeLateraleBilles === "function") {
-            rafraichirListeLateraleBilles();
-        }
-    });
-}
+    if (typeof chkMagnetism !== "undefined" && chkMagnetism) {
+        chkMagnetism.addEventListener('change', () => {
+            if (typeof rafraichirListeLateraleBilles === "function") {
+                rafraichirListeLateraleBilles();
+            }
+        });
+    }
 
-
-
-
-
-
-
-// === AJOUT POUR L'APERÇU FANTÔME ===
-let outilActif = null; // Peut valoir: 'cible', 'carre', 'effetBlanche', 'repereX'
-
-    // Variables pour suivre la position du curseur sur la table de billard
+    // === ADAPTATION APERÇU FANTÔME ===
+    let outilActif = null; 
     let mouseX = 0;
     let mouseY = 0;
-
-        // === SUIVI EN DIRECT OPTIMISÉ POUR L'APERÇU FANTÔME ===
     let animationFrameId = null;
 
     table.addEventListener('mousemove', (e) => {
@@ -76,210 +101,169 @@ let outilActif = null; // Peut valoir: 'cible', 'carre', 'effetBlanche', 'repere
         mouseX = Math.round(e.clientX - rect.left);
         mouseY = Math.round(e.clientY - rect.top);
 
-        // Si aucun outil fantôme n'est actif, inutile de surcharger le processeur
         if (!outilActif) return;
-
-        // Si un rafraîchissement graphique est déjà planifié pour le prochain cycle de l'écran, on attend
         if (animationFrameId) return;
 
-        // Planification du dessin synchronisé avec l'écran
         animationFrameId = requestAnimationFrame(() => {
             window.redessinerToutesLesLignes();
-            animationFrameId = null; // Libère le verrou une fois le rendu terminé
+            animationFrameId = null; 
         });
     });
-
-
 	
-	
-function dessinerPointContact(x, y, couleur, pctFige, coteFige) {
-    ctx.save();
+    function dessinerPointContact(x, y, couleur, pctFige, coteFige) {
+        ctx.save();
+        const pct = (pctFige !== undefined) ? pctFige : window.pourcentageContactCourant;
+        const cote = (coteFige !== undefined) ? coteFige : window.coteContactCourant;
+        const couleurMarqueur = couleur || (colorSelect ? colorSelect.value : '#ffffff');
 
-    // 1. EXTRACTION DES PARAMÈTRES FIGÉS OU DYNAMIQUES
-    const pct = (pctFige !== undefined) ? pctFige : window.pourcentageContactCourant;
-    const cote = (coteFige !== undefined) ? coteFige : window.coteContactCourant;
-    const couleurMarqueur = couleur || (colorSelect ? colorSelect.value : '#ffffff');
+        const largeurCadre = 180;
+        const hauteurCadre = 110;
+        const cadreX = x - (largeurCadre / 2);
+        const cadreY = y - hauteurCadre - 25; 
+        const arrondiCoins = 12;
 
-    // 2. DIMENSIONS ET HABILLAGE DU PANNEAU (Style effetsBilleBlanche)
-    const largeurCadre = 180;
-    const hauteurCadre = 110;
-    const cadreX = x - (largeurCadre / 2);
-    const cadreY = y - hauteurCadre - 25; // Positionné élégamment au-dessus du curseur
-    const arrondiCoins = 12;
+        ctx.beginPath();
+        ctx.roundRect(cadreX, cadreY, largeurCadre, hauteurCadre, arrondiCoins);
+        ctx.fillStyle = "rgba(16, 20, 30, 0.88)";
+        ctx.fill();
 
-    // Fond du cadre noir/anthracite translucide
-    ctx.beginPath();
-    ctx.roundRect(cadreX, cadreY, largeurCadre, hauteurCadre, arrondiCoins);
-    ctx.fillStyle = "rgba(16, 20, 30, 0.88)";
-    ctx.fill();
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
 
-    // Liseré subtil autour du cadre
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
-    ctx.lineWidth = 1;
-    ctx.stroke();
+        const centreCadreX = cadreX + (largeurCadre / 2);
+        const centreCadreY = cadreY + (hauteurCadre / 2) + 8; 
+        const rayonBilleAgrandie = 22; 
+        const diametreAgrandie = rayonBilleAgrandie * 2;
+        const decalageX = diametreAgrandie * (1 - (pct / 100));
 
-    // 3. CONFIGURATION DES BILLES AGRANDIES DANS LE CADRE
-    const centreCadreX = cadreX + (largeurCadre / 2);
-    const centreCadreY = cadreY + (hauteurCadre / 2) + 8; // Décalé vers le bas pour laisser la place aux titres
-    const rayonBilleAgrandie = 22; // Multiplié par deux par rapport à la table
-    const diametreAgrandie = rayonBilleAgrandie * 2;
+        ctx.beginPath();
+        ctx.arc(centreCadreX, centreCadreY, rayonBilleAgrandie, 0, 2 * Math.PI);
+        ctx.save();
+        ctx.globalAlpha = 0.35;
+        ctx.fillStyle = couleurMarqueur;
+        ctx.fill();
+        ctx.restore();
+        ctx.strokeStyle = couleurMarqueur;
+        ctx.lineWidth = 2;
+        ctx.stroke();
 
-    // Calcul du décalage horizontal de la blanche selon la fente
-    const decalageX = diametreAgrandie * (1 - (pct / 100));
+        const blancheX = centreCadreX - (decalageX * cote);
+        ctx.beginPath();
+        ctx.arc(blancheX, centreCadreY, rayonBilleAgrandie, 0, 2 * Math.PI);
+        ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+        ctx.fill();
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2;
+        ctx.stroke();
 
-    // Rendu : Bille Objet Virtuelle (Prend la couleur du marqueur)
-    ctx.beginPath();
-    ctx.arc(centreCadreX, centreCadreY, rayonBilleAgrandie, 0, 2 * Math.PI);
-    ctx.save();
-    ctx.globalAlpha = 0.35;
-    ctx.fillStyle = couleurMarqueur;
-    ctx.fill();
-    ctx.restore();
-    ctx.strokeStyle = couleurMarqueur;
-    ctx.lineWidth = 2;
-    ctx.stroke();
+        ctx.beginPath();
+        ctx.setLineDash([2, 4]);
+        ctx.moveTo(centreCadreX - (rayonBilleAgrandie * 2) - 10, centreCadreY);
+        ctx.lineTo(centreCadreX + (rayonBilleAgrandie * 2) + 10, centreCadreY);
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.setLineDash([]); 
 
-    // Rendu : Bille Blanche d'impact (Décalée à gauche ou à droite selon le côté choisi)
-    const blancheX = centreCadreX - (decalageX * cote);
-    ctx.beginPath();
-    ctx.arc(blancheX, centreCadreY, rayonBilleAgrandie, 0, 2 * Math.PI);
-    ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
-    ctx.fill();
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 2;
-    ctx.stroke();
+        ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+        ctx.font = "bold 12px sans-serif";
+        ctx.textBaseline = "top";
 
-    // Ligne de visée centrale en pointillés très fins dans l'aperçu
-    ctx.beginPath();
-    ctx.setLineDash([2, 4]);
-    ctx.moveTo(centreCadreX - (rayonBilleAgrandie * 2) - 10, centreCadreY);
-    ctx.lineTo(centreCadreX + (rayonBilleAgrandie * 2) + 10, centreCadreY);
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.setLineDash([]); // Reset des pointillés
-
-// 4. LABELS ET ENTÊTES DU PANNEAU DE CONTRÔLE
-// 4. LABELS ET ENTÊTES DU PANNEAU DE CONTRÔLE
-ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
-ctx.font = "bold 12px sans-serif";
-ctx.textBaseline = "top";
-
-if (pct === 100) {
-    // === MODIFICATION : CENTRAGE HORIZONTAL PARFAIT POUR L'IMPACT PLEIN ===
-    ctx.fillStyle = "#ffffff";
-    ctx.textAlign = "center";
-    ctx.fillText("IMPACT PLEIN", cadreX + (largeurCadre / 2), cadreY + 10); 
-} else {
-    // Comportement d'origine pour les autres pourcentages
-    ctx.textAlign = "left";
-    ctx.fillText(cote === 1 ? "IMPACT GAUCHE" : "IMPACT DROITE", cadreX + 12, cadreY + 12);
-
-    ctx.fillStyle = "#ffffff";
-    ctx.textAlign = "right";
-    ctx.fillText(`${pct}%`, cadreX + largeurCadre - 12, cadreY + 10);
-}
-
-
-
-
-    ctx.restore();
-}
-
-	
-	
-	
-
- function configurerStyleDessin(couleur, estPointille) {
-    if (couleur) {
-        ctx.strokeStyle = couleur;
-    } else if (window.billeSelectionneeCourante) {
-        ctx.strokeStyle = window.billeSelectionneeCourante.style.backgroundColor;
-    } else {
-        ctx.strokeStyle = colorSelect ? colorSelect.value : '#ffffff';
+        if (pct === 100) {
+            ctx.fillStyle = "#ffffff";
+            ctx.textAlign = "center";
+            ctx.fillText("IMPACT PLEIN", cadreX + (largeurCadre / 2), cadreY + 10); 
+        } else {
+            ctx.textAlign = "left";
+            ctx.fillText(cote === 1 ? "IMPACT GAUCHE" : "IMPACT DROITE", cadreX + 12, cadreY + 12);
+            ctx.fillStyle = "#ffffff";
+            ctx.textAlign = "right";
+            ctx.fillText(`${pct}%`, cadreX + largeurCadre - 12, cadreY + 10);
+        }
+        ctx.restore();
     }
 
-    ctx.lineWidth = 3;           
-    ctx.lineCap = 'round';       
-    ctx.lineJoin = 'round';
+    function configurerStyleDessin(couleur, estPointille) {
+        if (couleur) {
+            ctx.strokeStyle = couleur;
+        } else if (window.billeSelectionneeCourante) {
+            ctx.strokeStyle = window.billeSelectionneeCourante.style.backgroundColor;
+        } else {
+            ctx.strokeStyle = colorSelect ? colorSelect.value : '#ffffff';
+        }
+        ctx.lineWidth = 3;           
+        ctx.lineCap = 'round';       
+        ctx.lineJoin = 'round';
 
-    if (estPointille) {
-        ctx.setLineDash([4, 8]); // Restauration du motif [4, 8] d'origine
-    } else {
+        if (estPointille) {
+            ctx.setLineDash([4, 8]); 
+        } else {
+            ctx.setLineDash([]);
+        }
+    }
+
+    function dessinerEffetsBilleBlanche(x, y, couleur, forceFige) {
+        ctx.save(); 
+        const marge = 18;
+        let zoneUtileX = marge;
+        let zoneUtileY = marge;
+        let zoneUtileLargeur = ctx.canvas.width - (marge * 2);
+        let zoneUtileHauteur = ctx.canvas.height - (marge * 2);
+
+        ctx.beginPath();
+        ctx.rect(zoneUtileX, zoneUtileY, zoneUtileLargeur, zoneUtileHauteur);
+
+        const forceActuelle = (forceFige !== undefined) ? forceFige : window.niveauForceCourant;
+        const jaugeActive = forceActuelle > 0;
+        
+        const largeurCadre = jaugeActive ? 210 : 150; 
+        const hauteurCadre = 175;
+        const demiLargeur = largeurCadre / 2;
+        const rayonBille = 60;
+        
+        const cadreX = x - demiLargeur;
+        const cadreY = y - rayonBille - 32; 
+        const arronsCoins = 12; 
+
+        ctx.beginPath();
+        ctx.roundRect(cadreX, cadreY, largeurCadre, hauteurCadre, arronsCoins);
+        ctx.fillStyle = "rgba(16, 20, 30, 0.85)"; 
+        ctx.fill();
+
+        const shiftX = jaugeActive ? -20 : 0;
+        const billeX = x + shiftX;
+
+        ctx.save();
+        ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+        ctx.shadowBlur = 12;
+        ctx.shadowOffsetX = 3;
+        ctx.shadowOffsetY = 4;
+        ctx.fillStyle = "#ffffff"; 
+        ctx.beginPath();
+        ctx.arc(billeX, y, rayonBille, 0, 2 * Math.PI);
+        ctx.fill(); 
+        ctx.restore();
+
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.15)"; 
+        ctx.lineWidth = 1;
+        ctx.setLineDash([2, 3]); 
+        
+        const cos45 = Math.cos(Math.PI / 4);
+        const decalageDiag = rayonBille * cos45;
+
+        ctx.beginPath();
+        ctx.moveTo(billeX, y - rayonBille); ctx.lineTo(billeX, y + rayonBille);
+        ctx.moveTo(billeX - rayonBille, y); ctx.lineTo(billeX + rayonBille, y);
+        ctx.moveTo(billeX - decalageDiag, y - decalageDiag); ctx.lineTo(billeX + decalageDiag, y + decalageDiag);
+        ctx.moveTo(billeX - decalageDiag, y + decalageDiag); ctx.lineTo(billeX + decalageDiag, y - decalageDiag);
+        ctx.stroke();
         ctx.setLineDash([]);
-    }
-}
 
-function dessinerEffetsBilleBlanche(x, y, couleur, forceFige) {
-    ctx.save(); 
-
-    // --- 1. CONFIGURATION DES BANDES DE SÉCURITÉ ---
-    const marge = 18;
-    let zoneUtileX = marge;
-    let zoneUtileY = marge;
-    let zoneUtileLargeur = ctx.canvas.width - (marge * 2);
-    let zoneUtileHauteur = ctx.canvas.height - (marge * 2);
-
-    ctx.beginPath();
-    ctx.rect(zoneUtileX, zoneUtileY, zoneUtileLargeur, zoneUtileHauteur);
-
-    const forceActuelle = (forceFige !== undefined) ? forceFige : window.niveauForceCourant;
-    const jaugeActive = forceActuelle > 0;
-    
-    // Proportions du panneau adaptées
-    const largeurCadre = jaugeActive ? 210 : 150; 
-    const hauteurCadre = 175;
-    const demiLargeur = largeurCadre / 2;
-    const rayonBille = 60;
-    
-    const cadreX = x - demiLargeur;
-    const cadreY = y - rayonBille - 32; 
-    const arronsCoins = 12; 
-
-    // 1. Fond du cadre (Teinte anthracite sombre translucide)
-    ctx.beginPath();
-    ctx.roundRect(cadreX, cadreY, largeurCadre, hauteurCadre, arronsCoins);
-    ctx.fillStyle = "rgba(16, 20, 30, 0.85)"; 
-    ctx.fill();
-
-    // Décalage de la bille vers la gauche si la jauge s'affiche
-    const shiftX = jaugeActive ? -20 : 0;
-    const billeX = x + shiftX;
-
-    // 2. Corps de la bille blanche
-    ctx.save();
-    ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
-    ctx.shadowBlur = 12;
-    ctx.shadowOffsetX = 3;
-    ctx.shadowOffsetY = 4;
-    ctx.fillStyle = "#ffffff"; 
-    ctx.beginPath();
-    ctx.arc(billeX, y, rayonBille, 0, 2 * Math.PI);
-    ctx.fill(); 
-    ctx.restore();
-
-    // 3. Réticule (lignes en pointillés fins)
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.15)"; 
-    ctx.lineWidth = 1;
-    ctx.setLineDash([2, 3]); 
-    
-    const cos45 = Math.cos(Math.PI / 4);
-    const decalageDiag = rayonBille * cos45;
-
-    ctx.beginPath();
-    ctx.moveTo(billeX, y - rayonBille); ctx.lineTo(billeX, y + rayonBille);
-    ctx.moveTo(billeX - rayonBille, y); ctx.lineTo(billeX + rayonBille, y);
-    ctx.moveTo(billeX - decalageDiag, y - decalageDiag); ctx.lineTo(billeX + decalageDiag, y + decalageDiag);
-    ctx.moveTo(billeX - decalageDiag, y + decalageDiag); ctx.lineTo(billeX + decalageDiag, y - decalageDiag);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // 4. Points d'effets (Rond central et extérieurs)
-    const rayonPointExterieur = 4.5;
-    const rayonPointCentral = 6.5;
-    const distanceCentre = 42;
-    const diagPoint = distanceCentre * cos45;
-
+        const rayonPointExterieur = 4.5;
+        const rayonPointCentral = 6.5;
+        const distanceCentre = 42;
+        const diagPoint = distanceCentre * cos45;
     const pointsEffets = [
         { dx: 0, dy: 0, estCentre: true },                                
         { dx: 0, dy: -distanceCentre, estCentre: false },                 
@@ -317,16 +301,13 @@ function dessinerEffetsBilleBlanche(x, y, couleur, forceFige) {
     ctx.fillText("CONTACT", billeX, y - rayonBille - 12);
 
     // ====================================================================
-    // JAUGE DE PUISSANCE MODERNISÉE
-    // ====================================================================
-        // ====================================================================
     // JAUGE DE PUISSANCE MODERNISÉE (REPOSITIONNÉE ET CENTRÉE)
     // ====================================================================
     if (jaugeActive) {
         const jaugeWidth = 14;
         const jaugeHeight = rayonBille * 2; // 120px
         
-        // CORRECTION : Décalage vers la gauche de l'ensemble de la jauge pour l'intégrer harmonieusement
+        // Décalage vers la gauche de l'ensemble de la jauge pour l'intégrer harmonieusement
         const jaugeX = cadreX + largeurCadre - 48; 
         const jaugeY = y - rayonBille;
 
@@ -398,11 +379,8 @@ function dessinerEffetsBilleBlanche(x, y, couleur, forceFige) {
         ctx.fillText(`${valeurPourcentage}%`, jaugeX + (jaugeWidth / 2), jaugeY + jaugeHeight + 8);
     }
 
-
     ctx.restore(); 
 }
-
-
 function dessinerRepereXGras(x, y, couleur, texteFige) {
     ctx.save(); 
 
@@ -444,7 +422,6 @@ function dessinerRepereXGras(x, y, couleur, texteFige) {
     
     ctx.restore(); 
 }
-
 
 // === SOUS-FONCTIONS DE RENDU SPÉCIALISÉES POUR LE REPÈRE X ===
 
@@ -510,14 +487,6 @@ function rendreEtoileRepere(x, y, couleur, branches) {
     ctx.stroke();
 }
 
-
-
-
-
-
-
-
-
 function dessinerPointeFleche(fromX, fromY, toX, toY, couleur) {
     const arrowLength = 14; 
     const arrowAngle = Math.PI / 6; 
@@ -548,18 +517,10 @@ function dessinerPointeFleche(fromX, fromY, toX, toY, couleur) {
     ctx.fill(); 
     ctx.restore();
 }
-
-
-
-
-
-
-
-
 function dessinerCible(x, y, couleur) {
     ctx.save(); // Sauvegarde l'état global du canvas
 
-    // === AJOUT TECHNIQUE : FORCE LES LIGNES PLEINES POUR LA CIBLE ===
+    // === FORCE LES LIGNES PLEINES POUR LA CIBLE ===
     ctx.setLineDash([]); 
 
     // --- 1. DÉFINITION DES BANDES DE SÉCURITÉ ---
@@ -642,12 +603,6 @@ function dessinerCible(x, y, couleur) {
     ctx.restore(); // Annule le clip global
 }
 
-
-
-
-	
-// Dessine un carré de 95x95 pixels avec coins arrondis, un fond pâle, et le TRONQUE si besoin
-// Dessine un carré avec coins arrondis, un fond pâle, et le TRONQUE si besoin
 function dessinerCarre(x, y, couleur) {
     ctx.save(); 
 
@@ -665,12 +620,12 @@ function dessinerCarre(x, y, couleur) {
     ctx.beginPath();
     ctx.rect(zoneUtileX, zoneUtileY, zoneUtileLargeur, zoneUtileHauteur);
     ctx.clip(); 
+
     // --- 2. CONFIGURATION DU STYLE ---
     ctx.setLineDash([]); 
     ctx.strokeStyle = couleur;
     ctx.lineWidth = 2;
 
-    // MODIFICATION : Utilisation de la dimension dynamique issue du cycle de rotation
     const taille = window.tailleCarreCourante || 95;
     const demiTaille = taille / 2;
     const rayonCoins = 15; 
@@ -686,9 +641,6 @@ function dessinerCarre(x, y, couleur) {
     ctx.restore(); 
 }
 
-
-// Dessine un rectangle sans bordure avec des coins arrondis qui recouvre une zone de la grille
-// MODIFICATION : ZD/ZA blancs, ZA hachures épaisses/pâles, textes harmonisés (20px, marge 18px)
 function dessinerZoneGrille(zoneIndex, couleur, mode) {
     ctx.save();
     ctx.setLineDash([]); // Réinitialisation par sécurité
@@ -697,7 +649,7 @@ function dessinerZoneGrille(zoneIndex, couleur, mode) {
     ctx.strokeStyle = "transparent";
     ctx.lineWidth = 0;
 
-    // Configuration géométrique de la table (parfaitement alignée)
+    // Configuration géométrique de la table
     const gridLeft = 19;
     const gridTop = 18;
     const gridWidth = 754;
@@ -717,15 +669,12 @@ function dessinerZoneGrille(zoneIndex, couleur, mode) {
     // Calcul des positions physiques du coin haut-gauche de la zone
     const x = gridLeft + (c * pasX);
     const y = gridTop + (r * pasY);
-    
-    // Paramètres de l'arrondi (20 pixels pour épouser les bandes)
     const rayonCoins = 20; 
 
     // Crée le chemin de la zone avec coins arrondis
     ctx.beginPath();
     ctx.roundRect(x, y, pasX, pasY, rayonCoins);
 
-    // --- FORCE LA COULEUR BLANCHE POUR TOUTES LES ZONES ---
     const couleurBlanche = "#ffffff";
 
     if (mode === 'alternatif') {
@@ -758,9 +707,9 @@ function dessinerZoneGrille(zoneIndex, couleur, mode) {
 
     // --- CONFIGURATION COMMUNE ET HARMONISÉE DU FILIGRANE BLANC ---
     ctx.fillStyle = couleurBlanche;
-    ctx.font = "bold 20px sans-serif"; // Même taille pour tous les textes de la zone
-    const marge = 18;                  // Même marge pour les quatre coins
-    const opaciteTexte = 0.2;          // Même opacité pour une intensité égale
+    ctx.font = "bold 20px sans-serif"; 
+    const marge = 18;                  
+    const opaciteTexte = 0.2;          
 
     // 1. DESSIN DU TEXTE « ZD » OU « ZA » (PETIT, EN HAUT À DROITE)
     ctx.save();
@@ -772,13 +721,12 @@ function dessinerZoneGrille(zoneIndex, couleur, mode) {
     ctx.fillText(textPrefixe, x + pasX - marge, y + marge);
     ctx.restore();
 
-    // 2. MODIFICATION : DESSIN DU CHIFFRE UNIQUE IDENTIQUE (20px, EN BAS À GAUCHE)
+    // 2. DESSIN DU CHIFFRE UNIQUE IDENTIQUE (EN BAS À GAUCHE)
     ctx.save();
     ctx.globalAlpha = opaciteTexte; 
     ctx.textAlign = "left";        
     ctx.textBaseline = "bottom";    
     
-    // Même calcul d'alignement avec les proportions des lettres
     const positionChiffreX = x + marge;
     const positionChiffreY = y + pasY - marge;
     
@@ -787,12 +735,7 @@ function dessinerZoneGrille(zoneIndex, couleur, mode) {
 
     ctx.restore();
 }
-
-
-
-
-
-    function resizeCanvas() {
+function resizeCanvas() {
     // 1. Récupérer le facteur de zoom (pixel ratio) du navigateur
     const dpr = window.devicePixelRatio || 1;
     
@@ -813,166 +756,157 @@ function dessinerZoneGrille(zoneIndex, couleur, mode) {
     window.redessinerToutesLesLignes(); 
 }
 
+window.addEventListener('resize', resizeCanvas);
 
-    window.addEventListener('resize', resizeCanvas);
-
-    // Écoute de manière agressive les changements de pixel ratio (Zoom navigateur)
+// Écoute de manière agressive les changements de pixel ratio (Zoom navigateur)
 matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`).addEventListener('change', function () {
     resizeCanvas();
 }, { once: true });
 
-
-    // Redessine l'ensemble des calques de dessin (lignes, flèches et cibles)
-    window.redessinerToutesLesLignes = function() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+// Redessine l'ensemble des calques de dessin (lignes, flèches et cibles)
+window.redessinerToutesLesLignes = function() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    window.dessinsSauvegardes.forEach(dessin => {
         
-        window.dessinsSauvegardes.forEach(dessin => {
-            
-            if (dessin.estCible) {
-                if (dessin.points && dessin.points.length > 0) {
-                    const centre = dessin.points[0];
-                    const tempQuadrant = window.quadrantCibleCourant;
-                    window.quadrantCibleCourant = dessin.hasOwnProperty('quadrant') ? dessin.quadrant : 0;
-                    dessinerCible(centre.x, centre.y, dessin.couleur);
-                    window.quadrantCibleCourant = tempQuadrant;
-                }
-                return;
+        if (dessin.estCible) {
+            if (dessin.points && dessin.points.length > 0) {
+                const centre = dessin.points[0];
+                const tempQuadrant = window.quadrantCibleCourant;
+                window.quadrantCibleCourant = dessin.hasOwnProperty('quadrant') ? dessin.quadrant : 0;
+                dessinerCible(centre.x, centre.y, dessin.couleur);
+                window.quadrantCibleCourant = tempQuadrant;
             }
+            return;
+        }
 
-            if (dessin.estPointContact) {
-    if (dessin.points && dessin.points.length > 0) {
-        const centre = dessin.points[0]; // Extraction du premier point du tableau [{x, y}]
-        dessinerPointContact(centre.x, centre.y, dessin.couleur, dessin.pourcentage, dessin.cote);
+        if (dessin.estPointContact) {
+            if (dessin.points && dessin.points.length > 0) {
+                const centre = dessin.points[0]; // Extraction du premier point du tableau [{x, y}]
+                dessinerPointContact(centre.x, centre.y, dessin.couleur, dessin.pourcentage, dessin.cote);
+            }
+            return;
+        }
+		
+        if (dessin.estCarre) {
+            if (dessin.points && dessin.points.length > 0) {
+                const centre = dessin.points[0];
+                const tempTaille = window.tailleCarreCourante;
+                window.tailleCarreCourante = dessin.taille || 95;
+                dessinerCarre(centre.x, centre.y, dessin.couleur);
+                window.tailleCarreCourante = tempTaille;
+            }
+            return;
+        }
+
+        // === GESTION DE LA FORME D'EFFETS BILLE BLANCHE SAUVEGARDÉE ===
+        if (dessin.estEffetBlanche) {
+            if (dessin.points && dessin.points.length > 0) {
+                const centre = dessin.points[0];
+                // On passe dessin.force qui a été figé au moment du clic
+                dessinerEffetsBilleBlanche(centre.x, centre.y, dessin.couleur, dessin.force);
+            }
+            return;
+        }
+
+        if (dessin.estRepereX) {
+            if (dessin.points && dessin.points[0]) {
+                const centre = dessin.points[0];
+                const tempCercle = window.repereXEstUnCercle;
+                const tempBranches = window.nombreBranchesRepereX;
+                window.repereXEstUnCercle = dessin.hasOwnProperty('estUnCercle') ? dessin.estUnCercle : false;
+                window.nombreBranchesRepereX = dessin.branches || 8;
+                
+                dessinerRepereXGras(centre.x, centre.y, dessin.couleur, dessin.texte);
+                
+                window.repereXEstUnCercle = tempCercle;
+                window.nombreBranchesRepereX = tempBranches;
+            }
+            return;
+        }
+
+        if (dessin.estZoneGrille) {
+            dessinerZoneGrille(dessin.zoneId, dessin.couleur, dessin.mode);
+            return;
+        }
+
+        // Gestion des tracés standards et lignes droites
+        if (dessin.points.length < 2) return;
+        configurerStyleDessin(dessin.couleur, dessin.estPointille);
+        ctx.beginPath();
+        ctx.moveTo(dessin.points[0].x, dessin.points[0].y);
+        
+        if (dessin.estDroite) {
+            const d_point = dessin.points[dessin.points.length - 1];
+            ctx.lineTo(d_point.x, d_point.y);
+            ctx.stroke();
+            
+            if (dessin.avecFleche) {
+                dessinerPointeFleche(dessin.points[0].x, dessin.points[0].y, d_point.x, d_point.y, dessin.couleur);
+            }
+        } else {
+            for (let i = 1; i < dessin.points.length; i++) {
+                ctx.lineTo(dessin.points[i].x, dessin.points[i].y);
+            }
+            ctx.stroke();
+        }
+    });
+
+    // === RENDU EN DIRECT DE L'APERÇU FANTÔME (SOUS LE CURSEUR) ===
+    if (outilActif) {
+        ctx.save();
+        ctx.globalAlpha = 0.40; // Translucide pour l'aperçu dynamique
+        
+        let couleurActive = colorSelect ? colorSelect.value : '#ffffff';
+        if (window.billeSelectionneeCourante) {
+            couleurActive = window.billeSelectionneeCourante.style.backgroundColor;
+        }
+
+        if (outilActif === 'cible') dessinerCible(mouseX, mouseY, couleurActive);
+        if (outilActif === 'carre') dessinerCarre(mouseX, mouseY, couleurActive);
+        if (outilActif === 'repereX') dessinerRepereXGras(mouseX, mouseY, couleurActive);
+        
+        // On envoie la variable de force globale pour l'aperçu sous la souris
+        if (outilActif === 'effetBlanche') {
+            dessinerEffetsBilleBlanche(mouseX, mouseY, couleurActive, window.niveauForceCourant);
+        }
+
+        if (outilActif === 'pointContact') {
+            dessinerPointContact(mouseX, mouseY, couleurActive, window.pourcentageContactCourant, window.coteContactCourant);
+        }
+        
+        ctx.restore();
     }
-    return;
+
+    const modeDashed = dashedCheck ? dashedCheck.checked : false;
+    configurerStyleDessin(null, modeDashed); 
+};
+
+function annulerDernierTrace() {
+    if (window.dessinsSauvegardes.length > 0) {
+        window.dessinsSauvegardes.pop(); 
+        window.redessinerToutesLesLignes(); 
+    }
 }
 
+if (colorSelect) {
+    colorSelect.addEventListener('change', () => {
+        ctx.strokeStyle = colorSelect.value;
+    });
+}
 
+if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        window.dessinsSauvegardes = []; 
+    });
+}
 
-			
-            if (dessin.estCarre) {
-                if (dessin.points && dessin.points.length > 0) {
-                    const centre = dessin.points[0];
-                    const tempTaille = window.tailleCarreCourante;
-                    window.tailleCarreCourante = dessin.taille || 95;
-                    dessinerCarre(centre.x, centre.y, dessin.couleur);
-                    window.tailleCarreCourante = tempTaille;
-                }
-                return;
-            }
+if (undoBtn) {
+    undoBtn.addEventListener('click', annulerDernierTrace);
+}
 
-            // === GESTION DE LA FORME D'EFFETS BILLE BLANCHE SAUVEGARDÉE ===
-            if (dessin.estEffetBlanche) {
-                if (dessin.points && dessin.points.length > 0) {
-                    const centre = dessin.points[0];
-                    // On passe dessin.force qui a été figé au moment du clic
-                    dessinerEffetsBilleBlanche(centre.x, centre.y, dessin.couleur, dessin.force);
-                }
-                return;
-            }
-
-            if (dessin.estRepereX) {
-                if (dessin.points && dessin.points[0]) {
-                    const centre = dessin.points[0];
-                    const tempCercle = window.repereXEstUnCercle;
-                    const tempBranches = window.nombreBranchesRepereX;
-                    window.repereXEstUnCercle = dessin.hasOwnProperty('estUnCercle') ? dessin.estUnCercle : false;
-                    window.nombreBranchesRepereX = dessin.branches || 8;
-                    
-                    dessinerRepereXGras(centre.x, centre.y, dessin.couleur, dessin.texte);
-                    
-                    window.repereXEstUnCercle = tempCercle;
-                    window.nombreBranchesRepereX = tempBranches;
-                }
-                return;
-            }
-
-            if (dessin.estZoneGrille) {
-                dessinerZoneGrille(dessin.zoneId, dessin.couleur, dessin.mode);
-                return;
-            }
-
-            // Gestion des tracés standards et lignes droites
-            if (dessin.points.length < 2) return;
-            configurerStyleDessin(dessin.couleur, dessin.estPointille);
-            ctx.beginPath();
-            ctx.moveTo(dessin.points[0].x, dessin.points[0].y);
-            
-            if (dessin.estDroite) {
-                const d_point = dessin.points[dessin.points.length - 1];
-                ctx.lineTo(d_point.x, d_point.y);
-                ctx.stroke();
-                
-                if (dessin.avecFleche) {
-                    dessinerPointeFleche(dessin.points[0].x, dessin.points[0].y, d_point.x, d_point.y, dessin.couleur);
-                }
-            } else {
-                for (let i = 1; i < dessin.points.length; i++) {
-                    ctx.lineTo(dessin.points[i].x, dessin.points[i].y);
-                }
-                ctx.stroke();
-            }
-        });
-
-        // === RENDU EN DIRECT DE L'APERÇU FANTÔME (SOUS LE CURSEUR) ===
-        if (outilActif) {
-            ctx.save();
-            ctx.globalAlpha = 0.40; // Translucide pour l'aperçu dynamique
-            
-            let couleurActive = colorSelect ? colorSelect.value : '#ffffff';
-            if (window.billeSelectionneeCourante) {
-                couleurActive = window.billeSelectionneeCourante.style.backgroundColor;
-            }
-
-            if (outilActif === 'cible') dessinerCible(mouseX, mouseY, couleurActive);
-            if (outilActif === 'carre') dessinerCarre(mouseX, mouseY, couleurActive);
-            if (outilActif === 'repereX') dessinerRepereXGras(mouseX, mouseY, couleurActive);
-            
-            // MODIFICATION ICI : On envoie la variable de force globale pour l'aperçu sous la souris
-            if (outilActif === 'effetBlanche') {
-                dessinerEffetsBilleBlanche(mouseX, mouseY, couleurActive, window.niveauForceCourant);
-            }
-
-            if (outilActif === 'pointContact') {
-                dessinerPointContact(mouseX, mouseY, couleurActive, window.pourcentageContactCourant, window.coteContactCourant);
-            }
-
-            
-            ctx.restore();
-        }
-
-        const modeDashed = dashedCheck ? dashedCheck.checked : false;
-        configurerStyleDessin(null, modeDashed); 
-    };
-
-
-    function annulerDernierTrace() {
-        if (window.dessinsSauvegardes.length > 0) {
-            window.dessinsSauvegardes.pop(); 
-            window.redessinerToutesLesLignes(); 
-        }
-    }
-
-    if (colorSelect) {
-        colorSelect.addEventListener('change', () => {
-            ctx.strokeStyle = colorSelect.value;
-        });
-    }
-
-    if (clearBtn) {
-        clearBtn.addEventListener('click', () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            window.dessinsSauvegardes = []; 
-        });
-    }
-
-    if (undoBtn) {
-        undoBtn.addEventListener('click', annulerDernierTrace);
-    }
-
-   // ====================================================================
-// GESTION AUTONOME DE LA CASE À COCHER "DESSINS/TRACÉS"
-// ====================================================================
+// === GESTION AUTONOME DE LA CASE À COCHER "DESSINS/TRACÉS" ===
 if (toggleDrawingsCheck) {
     toggleDrawingsCheck.addEventListener('change', () => {
         canvas.style.visibility = toggleDrawingsCheck.checked ? 'visible' : 'hidden';
@@ -1002,116 +936,75 @@ document.addEventListener('keydown', (e) => {
 
     if (e.key.toLowerCase() === 't') {
         e.preventDefault();
-
         if (outilActif === 'cible') {
-            // Si l'outil est déjà actif, on passe au quadrant suivant (0 ➔ 1 ➔ 2 ➔ 3 ➔ 0)
             window.quadrantCibleCourant = (window.quadrantCibleCourant + 1) % 4;
         } else {
-            // Si l'outil n'était pas actif, on l'active
             outilActif = 'cible';
         }
-
         if (outilActif) canvas.style.pointerEvents = 'auto';
         window.redessinerToutesLesLignes();
     }
 
-
-
-      if (e.key.toLowerCase() === 'p') {
-    e.preventDefault();
-
-    if (outilActif !== 'pointContact') {
-        outilActif = 'pointContact';
-        window.pourcentageContactCourant = 100;
-        window.coteContactCourant = 1; // Commence par défaut à gauche
-    } else {
-        window.pourcentageContactCourant -= 10;
-        if (window.pourcentageContactCourant < 0) {
-            
+    if (e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        if (outilActif !== 'pointContact') {
+            outilActif = 'pointContact';
             window.pourcentageContactCourant = 100;
+            window.coteContactCourant = 1; 
+        } else {
+            window.pourcentageContactCourant -= 10;
+            if (window.pourcentageContactCourant < 0) {
+                window.pourcentageContactCourant = 100;
+            }
         }
+        if (outilActif) canvas.style.pointerEvents = 'auto';
+        window.redessinerToutesLesLignes();
     }
-    if (outilActif) canvas.style.pointerEvents = 'auto';
-    window.redessinerToutesLesLignes();
-}
 
-// Changement de côté à la volée
-if (e.key === 'Shift' && outilActif === 'pointContact') {
-    e.preventDefault();
-    // Alterne entre 1 (gauche) et -1 (droite)
-    window.coteContactCourant = window.coteContactCourant * -1;
-    window.redessinerToutesLesLignes();
-}
+    if (e.key === 'Shift' && outilActif === 'pointContact') {
+        e.preventDefault();
+        window.coteContactCourant = window.coteContactCourant * -1;
+        window.redessinerToutesLesLignes();
+    }
 
-
-
-
-
-
-
-    // ====================================================================
     // DÉPLACEMENT MICRO-MÉTRIQUE DES BILLES AUX FLÈCHES DU CLAVIER
-    // ====================================================================
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-        // Si aucune bille n'est sélectionnée, on ne fait rien
         if (!window.billeSelectionneeCourante || window.billeSelectionneeCourante.style.display === 'none') {
             return;
         }
-
-        // Bloque le défilement par défaut de la page web dans le navigateur
         e.preventDefault();
 
-        // 1. Récupération des positions physiques actuelles en pixels
         let currentX = parseFloat(window.billeSelectionneeCourante.style.left) || 0;
         let currentY = parseFloat(window.billeSelectionneeCourante.style.top) || 0;
 
-        // 2. Définition des pas géométriques basés sur votre grille 16x8
         const gridWidth = 754;
         const gridHeight = 364;
-        const pasX = gridWidth / 16;  // ~47.12px (1 unité de grille X)
-        const pasY = gridHeight / 8;  // ~45.5px  (1 unité de grille Y)
+        const pasX = gridWidth / 16;  
+        const pasY = gridHeight / 8;  
 
-        // Si SHIFT est enfoncé, on déplace d'une case entière, sinon d'un micro-pas (1/10ème de case)
         const multiplicateur = e.shiftKey ? 1.0 : 0.1;
         const incrementX = pasX * multiplicateur;
         const incrementY = pasY * multiplicateur;
 
-        // 3. Calcul des nouvelles coordonnées selon la flèche pressée
         switch (e.key) {
-            case 'ArrowLeft':
-                currentX -= incrementX;
-                break;
-            case 'ArrowRight':
-                currentX += incrementX;
-                break;
-            case 'ArrowUp':
-                currentY -= incrementY; // En CSS, diminuer 'top' fait monter l'élément
-                break;
-            case 'ArrowDown':
-                currentY += incrementY; // Augmenter 'top' fait descendre l'élément
-                break;
+            case 'ArrowLeft':  currentX -= incrementX; break;
+            case 'ArrowRight': currentX += incrementX; break;
+            case 'ArrowUp':    currentY -= incrementY; break;
+            case 'ArrowDown':  currentY += incrementY; break;
         }
 
-        // 4. Sécurité anti-débordement des bandes et poches
         const positionClampee = clampPosition(currentX, currentY);
-
-        // 5. Application directe des coordonnées physiques (sans snap magnétique forcé pour permettre le hors-piste au millimètre)
         window.billeSelectionneeCourante.style.left = `${positionClampee.x}px`;
         window.billeSelectionneeCourante.style.top = `${positionClampee.y}px`;
 
-        // 6. Résolution des collisions à la volée avec les autres billes du tapis
         if (typeof resolveCollisions === "function") {
             resolveCollisions(window.billeSelectionneeCourante);
         }
-
-        // 7. Rafraîchissement des modules d'information (HUD latéral et affichage texte)
         if (typeof rafraichirListeLateraleBilles === "function") {
             rafraichirListeLateraleBilles();
         }
     }
 
-
-    // === LOGIQUE DU RACCOURCI TOUCHE H SYNCED AVEC LA CASE À COCHER ===
     if (e.key.toLowerCase() === 'h') {
         e.preventDefault();
         if (canvas.style.visibility === 'hidden') {
@@ -1123,96 +1016,68 @@ if (e.key === 'Shift' && outilActif === 'pointContact') {
         }
     }
 
-
     if (e.key.toLowerCase() === 'z' && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();
-
         if (outilActif === 'carre') {
-            // Si l'outil est déjà actif, on fait tourner les dimensions (3 tailles)
             if (window.tailleCarreCourante === 95) window.tailleCarreCourante = 135;
             else if (window.tailleCarreCourante === 135) window.tailleCarreCourante = 180;
-            else window.tailleCarreCourante = 95; // Retour au début du cycle
+            else window.tailleCarreCourante = 95; 
         } else {
-            // Si l'outil n'était pas actif, on l'active
             outilActif = 'carre';
         }
-
         if (outilActif) canvas.style.pointerEvents = 'auto';
         window.redessinerToutesLesLignes();
     }
-
-
-
     
-           if (e.key === '9') {
+    if (e.key === '9') {
         e.preventDefault();
-
         if (outilActif === 'repereX') {
             if (!window.repereXEstUnCercle && window.nombreBranchesRepereX === 4 && window.repereXTexte === null) {
-                // Étoile 4 -> Étoile 6
                 window.nombreBranchesRepereX = 6;
             } 
             else if (!window.repereXEstUnCercle && window.nombreBranchesRepereX === 6 && window.repereXTexte === null) {
-                // Étoile 6 -> Cercle
                 window.repereXEstUnCercle = true;
             } 
             else if (window.repereXEstUnCercle && window.repereXTexte === null) {
-                // Cercle -> Lettre A (On désactive le cercle instantanément)
                 window.repereXEstUnCercle = false;
-                window.repereXTexte = cycleCaracteres[0]; // "A"
+                window.repereXTexte = cycleCaracteres[0]; 
             } 
             else if (window.repereXTexte !== null) {
-                // Progression dans le tableau des caractères (A-F, 1-6)
                 const indexActuel = cycleCaracteres.indexOf(window.repereXTexte);
                 if (indexActuel >= 0 && indexActuel < cycleCaracteres.length - 1) {
                     window.repereXTexte = cycleCaracteres[indexActuel + 1];
                 } else {
-                    // Fin de la liste -> Retour à la configuration de départ
                     window.repereXTexte = null;
                     window.nombreBranchesRepereX = 4;
                     window.repereXEstUnCercle = false;
                 }
             }
         } else {
-            // Premier appui sur la touche : Initialisation de l'outil fantôme
             outilActif = 'repereX';
             window.nombreBranchesRepereX = 4;
             window.repereXEstUnCercle = false;
             window.repereXTexte = null;
         }
-
         if (outilActif) canvas.style.pointerEvents = 'auto';
         window.redessinerToutesLesLignes();
     }
 
-
-
-
-        if (e.key === '0') {
+    if (e.key === '0') {
         e.preventDefault();
-
         if (outilActif !== 'effetBlanche') {
-            // 1er appui : On ouvre l'outil (Bille Blanche seule, pas de jauge)
             outilActif = 'effetBlanche';
             window.niveauForceCourant = 0;
         } else {
-            // Appuis suivants : On incrémente la puissance (de 1 à 4)
             window.niveauForceCourant++;
-            
-            // Si on dépasse le niveau MAX (4), on ferme l'outil
             if (window.niveauForceCourant > 4) {
                 outilActif = null;
                 window.niveauForceCourant = 0;
             }
         }
-
         if (outilActif) canvas.style.pointerEvents = 'auto';
-        // RECOLLÉ : Correction de la fonction de rafraîchissement
         window.redessinerToutesLesLignes();
     }
 
-
-        // Touche Échap pour annuler l'aperçu en cours
     if (e.key === 'Escape') {
         outilActif = null;
         if (animationFrameId) {
@@ -1222,24 +1087,16 @@ if (e.key === 'Shift' && outilActif === 'pointContact') {
         window.redessinerToutesLesLignes();
     }
 
-
     if (e.key.toLowerCase() === 'e' || e.key === 'Delete') {
-    e.preventDefault();
-    
-    // Force la réactivation temporaire des événements pour lire la position sous le curseur
-    canvas.style.pointerEvents = 'auto';
-    
-    // Exécute la fonction maîtresse d'effacement
-    const aEteEfface = window.detecterEtEffacerDessin(mouseX, mouseY);
-    
-    // Remet le canevas en mode passif si aucune action n'est requise
-    if (!aEteEfface) {
-        canvas.style.pointerEvents = 'none';
+        e.preventDefault();
+        canvas.style.pointerEvents = 'auto';
+        const aEteEfface = window.detecterEtEffacerDessin(mouseX, mouseY);
+        if (!aEteEfface) {
+            canvas.style.pointerEvents = 'none';
+        }
     }
-}
 
-
-    // 3. Gestion des zones de grille (1 à 8)
+    // Gestion des zones de grille (1 à 8)
     if (e.key >= '1' && e.key <= '8') {
         const zoneId = parseInt(e.key, 10);
         const indexZoneExistante = window.dessinsSauvegardes.findIndex(dessin => dessin.estZoneGrille && dessin.zoneId === zoneId);
@@ -1253,156 +1110,149 @@ if (e.key === 'Shift' && outilActif === 'pointContact') {
             }
         } else {
             const couleurActive = colorSelect ? colorSelect.value : '#ffffff';
-            const nouvelleZone = {
+            window.dessinsSauvegardes.push({
                 couleur: couleurActive,
                 estZoneGrille: true,
                 zoneId: zoneId,
                 mode: 'standard',
                 points: [] 
-            };
-            window.dessinsSauvegardes.push(nouvelleZone);
+            });
         }
         window.redessinerToutesLesLignes();
     }
 });
 
-
-
-    document.addEventListener('keyup', (e) => {
-        if (e.key === 'Shift') {
-            isShiftPressed = false;
-            canvas.style.pointerEvents = 'none';
-            if (isDrawing) finTrace();
-        }
-        if (e.key === 'Control') {
-            isCtrlPressed = false;
-        }
-    });
-
-    // Sécurité additionnelle : Si l'utilisateur change de fenêtre, on réinitialise les touches
-    window.addEventListener('blur', () => {
+document.addEventListener('keyup', (e) => {
+    if (e.key === 'Shift') {
         isShiftPressed = false;
-        isCtrlPressed = false;
-        if (canvas) canvas.style.pointerEvents = 'none';
+        canvas.style.pointerEvents = 'none';
         if (isDrawing) finTrace();
-    });
+    }
+    if (e.key === 'Control') {
+        isCtrlPressed = false;
+    }
+});
 
-    table.addEventListener('mousedown', (e) => {
-        if (e.button === 2) {
-            canvas.style.pointerEvents = 'auto';
-            commencerDessin(e);
-        }
-    });
+window.addEventListener('blur', () => {
+    isShiftPressed = false;
+    isCtrlPressed = false;
+    if (canvas) canvas.style.pointerEvents = 'none';
+    if (isDrawing) finTrace();
+});
 
-function commencerDessin(e) {
-
-    // === AJOUT : CLIC POUR PLACER LA FORME FANTÔME ===
-    if (outilActif && e.button === 0) { // Clic gauche
-        const couleurActive = window.billeSelectionneeCourante ? 
-            window.billeSelectionneeCourante.style.backgroundColor : 
-            (colorSelect ? colorSelect.value : '#ffffff');
-
-        let nouvelElement = {
-            couleur: couleurActive,
-            points: [{ x: mouseX, y: mouseY }]
-        };
-
-        // On assigne le bon drapeau selon l'outil actif
-        if (outilActif === 'cible') {
-    nouvelElement.estCible = true;
-    // On fige l'index de quadrant sélectionné au moment précis du clic
-    nouvelElement.quadrant = window.quadrantCibleCourant || 0; 
-}
-
-        if (outilActif === 'carre') {
-			nouvelElement.estCarre = true;
-		// On fige la taille sélectionnée au moment précis du clic
-			nouvelElement.taille = window.tailleCarreCourante || 95; 
-		}
-
-        if (outilActif === 'pointContact') {
-    nouvelElement.estPointContact = true;
-    nouvelElement.pourcentage = window.pourcentageContactCourant;
-    nouvelElement.cote = window.coteContactCourant; // Sauvegarde du côté (gauche ou droite)
-}
-
-
-
-        if (outilActif === 'repereX') {
-            nouvelElement.estRepereX = true;
-            // On fige l'état exact au moment du clic
-            nouvelElement.estUnCercle = window.repereXEstUnCercle;
-            nouvelElement.branches = window.nombreBranchesRepereX;
-            nouvelElement.texte = window.repereXTexte; // <--- AJOUT : Sauvegarde le texte posé
-        }
-
-
-                if (outilActif === 'effetBlanche') {
-            nouvelElement.estEffetBlanche = true;
-            nouvelElement.force = window.niveauForceCourant; // <--- SÉCURISÉ : On fige la force choisie !
-        }
-
-
-        window.dessinsSauvegardes.push(nouvelElement);
-        outilActif = null; // Désactive l'outil après la pose
-        window.redessinerToutesLesLignes();
-        return; // Évite de déclencher un tracé de ligne classique en même temps
+// === GESTION INTERACTION DESSIN IPAD ET PC ===
+function declencherDebutTrace(e) {
+    if (window.outilTraceActif !== "select") {
+        if (e.cancelable) e.preventDefault();
     }
 
+    const coords = obtenirCoordonneesEvenement(e, table);
+    const localX = coords.x;
+    const localY = coords.y;
+
+    // Mode Gomme Tactile / Clic
+    if (window.outilTraceActif === "erase") {
+        const elementSupprime = window.detecterEtEffacerDessin(localX, localY);
+        if (elementSupprime) {
+            const btnSelect = document.querySelector('.tool-btn[data-tool="select"]');
+            if (btnSelect) btnSelect.click();
+        }
+        return; 
+    }
+
+    // Mode pose de formes tactiques (Cible, Carré...)
+    if (outilActif) {
+        mouseX = localX;
+        mouseY = localY;
+        const simuleEvent = { button: 0 };
+        commencerDessin(simuleEvent);
+        return;
+    }
+
+    // Dessin Libre / Tracé
+    if (window.outilTraceActif !== "select") {
+        commencerDessin(e);
+    }
+}
+
+function declencherMouvementTrace(e) {
+    if (!isDrawing || !currentLine) return;
+    if (e.cancelable) e.preventDefault();
+
+    const coords = obtenirCoordonneesEvenement(e, table);
+    const x = coords.x;
+    const y = coords.y;
+
+    if (currentLine.estDroite) {
+        window.redessinerToutesLesLignes();
+        configurerStyleDessin(currentLine.couleur, currentLine.estPointille);
+        ctx.beginPath();
+        ctx.moveTo(startPoint.x, startPoint.y);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        if (currentLine.avecFleche) {
+            dessinerPointeFleche(startPoint.x, startPoint.y, x, y, currentLine.couleur);
+        }
+                currentLine.points = [startPoint, { x, y }];
+    } else {
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        currentLine.points.push({ x, y }); // <--- RESTAURÉ : Enregistre le tracé libre en continu
+    }
+}
+
+function declencherFinTrace() {
+    finTrace();
+    if (window.outilTraceActif === "select") {
+        canvas.style.pointerEvents = 'none';
+    } else {
+        canvas.style.pointerEvents = 'auto'; 
+    }
+}
+
+function commencerDessin(e) {
     isDrawing = true;
-    const rect = table.getBoundingClientRect();
-    const x = Math.round(e.clientX - rect.left);
-    const y = Math.round(e.clientY - rect.top);
+    const coords = obtenirCoordonneesEvenement(e, table);
+    const x = coords.x;
+    const y = coords.y;
     
-    // 1. Percer le canvas pour trouver ce qu'il y a en dessous
     canvas.style.pointerEvents = 'none';
-    const elementSousCurseur = document.elementFromPoint(e.clientX, e.clientY);
+    const elementSousCurseur = document.elementFromPoint(e.touches ? e.touches[0].clientX : e.clientX, e.touches ? e.touches[0].clientY : e.clientY);
     canvas.style.pointerEvents = 'auto';
 
     let billeSousCurseur = elementSousCurseur ? elementSousCurseur.closest('.ball') : null;
-    let couleurActive;
+    let couleurActive = colorSelect ? colorSelect.value : '#ffffff';
 
     if (billeSousCurseur) {
-        // --- CLIC SUR UNE BILLE ---
         if (window.billeSelectionneeCourante && window.billeSelectionneeCourante !== billeSousCurseur) {
             window.billeSelectionneeCourante.style.outline = 'none';
         }
         window.billeSelectionneeCourante = billeSousCurseur;
         billeSousCurseur.style.outline = '2px solid #ffffff';
         billeSousCurseur.style.outlineOffset = '2px';
-        
         couleurActive = billeSousCurseur.style.backgroundColor;
     } else {
-        // --- CLIC SUR LE TAPIS VIDE ---
-        if (e.button === 2 || e.shiftKey) {
-            // Clic droit ou Shift+Clic : On dessine ! On garde la couleur de la bille mémorisée
-            if (window.billeSelectionneeCourante) {
-                couleurActive = window.billeSelectionneeCourante.style.backgroundColor;
-            } else {
-                couleurActive = colorSelect ? colorSelect.value : '#ffffff';
-            }
-        } else {
-            // Clic gauche normal sur le tapis vide : On désélectionne TOUT
-            if (window.billeSelectionneeCourante) {
-                window.billeSelectionneeCourante.style.outline = 'none';
-            }
-            window.billeSelectionneeCourante = null;
-            couleurActive = colorSelect ? colorSelect.value : '#ffffff';
-            
-            const displayEl = document.getElementById('ball-position-display');
-            if (displayEl) displayEl.innerText = "Position de la bille : Aucune sélectionnée";
+        if (window.billeSelectionneeCourante) {
+            couleurActive = window.billeSelectionneeCourante.style.backgroundColor;
         }
     }
     
     const modeDashed = dashedCheck ? dashedCheck.checked : false;
     configurerStyleDessin(couleurActive, modeDashed);
-    
     ctx.beginPath();
     ctx.moveTo(x, y);
     startPoint = { x, y }; 
 
-    const forceLigneDroite = e.ctrlKey || e.metaKey || isCtrlPressed;
-    const forceFleche = forceLigneDroite && (e.shiftKey || isShiftPressed);
+    let forceLigneDroite = false;
+    let forceFleche = false;
+
+    if (window.outilTraceActif !== "select") {
+        forceLigneDroite = (window.outilTraceActif === "line" || window.outilTraceActif === "arrow");
+        forceFleche = (window.outilTraceActif === "arrow");
+    } else {
+        forceLigneDroite = e.ctrlKey || e.metaKey || isCtrlPressed;
+        forceFleche = forceLigneDroite && (e.shiftKey || isShiftPressed);
+    }
 
     currentLine = {
         couleur: couleurActive,
@@ -1413,50 +1263,7 @@ function commencerDessin(e) {
     };
 }
 
-
-
-    canvas.addEventListener('mousedown', (e) => {
-    // Si un outil fantôme est actif, on autorise le clic gauche pour valider
-    if (outilActif && e.button === 0) {
-        commencerDessin(e);
-    } 
-    // Garde votre comportement d'origine pour le dessin classique au clic droit ou Shift+Clic
-    else if (e.shiftKey || e.button === 2) {
-        commencerDessin(e);
-    }
-});
-
-
-    document.addEventListener('mousemove', (e) => {
-        if (!isDrawing || !currentLine) return;
-
-        const rect = table.getBoundingClientRect();
-        const x = Math.round(e.clientX - rect.left);
-        const y = Math.round(e.clientY - rect.top);
-
-        if (currentLine.estDroite) {
-            window.redessinerToutesLesLignes();
-            
-            // MODIFICATION : Passage du mode pointillé lors du dessin en direct
-            configurerStyleDessin(currentLine.couleur, currentLine.estPointille);
-            ctx.beginPath();
-            ctx.moveTo(startPoint.x, startPoint.y);
-            ctx.lineTo(x, y);
-            ctx.stroke();
-
-            if (currentLine.avecFleche) {
-                dessinerPointeFleche(startPoint.x, startPoint.y, x, y, currentLine.couleur);
-            }
-
-            currentLine.points = [startPoint, { x, y }];
-        } else {
-            ctx.lineTo(x, y);
-            ctx.stroke();
-            currentLine.points.push({ x, y });
-        }
-    });
-
-    function finTrace() {
+function finTrace() {
     if (isDrawing && currentLine) {
         if (currentLine.points.length >= 2) {
             window.dessinsSauvegardes.push(currentLine); 
@@ -1464,36 +1271,29 @@ function commencerDessin(e) {
         isDrawing = false;
         currentLine = null;
         startPoint = null; 
-        
-        
     }
 }
 
+// === ATTACHEMENT DES ÉCOUTEURS DYNAMIQUES HYBRIDES ===
+canvas.addEventListener('mousedown', (e) => {
+    if (e.button === 0 || e.button === 2) declencherDebutTrace(e);
+});
+canvas.addEventListener('touchstart', declencherDebutTrace, { passive: false });
 
-    document.addEventListener('mouseup', () => {
-        finTrace();
-        canvas.style.pointerEvents = 'none';
-    });
-
-    table.addEventListener('contextmenu', e => e.preventDefault());
-    canvas.addEventListener('contextmenu', e => e.preventDefault());
-
-    setTimeout(resizeCanvas, 100);
-
-// AJOUT : Permet de désélectionner la bille active en cliquant n'importe où sur le tapis vide
 table.addEventListener('mousedown', (e) => {
-    // Si on clique sur le tapis directement (et pas sur une bille) avec le clic gauche
+    if (window.outilTraceActif === "select" && e.button === 2) {
+        canvas.style.pointerEvents = 'auto';
+        commencerDessin(e);
+    }
     if (e.target === table && e.button === 0) {
         if (window.billeSelectionneeCourante) {
             window.billeSelectionneeCourante.style.outline = 'none';
             window.billeSelectionneeCourante = null;
-			
-			// === AJOUT ICI : Met à jour la liste pour enlever la surbrillance ===
+            
             if (typeof rafraichirListeLateraleBilles === "function") {
                 rafraichirListeLateraleBilles();
             }
             
-            // Réinitialise l'affichage textuel
             const displayEl = document.getElementById('ball-position-display');
             if (displayEl) {
                 displayEl.innerText = "Position de la bille : Aucune sélectionnée";
@@ -1502,8 +1302,13 @@ table.addEventListener('mousedown', (e) => {
     }
 });
 
+document.addEventListener('mousemove', declencherMouvementTrace);
+document.addEventListener('touchmove', declencherMouvementTrace, { passive: false });
+document.addEventListener('mouseup', declencherFinTrace);
+document.addEventListener('touchend', declencherFinTrace);
 
+table.addEventListener('contextmenu', e => e.preventDefault());
+canvas.addEventListener('contextmenu', e => e.preventDefault());
 
-
-
+setTimeout(resizeCanvas, 100);
 });

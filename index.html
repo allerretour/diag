@@ -924,6 +924,60 @@ kbd {
 
 
 
+.drawing-tools-palette {
+    background-color: rgba(16, 20, 30, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 15px;
+}
+.drawing-tools-palette h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.tools-flex-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+.tool-btn {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border-radius: 6px;
+    padding: 8px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+.tool-btn:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+.tool-btn.active {
+    background-color: #2980b9;
+    border-color: #3498db;
+    box-shadow: 0 0 8px rgba(41, 128, 185, 0.4);
+}
+.tool-btn.tool-eraser.active {
+    background-color: #c0392b;
+    border-color: #e74c3c;
+    box-shadow: 0 0 8px rgba(192, 57, 43, 0.4);
+}
+
+
+
+
 
     </style>
 </head>
@@ -1095,6 +1149,33 @@ kbd {
     <div id="balls-sidebar">
         <h3>Billes sur la table</h3>
         <div id="visible-balls-list"></div>
+		
+		<!-- Palette d'outils de tracé et de suppression tactile -->
+<div class="drawing-tools-palette">
+    <h4>Outils de Tracé & Tactique</h4>
+    <div class="tools-flex-container">
+        <button type="button" class="tool-btn active" data-tool="select" title="Sélection et déplacement des billes">
+            🖱️ Sélection
+        </button>
+        <button type="button" class="tool-btn" data-tool="pencil" title="Dessin libre">
+            ✏️ Crayon
+        </button>
+        <button type="button" class="tool-btn" data-tool="line" title="Ligne droite">
+            📏 Ligne
+        </button>
+        <button type="button" class="tool-btn" data-tool="arrow" title="Flèche droite">
+            🏹 Flèche
+        </button>
+        <button type="button" class="tool-btn tool-eraser" data-tool="erase" title="Effacer un élément (Gomme)">
+            🧼 Gomme
+        </button>
+    </div>
+</div>
+
+		
+		
+		
+		
     </div>
 	
 </div>
