@@ -601,24 +601,17 @@ window.detecterEtEffacerDessin = function(clicX, clicY) {
         
         // 2. CAS SPÉCIFIQUE : Point de Contact (Détection centrée sur le grand panneau visuel)
         else if (dessin.estPointContact) {
-            if (dessin.points) {
-                const pt = Array.isArray(dessin.points) ? dessin.points[0] : dessin.points;
-                if (pt) {
-                    // On recalcule le centre exact du grand cadre visuel noir
-                    // Le cadre fait 110px de haut et est placé 25px au-dessus du point d'impact (pt.y)
-                    // Son centre vertical est donc décalé vers le haut de : 25 + (110 / 2) = 80 pixels
-                    const centreCadreX = pt.x;
-                    const centreCadreY = pt.y - 80;
-
-                    // On applique une zone de détection large (tolérance de 60px) pour couvrir tout le cadre
-                    if (estProchePoint(clicX, clicY, centreCadreX, centreCadreY, 60)) {
-                        window.dessinsSauvegardes.splice(i, 1);
-                        window.redessinerToutesLesLignes();
-                        return true;
-                    }
-                }
-            }
+    if (dessin.points) {
+        const pt = Array.isArray(dessin.points) ? dessin.points[0] : dessin.points;
+        // Détection standard basée sur le centre parfait du panneau
+        if (pt && estProchePoint(clicX, clicY, pt.x, pt.y, 45)) {
+            window.dessinsSauvegardes.splice(i, 1);
+            window.redessinerToutesLesLignes();
+            return true;
         }
+    }
+}
+
 
         
         else if (dessin.estDroite && dessin.points.length >= 2) {
