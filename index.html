@@ -942,7 +942,7 @@ kbd {
 }
 .tools-flex-container {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, 1fr); /* 2 colonnes pour une lecture parfaite des textes sur iPad */
     gap: 8px;
 }
 .tool-btn {
@@ -957,8 +957,8 @@ kbd {
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 6px;
+    justify-content: flex-start;
+    gap: 8px;
 }
 .tool-btn:hover {
     background-color: rgba(255, 255, 255, 0.12);
@@ -969,11 +969,17 @@ kbd {
     border-color: #3498db;
     box-shadow: 0 0 8px rgba(41, 128, 185, 0.4);
 }
+.tool-btn.tool-shape.active {
+    background-color: #8e44ad; /* Violet distinctif pour l'arsenal tactique */
+    border-color: #9b59b6;
+    box-shadow: 0 0 8px rgba(142, 68, 173, 0.4);
+}
 .tool-btn.tool-eraser.active {
     background-color: #c0392b;
     border-color: #e74c3c;
     box-shadow: 0 0 8px rgba(192, 57, 43, 0.4);
 }
+
 
 
 
@@ -1150,10 +1156,13 @@ kbd {
         <h3>Billes sur la table</h3>
         <div id="visible-balls-list"></div>
 		
-		<!-- Palette d'outils de tracé et de suppression tactile -->
+		
+		
+		<!-- Palette d'outils de tracé & Formes tactiques complète -->
 <div class="drawing-tools-palette">
     <h4>Outils de Tracé & Tactique</h4>
     <div class="tools-flex-container">
+        <!-- Modes de déplacement et tracé -->
         <button type="button" class="tool-btn active" data-tool="select" title="Sélection et déplacement des billes">
             🖱️ Sélection
         </button>
@@ -1166,11 +1175,39 @@ kbd {
         <button type="button" class="tool-btn" data-tool="arrow" title="Flèche droite">
             🏹 Flèche
         </button>
+
+        <!-- Formes Tactiques (Intégration de P, T, Z, 0, 9) -->
+        <button type="button" class="tool-btn tool-shape" data-tool="pointContact" title="Point de contact (P) - Cliquez pour réduire la quantité d'impact">
+            🎯 Contact (P)
+        </button>
+        <button type="button" class="tool-btn tool-shape" data-tool="cible" title="Cible de visée (T) - Cliquez pour changer de quadrant">
+            🎯 Cible (T)
+        </button>
+        <button type="button" class="tool-btn tool-shape" data-tool="carre" title="Carré de zone (Z) - Cliquez pour changer la taille">
+            🔲 Carré (Z)
+        </button>
+        <button type="button" class="tool-btn tool-shape" data-tool="effetBlanche" title="Effets Bille Blanche (0) - Cliquez pour doser la force">
+            🔮 Effet (0)
+        </button>
+        <button type="button" class="tool-btn tool-shape" data-tool="repereX" title="Repère visuel X (9) - Cliquez pour changer de style">
+            ❌ Repère (9)
+        </button>
+
+        <!-- Outil de suppression -->
         <button type="button" class="tool-btn tool-eraser" data-tool="erase" title="Effacer un élément (Gomme)">
             🧼 Gomme
         </button>
+		
+		<button type="button" class="tool-config-action" id="btn-rotate-tool-options" style="margin-top: 10px; width: 100%; display: none;">
+        ⚙️ Configurer l'outil actif
+    </button>
+    <button type="button" class="tool-config-invert" id="btn-invert-contact-side" style="margin-top: 6px; width: 100%; display: none;">
+        🔄 Inverser le côté (Gauche / Droite)
+    </button>
+		
     </div>
 </div>
+
 
 		
 		
