@@ -31,6 +31,13 @@ boutonsOutils.forEach(btn => {
     btn.addEventListener('click', (e) => {
         const toolSelected = btn.getAttribute('data-tool');
         
+        // --- LOGIQUE DE ROTATION UNIVERSELLE ---
+        const cyclerOption = (valeurActuelle, tableauOptions) => {
+            const indexActuel = tableauOptions.indexOf(valeurActuelle);
+            const indexSuivant = (indexActuel + 1) % tableauOptions.length;
+            return tableauOptions[indexSuivant];
+        };
+        
         // --- LOGIQUE DE CYCLE MULTI-CLIC (IPAD & SOURIS) ---
         if (window.outilTraceActif === toolSelected) {
             if (toolSelected === 'pointContact') {
@@ -40,18 +47,21 @@ boutonsOutils.forEach(btn => {
                 }
             }
             else if (toolSelected === 'cible') {
-                window.quadrantCibleCourant = (window.quadrantCibleCourant + 1) % 4;
+                // Cycle parfait entre les quadrants 0, 1, 2 et 3
+                window.quadrantCibleCourant = cyclerOption(window.quadrantCibleCourant, [0, 1, 2, 3]);
             }
             else if (toolSelected === 'carre') {
-                if (window.tailleCarreCourante === 95) window.tailleCarreCourante = 135;
-                else if (window.tailleCarreCourante === 135) window.tailleCarreCourante = 180;
-                else window.tailleCarreCourante = 95;
+                // Cycle parfait entre les 3 tailles de carré
+                window.tailleCarreCourante = cyclerOption(window.tailleCarreCourante, [95, 135, 180]);
             }
             else if (toolSelected === 'effetBlanche') {
-                window.niveauForceCourant++;
-                if (window.niveauForceCourant > 4) {
-                    window.niveauForceCourant = 0;
-                    document.querySelector('.tool-btn[data-tool="select"]').click();
+                // Cycle parfait entre les niveaux de force (0 à 4)
+                window.niveauForceCourant = cyclerOption(window.niveauForceCourant, [0, 1, 2, 3, 4]);
+                
+                // Si on boucle et revient à 0 (désactivé), on quitte l'outil
+                if (window.niveauForceCourant === 0) {
+                    const btnSelect = document.querySelector('.tool-btn[data-tool="select"]');
+                    if (btnSelect) btnSelect.click();
                     return;
                 }
             }
@@ -92,6 +102,13 @@ boutonsOutils.forEach(btn => {
 });
 
 
+// Fonction universelle pour cycler dans un tableau d'options
+function cyclerOption(valeurActuelle, tableauOptions) {
+    const indexActuel = tableauOptions.indexOf(valeurActuelle);
+    // Trouve l'index suivant, s'il dépasse la taille du tableau, il revient à 0
+    const indexSuivant = (indexActuel + 1) % tableauOptions.length;
+    return tableauOptions[indexSuivant];
+}
 
 
 
