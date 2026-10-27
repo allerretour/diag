@@ -101,7 +101,9 @@ document.addEventListener("DOMContentLoaded", () => {
         mouseX = Math.round(e.clientX - rect.left);
         mouseY = Math.round(e.clientY - rect.top);
 
-        if (!outilActif) return;
+        // Modifié pour réagir si la palette OU le clavier est utilisé
+        const aUnOutilActif = outilActif || ['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact'].includes(window.outilTraceActif);
+        if (!aUnOutilActif) return;
         if (animationFrameId) return;
 
         animationFrameId = requestAnimationFrame(() => {
@@ -109,6 +111,7 @@ document.addEventListener("DOMContentLoaded", () => {
             animationFrameId = null; 
         });
     });
+
 	
     function dessinerPointContact(x, y, couleur, pctFige, coteFige) {
         ctx.save();
@@ -1141,6 +1144,7 @@ window.addEventListener('blur', () => {
 });
 
 // === GESTION INTERACTION DESSIN IPAD ET PC ===
+// === GESTION INTERACTION DESSIN IPAD ET PC ===
 function declencherDebutTrace(e) {
     if (window.outilTraceActif !== "select") {
         if (e.cancelable) e.preventDefault();
@@ -1160,20 +1164,61 @@ function declencherDebutTrace(e) {
         return; 
     }
 
-    // Mode pose de formes tactiques (Cible, Carré...)
-    if (outilActif) {
+    // === GESTION DE LA POSE DE FORMES (CIBLE, CARRÉ, EFFET, REPÈRE, CONTACT) ===
+    // On regarde quel outil est actif (soit via la palette, soit via le clavier)
+    const outilTactiqueActif = (window.outilTraceActif !== "select") ? window.outilTraceActif : outilActif;
+
+    // AJOUT DE 'pointContact' DANS LA LISTE DES FORMES AUTORISÉES À ÊTRE DÉPOSÉES
+    if (['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact'].includes(outilTactiqueActif)) {
+        // Fixation des coordonnées au point d'impact du clic ou du doigt
         mouseX = localX;
         mouseY = localY;
-        const simuleEvent = { button: 0 };
-        commencerDessin(simuleEvent);
-        return;
+        
+        const couleurActive = window.billeSelectionneeCourante ? 
+            window.billeSelectionneeCourante.style.backgroundColor : 
+            (colorSelect ? colorSelect.value : '#ffffff');
+
+        // Création de l'objet de dessin avec le premier point d'ancrage
+        let nouvelElement = {
+            couleur: couleurActive,
+            points: [{ x: mouseX, y: mouseY }] // Format [{x, y}] conforme à votre fonction de rendu
+        };
+
+        // Renseignement des propriétés spécifiques à chaque forme
+        if (outilTactiqueActif === 'cible') { nouvelElement.estCible = true; nouvelElement.quadrant = window.quadrantCibleCourant || 0; }
+        if (outilTactiqueActif === 'carre') { nouvelElement.estCarre = true; nouvelElement.taille = window.tailleCarreCourante || 95; }
+        if (outilTactiqueActif === 'repereX') { nouvelElement.estRepereX = true; nouvelElement.estUnCercle = window.repereXEstUnCercle; nouvelElement.branches = window.nombreBranchesRepereX; nouvelElement.texte = window.repereXTexte; }
+        if (outilTactiqueActif === 'effetBlanche') { nouvelElement.estEffetBlanche = true; nouvelElement.force = window.niveauForceCourant; }
+        
+        // AJOUT DU CAS SPÉCIFIQUE : Point de contact
+        if (outilTactiqueActif === 'pointContact') { 
+            nouvelElement.estPointContact = true; 
+            nouvelElement.pourcentage = window.pourcentageContactCourant; 
+            nouvelElement.cote = window.coteContactCourant; 
+        }
+
+        // Sauvegarde immédiate dans votre tableau global
+        window.dessinsSauvegardes.push(nouvelElement);
+        
+        // Nettoyage de l'état clavier
+        outilActif = null;
+        
+        // Auto-retour au mode sélection pour pouvoir déplacer à nouveau les billes
+        const btnSelect = document.querySelector('.tool-btn[data-tool="select"]');
+        if (btnSelect) btnSelect.click();
+        
+        // Forcer le Canvas à se mettre à jour
+        if (typeof window.redessinerToutesLesLignes === "function") window.redessinerToutesLesLignes();
+        return; 
     }
 
-    // Dessin Libre / Tracé
+    // Dessin Libre / Tracé classique (Crayon, Ligne, Flèche)
     if (window.outilTraceActif !== "select") {
         commencerDessin(e);
     }
 }
+
+
 
 function declencherMouvementTrace(e) {
     if (!isDrawing || !currentLine) return;
