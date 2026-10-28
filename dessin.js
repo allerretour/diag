@@ -72,18 +72,36 @@ function gererLogiquePalette(btn, e) {
             }
         }
         else if (toolSelected === 'repereX') {
-            if (!window.repereXEstUnCercle && window.nombreBranchesRepereX === 6 && window.repereXTexte === null) window.repereXEstUnCercle = true;
-            else if (!window.repereXEstUnCercle && window.nombreBranchesRepereX === 4 && window.repereXTexte === null) window.nombreBranchesRepereX = 6;
-            else if (window.repereXEstUnCercle && window.repereXTexte === null) { window.repereXEstUnCercle = false; window.repereXTexte = cycleCaracteres[0]; }
-            else if (window.repereXTexte !== null) {
-                const indexActuel = cycleCaracteres.indexOf(window.repereXTexte);
-                if (indexActuel >= 0 && indexActuel < cycleCaracteres.length - 1) window.repereXTexte = cycleCaracteres[indexActuel + 1];
-                else { window.repereXTexte = null; window.nombreBranchesRepereX = 4; window.repereXEstUnCercle = false; }
-            }
+    // ÉTAPE 1 : Si on est à 4 branches, on passe à 6 branches
+    if (!window.repereXEstUnCercle && window.nombreBranchesRepereX === 4 && window.repereXTexte === null) {
+        window.nombreBranchesRepereX = 6;
+    }
+    // ÉTAPE 2 : Si on est à 6 branches, on bascule sur le Cercle
+    else if (!window.repereXEstUnCercle && window.nombreBranchesRepereX === 6 && window.repereXTexte === null) {
+        window.repereXEstUnCercle = true;
+    }
+    // ÉTAPE 3 : Si on est sur le Cercle, on commence le cycle des lettres avec "A"
+    else if (window.repereXEstUnCercle && window.repereXTexte === null) {
+        window.repereXEstUnCercle = false;
+        window.repereXTexte = cycleCaracteres[0];
+    }
+    // ÉTAPE 4 : Si on a du texte, on avance dans le tableau ou on réinitialise à 4 branches
+    else if (window.repereXTexte !== null) {
+        const indexActuel = cycleCaracteres.indexOf(window.repereXTexte);
+        if (indexActuel >= 0 && indexActuel < cycleCaracteres.length - 1) {
+            window.repereXTexte = cycleCaracteres[indexActuel + 1];
+        } else {
+            // Retour au point de départ parfait (Étoile à 4 branches)
+            window.repereXTexte = null;
+            window.nombreBranchesRepereX = 4;
+            window.repereXEstUnCercle = false;
         }
-        rafraichirTexteBoutonsPalette();
-        if (typeof window.redessinerToutesLesLignes === "function") window.redessinerToutesLesLignes();
-        return;
+    }
+}
+rafraichirTexteBoutonsPalette();
+if (typeof window.redessinerToutesLesLignes === "function") window.redessinerToutesLesLignes();
+return;
+
     }
 
     // --- TOUT PREMIER CLIC : INITIALISATION DE L'OUTIL ---
@@ -249,11 +267,15 @@ document.addEventListener("DOMContentLoaded", () => {
 	
 function dessinerPointContact(x, y, couleur, pctFige, coteFige) {
     ctx.save();
+    
+    // === FORCE LES LIGNES PLEINES POUR LES BILLES D'IMPACT ===
+    ctx.setLineDash([]); 
+
     const pct = (pctFige !== undefined) ? pctFige : window.pourcentageContactCourant;
     const cote = (coteFige !== undefined) ? coteFige : window.coteContactCourant;
     const couleurMarqueur = couleur || (colorSelect ? colorSelect.value : '#ffffff');
 
-    // Dimensions du panneau de fond (similaire au panneau d'effet)
+    // Dimensions du panneau de fond
     const largeurCadre = 180;
     const hauteurCadre = 140;
     const cadreX = x - (largeurCadre / 2);
@@ -272,31 +294,34 @@ function dessinerPointContact(x, y, couleur, pctFige, coteFige) {
 
     // La bille fantôme/cible est centrée exactement sur l'axe X et Y du curseur
     const centreCadreX = x;
-    const centreCadreY = y - 8; // Léger décalage vers le haut pour laisser de la place au texte en bas
+    const centreCadreY = y - 8; 
     const rayonBilleAgrandie = 22; 
     const diametreAgrandie = rayonBilleAgrandie * 2;
     const decalageX = diametreAgrandie * (1 - (pct / 100));
 
-    // 1. Tracé de la bille cible (translucide)
+    // 1. Tracé de la bille cible / visée (Moins transparente : Opacité augmentée à 0.80)
     ctx.beginPath();
     ctx.arc(centreCadreX, centreCadreY, rayonBilleAgrandie, 0, 2 * Math.PI);
     ctx.save();
-    ctx.globalAlpha = 0.35;
+    ctx.globalAlpha = 0.80; // <-- Changé de 0.35 à 0.80 pour moins de transparence
     ctx.fillStyle = couleurMarqueur;
     ctx.fill();
     ctx.restore();
     ctx.strokeStyle = couleurMarqueur;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5; // Légèrement plus épais pour mieux la détacher
     ctx.stroke();
 
-    // 2. Tracé de la bille blanche (impact)
+    // 2. Tracé de la bille blanche d'impact (Opacité renforcée à 0.90)
     const blancheX = centreCadreX - (decalageX * cote);
     ctx.beginPath();
     ctx.arc(blancheX, centreCadreY, rayonBilleAgrandie, 0, 2 * Math.PI);
-    ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+    ctx.save();
+    ctx.globalAlpha = 0.90; // <-- Changé à 0.90 pour que la blanche soit quasi-opaque
+    ctx.fillStyle = "#ffffff";
     ctx.fill();
+    ctx.restore();
     ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5;
     ctx.stroke();
 
     // 3. Ligne d'axe horizontale en pointillés
@@ -309,16 +334,14 @@ function dessinerPointContact(x, y, couleur, pctFige, coteFige) {
     ctx.stroke();
     ctx.setLineDash([]); 
 
-    // 4. Affichage des textes explicatifs en haut et en bas
+    // 4. Affichage des textes explicatifs
     ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
     ctx.font = "bold 11px sans-serif";
     
-    // Titre supérieur
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     ctx.fillText("QUANTITÉ D'IMPACT", centreCadreX, cadreY + 10);
 
-    // Statut inférieur
     ctx.font = "bold 12px sans-serif";
     ctx.textBaseline = "bottom";
     if (pct === 100) {
@@ -331,6 +354,9 @@ function dessinerPointContact(x, y, couleur, pctFige, coteFige) {
     }
     ctx.restore();
 }
+
+
+
 
     function configurerStyleDessin(couleur, estPointille) {
         if (couleur) {
@@ -587,20 +613,22 @@ function rendreCercleRepere(x, y, couleur) {
     ctx.arc(x, y, rayon, 0, 2 * Math.PI);
     ctx.closePath();
     
-    // Remplissage du fond opaque à 80%
-    ctx.globalAlpha = 0.80;
+    // Remplissage du fond avec plus de transparence (Opacité baissée de 0.80 à 0.25)
+    ctx.save();
+    ctx.globalAlpha = 0.25; // <-- Ajustez cette valeur (ex: 0.10 pour encore plus transparent)
     ctx.fillStyle = couleur;
     ctx.fill();
+    ctx.restore();
 
-    // Tracé du contour en pointillés fins serrés
+    // Tracé du contour en pointillés fins serrés (Reste bien visible et net)
     ctx.strokeStyle = couleur;
     ctx.lineWidth = 1.5;
     ctx.setLineDash([2, 2]); 
-    ctx.globalAlpha = 1.0;
     ctx.stroke();
     
-    ctx.setLineDash([]); // Réinitialisation
+    ctx.setLineDash([]); // Réinitialisation du style de tracé
 }
+
 
 function rendreEtoileRepere(x, y, couleur, branches) {
     ctx.strokeStyle = couleur;
