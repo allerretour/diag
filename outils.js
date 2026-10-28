@@ -78,6 +78,7 @@ if (btnResetLogo && tableLogoOverlay) {
 }
 
 
+// --- GESTION DES FENÊTRES MODALES (<dialog>) ---
 const modalGuide = document.getElementById('modal-guide');
 const btnOuvrirGuide = document.getElementById('btn-ouvrir-guide');
 const btnFermerGuide = document.getElementById('btn-fermer-guide');
@@ -125,7 +126,25 @@ configurerFermetureExterieure(modalGuide);
 configurerFermetureExterieure(modalOptions);
 
 
+// --- GESTION DE LA BOÎTE D'OUTILS TACTIQUES (AFFICHER/MASQUER) ---
+const btnTogglePalette = document.getElementById('btn-toggle-palette');
+const paletteContainer = document.getElementById('drawing-tools-palette');
 
+if (btnTogglePalette && paletteContainer) {
+    btnTogglePalette.addEventListener('click', () => {
+        // Alterne la classe de réduction sur le bloc de la palette d'outils
+        paletteContainer.classList.toggle('is-collapsed');
+        
+        // Adapte le glyphe de l'œil et l'infobulle selon le nouvel état obtenu
+        if (paletteContainer.classList.contains('is-collapsed')) {
+            btnTogglePalette.innerText = '🙈';
+            btnTogglePalette.title = "Afficher les outils";
+        } else {
+            btnTogglePalette.innerText = '👁️';
+            btnTogglePalette.title = "Masquer les outils";
+        }
+    });
+}
 
 
 

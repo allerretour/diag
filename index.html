@@ -923,65 +923,110 @@ kbd {
 }
 
 
-
 .drawing-tools-palette {
-    background-color: rgba(16, 20, 30, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 8px;
-    padding: 12px;
-    margin-bottom: 15px;
-}
-.drawing-tools-palette h4 {
-    margin-top: 0;
-    margin-bottom: 10px;
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.6);
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-.tools-flex-container {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr); /* 2 colonnes pour une lecture parfaite des textes sur iPad */
-    gap: 8px;
-}
-.tool-btn {
-    background-color: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #ffffff;
-    border-radius: 6px;
-    padding: 8px;
-    font-size: 12px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 8px;
-}
-.tool-btn:hover {
-    background-color: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.2);
-}
-.tool-btn.active {
-    background-color: #2980b9;
-    border-color: #3498db;
-    box-shadow: 0 0 8px rgba(41, 128, 185, 0.4);
-}
-.tool-btn.tool-shape.active {
-    background-color: #8e44ad; /* Violet distinctif pour l'arsenal tactique */
-    border-color: #9b59b6;
-    box-shadow: 0 0 8px rgba(142, 68, 173, 0.4);
-}
-.tool-btn.tool-eraser.active {
-    background-color: #c0392b;
-    border-color: #e74c3c;
-    box-shadow: 0 0 8px rgba(192, 57, 43, 0.4);
+        /* Alignement sur le style des modales et panneaux de l'application (rgba sombre et feutré) */
+        background-color: rgba(16, 20, 30, 0.92);
+        padding: 15px;
+        border-radius: 8px;
+        max-width: 650px; /* Légèrement élargi pour maximiser le confort de lecture */
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    }
+    
+    .drawing-tools-palette h4 {
+        margin-top: 0;
+        margin-bottom: 12px;
+        color: rgba(255, 255, 255, 0.95);
+        font-family: sans-serif;
+        font-weight: bold;
+        font-size: 14px;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+    }
+    
+    .tools-grid-container {
+        display: grid;
+        /* Grille stricte de 5 colonnes qui empêche le texte de pousser les murs */
+        grid-template-columns: repeat(5, minmax(0, 1fr)); 
+        gap: 10px;
+    }
+    
+    .tool-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px 4px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 4px;
+        background-color: rgba(255, 255, 255, 0.05);
+        color: rgba(255, 255, 255, 0.85);
+        cursor: pointer;
+        font-family: sans-serif;
+        font-size: 12px;
+        font-weight: 500;
+        height: 52px; /* Hauteur fixe pour un alignement parfait de la grille */
+        box-sizing: border-box;
+        text-align: center;
+        transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+    }
+    
+    /* Style au survol (Hover) - Harmonisé avec le reste de la table */
+    .tool-btn:hover {
+        background-color: rgba(255, 255, 255, 0.15);
+        color: #ffffff;
+        border-color: rgba(255, 255, 255, 0.3);
+    }
+    
+    /* État Actif (Bouton sélectionné) - Calqué sur le contour blanc des billes sélectionnées */
+    .tool-btn.active {
+        background-color: rgba(255, 255, 255, 0.25);
+        color: #ffffff;
+        border-color: #ffffff;
+        box-shadow: 0 0 4px rgba(255, 255, 255, 0.4);
+        font-weight: bold;
+    }
+    
+    /* Bouton spécifique pour la Gomme (Erase) */
+    .tool-btn.tool-eraser:hover {
+        background-color: rgba(231, 76, 60, 0.2);
+        border-color: #e74c3c;
+        color: #ef9a9a;
+    }
+    .tool-btn.tool-eraser.active {
+        background-color: #e74c3c;
+        border-color: #ffcdd2;
+        color: #ffffff;
+    }
+
+    /* Conteneur interne pour limiter le texte à 2 lignes maximum */
+    .tool-btn .btn-text {
+        display: -webkit-box;
+        -webkit-line-clamp: 2; /* Blocage strict à 2 lignes maximum */
+        -webkit-box-orient: vertical;  
+        overflow: hidden;
+        text-overflow: ellipsis; /* Ajout automatique de "..." si un mot est trop long */
+        line-height: 1.2;
+    }
+
+/* Cache la grille de boutons lorsque la palette est repliée */
+.drawing-tools-palette.is-collapsed .tools-grid-container {
+    display: none !important;
 }
 
+/* Cache le titre (H4) de la palette lorsqu'elle est repliée */
+.drawing-tools-palette.is-collapsed h4 {
+    display: none !important;
+}
 
-
+/* Réduit la boîte au minimum et retire les bordures/panneaux transparents quand elle est complètement cachée */
+.drawing-tools-palette.is-collapsed {
+    padding: 0px !important;
+    border: none !important;
+    background: none !important;
+    box-shadow: none !important;
+}
 
 
 
@@ -992,18 +1037,25 @@ kbd {
   <div class="header-container" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
     <h1 style="margin: 0; font-size: 1.8rem;">Concepteur de diagramme</h1>
     
-    <!-- Zone des boutons d'outils isolée en POSITION FIXE en haut à droite -->
-    <div class="top-tools-actions" style="position: fixed; top: 15px; right: 15px; z-index: 9999; display: flex; gap: 10px; align-items: center; background-color: rgba(0, 0, 0, 0.5); padding: 5px 10px; border-radius: 20px; backdrop-filter: blur(4px); border: 1px solid rgba(255, 255, 255, 0.1);">
+    <!-- Zone des boutons d'outils isolée en POSITION FIXE en haut à droite (3 boutons inclus) -->
+    <div class="top-tools-actions" style="position: fixed; top: 15px; right: 15px; z-index: 9999; display: flex; gap: 12px; align-items: center; background-color: rgba(0, 0, 0, 0.5); padding: 5px 12px; border-radius: 20px; backdrop-filter: blur(4px); border: 1px solid rgba(255, 255, 255, 0.1);">
         
         <!-- Bouton engrenage Options -->
-        <button id="btn-ouvrir-options" class="btn-top-tool" title="Ouvrir les Options" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #ffffff; padding: 5px; line-height: 1;">
+        <button id="btn-ouvrir-options" class="btn-top-tool" title="Ouvrir les Options" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #ffffff; padding: 5px; line-height: 1; transition: transform 0.2s;">
             ⚙️
         </button>
 
         <!-- Bouton Guide (point d'interrogation) -->
-        <button id="btn-ouvrir-guide" class="btn-top-tool" title="Guide des Raccourcis" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #ffffff; padding: 5px; line-height: 1;">
+        <button id="btn-ouvrir-guide" class="btn-top-tool" title="Guide des Raccourcis" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #ffffff; padding: 5px; line-height: 1; transition: transform 0.2s;">
             ❓
         </button>
+
+        <!-- NOUVEAU : 3ème bouton pour afficher/cacher la boîte d'outils tactiques -->
+        <!-- Bouton mis à jour dans la zone .top-tools-actions -->
+<button id="btn-toggle-palette" class="btn-top-tool" title="Afficher les outils" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #ffffff; padding: 5px; line-height: 1; transition: transform 0.2s;">
+    🙈
+</button>
+
         
     </div>
 </div>
@@ -1066,8 +1118,25 @@ kbd {
 
 
 
+<!-- Palette d'outils de tracé & Formes tactiques complète -->
+<div class="drawing-tools-palette is-collapsed" id="drawing-tools-palette">
+    <h4>Outils de Tracé & Tactique</h4>
+    <div class="tools-grid-container">
+        <!-- Ligne 1 -->
+        <button type="button" class="tool-btn active" data-tool="select" title="Sélection et déplacement des billes"><span class="btn-text">🖱️ Sélection</span></button>
+        <button type="button" class="tool-btn" data-tool="pencil" title="Dessin libre"><span class="btn-text">✏️ Crayon</span></button>
+        <button type="button" class="tool-btn" data-tool="line" title="Ligne droite"><span class="btn-text">📏 Ligne</span></button>
+        <button type="button" class="tool-btn" data-tool="arrow" title="Flèche droite"><span class="btn-text">🏹 Flèche</span></button>
+        <button type="button" class="tool-btn tool-shape" data-tool="pointContact" title="Point de contact (P)"><span class="btn-text">🎯 Contact (P)</span></button>
 
-
+        <!-- Ligne 2 -->
+        <button type="button" class="tool-btn tool-shape" data-tool="cible" title="Cible de visée (T)"><span class="btn-text">🎯 Cible (T)</span></button>
+        <button type="button" class="tool-btn tool-shape" data-tool="carre" title="Carré de zone (Z)"><span class="btn-text">🔲 Carré (Z)</span></button>
+        <button type="button" class="tool-btn tool-shape" data-tool="effetBlanche" title="Effets Bille Blanche (0)"><span class="btn-text">🔮 Effet (0)</span></button>
+        <button type="button" class="tool-btn tool-shape" data-tool="repereX" title="Repère visuel X (9)"><span class="btn-text">❌ Repère (9)</span></button>
+        <button type="button" class="tool-btn tool-eraser" data-tool="erase" title="Effacer un élément (Gomme)"><span class="btn-text">🧼 Gomme</span></button>
+    </div>
+</div>
     
 
 
@@ -1115,6 +1184,7 @@ kbd {
 		<div id="table-title-overlay" style="display: none;"></div>
 
 
+
             <!-- À insérer à l'intérieur de <div id="pool-table"> -->
 <!-- À insérer à l'intérieur de <div id="pool-table"> -->
 <canvas id="drawing-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;"></canvas>
@@ -1150,6 +1220,7 @@ kbd {
 		
 			
     </div>
+
 	
 	<!-- La liste latérale déplacée à droite (à l'intérieur du conteneur principal) -->
     <div id="balls-sidebar">
@@ -1158,51 +1229,7 @@ kbd {
 		
 		
 		
-		<!-- Palette d'outils de tracé & Formes tactiques complète -->
-<div class="drawing-tools-palette">
-    <h4>Outils de Tracé & Tactique</h4>
-    <div class="tools-flex-container">
-        <!-- Modes de déplacement et tracé -->
-        <button type="button" class="tool-btn active" data-tool="select" title="Sélection et déplacement des billes">
-            🖱️ Sélection
-        </button>
-        <button type="button" class="tool-btn" data-tool="pencil" title="Dessin libre">
-            ✏️ Crayon
-        </button>
-        <button type="button" class="tool-btn" data-tool="line" title="Ligne droite">
-            📏 Ligne
-        </button>
-        <button type="button" class="tool-btn" data-tool="arrow" title="Flèche droite">
-            🏹 Flèche
-        </button>
-
-        <!-- Formes Tactiques (Intégration de P, T, Z, 0, 9) -->
-        <button type="button" class="tool-btn tool-shape" data-tool="pointContact" title="Point de contact (P) - Cliquez pour réduire la quantité d'impact">
-            🎯 Contact (P)
-        </button>
-        <button type="button" class="tool-btn tool-shape" data-tool="cible" title="Cible de visée (T) - Cliquez pour changer de quadrant">
-            🎯 Cible (T)
-        </button>
-        <button type="button" class="tool-btn tool-shape" data-tool="carre" title="Carré de zone (Z) - Cliquez pour changer la taille">
-            🔲 Carré (Z)
-        </button>
-        <button type="button" class="tool-btn tool-shape" data-tool="effetBlanche" title="Effets Bille Blanche (0) - Cliquez pour doser la force">
-            🔮 Effet (0)
-        </button>
-        <button type="button" class="tool-btn tool-shape" data-tool="repereX" title="Repère visuel X (9) - Cliquez pour changer de style">
-            ❌ Repère (9)
-        </button>
-
-        <!-- Outil de suppression -->
-        <button type="button" class="tool-btn tool-eraser" data-tool="erase" title="Effacer un élément (Gomme)">
-            🧼 Gomme
-        </button>
 		
-		
-		
-    </div>
-</div>
-
 
 		
 		
