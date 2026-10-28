@@ -6,7 +6,7 @@ window.repereXEstUnCercle = false; // Permet de savoir si on bascule en mode cer
 
 // NOUVEAU : Liste ordonnée pour le cycle de la touche 9
 window.repereXTexte = null; 
-const cycleCaracteres = ["A", "B", "C", "D", "E", "F", "1", "2", "3", "4", "5", "6"];
+const cycleCaracteres = ["A", "B", "C", "D", "E", "F","●","⚫", "1", "2", "3", "4", "5", "6"];
  
 // Variable globale pour suivre la dimension actuelle du carré (3 tailles en pixels)
 window.tailleCarreCourante = 95; 
@@ -601,7 +601,7 @@ function dessinerRepereXGras(x, y, couleur, texteFige) {
 
 function rendreTexteRepere(x, y, texte, couleur) {
     ctx.fillStyle = couleur;
-    ctx.font = "bold 18px sans-serif"; 
+    ctx.font = "bold 24px sans-serif"; 
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(texte, x, y);
