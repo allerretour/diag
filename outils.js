@@ -56,6 +56,20 @@ if (inputLogoFile && tableLogoOverlay) {
 }
 
 
+// Déclencheur du colorpicker natif depuis le nouveau bouton de la grille
+const boutonCouleurTactique = document.getElementById('indicateur-couleur-tactique');
+const selecteurCouleurOrigine = document.getElementById('marker-color');
+
+if (boutonCouleurTactique && selecteurCouleurOrigine) {
+    boutonCouleurTactique.addEventListener('click', (e) => {
+        e.preventDefault();
+        selecteurCouleurOrigine.click(); // Ouvre le volet de sélection chromatique
+    });
+}
+
+
+
+
 // NOUVEAU : ÉCOUTEUR pour restaurer le logo original
 if (btnResetLogo && tableLogoOverlay) {
     btnResetLogo.addEventListener('click', () => {

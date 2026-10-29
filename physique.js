@@ -260,38 +260,56 @@ function makeDraggable(element) {
     document.addEventListener('touchend', dragEnd);
 
     function dragStart(e) {
-    if (element.style.display === 'none') return;
+        if (element.style.display === 'none') return;
 
-    const xOffset = parseInt(element.style.left) || 0;
-    const yOffset = parseInt(element.style.top) || 0;
+        const xOffset = parseInt(element.style.left) || 0;
+        const yOffset = parseInt(element.style.top) || 0;
 
-    if (e.type === 'touchstart') {
-        initialX = e.touches[0].clientX - xOffset; 
-        initialY = e.touches[0].clientY - yOffset;
-    } else {
-        initialX = e.clientX - xOffset; 
-        initialY = e.clientY - yOffset;
-    }
-    
-    if (e.target === element || element.contains(e.target)) {
-        isDragging = true;
-        
-        // MODIFICATION : On retire l'éventuel contour de l'ancienne bille sélectionnée
-        if (window.billeSelectionneeCourante) {
-            window.billeSelectionneeCourante.style.outline = 'none';
+        if (e.type === 'touchstart') {
+            initialX = e.touches[0].clientX - xOffset; 
+            initialY = e.touches[0].clientY - yOffset;
+        } else {
+            initialX = e.clientX - xOffset; 
+            initialY = e.clientY - yOffset;
         }
         
-        // Mémorise la bille comme sélectionnée de façon permanente
-        window.billeSelectionneeCourante = element; 
-        
-        // OPTIONNEL : Ajoute un repère visuel (ex: un contour blanc de 2px) pour savoir quelle bille est active
-        element.style.outline = '2px solid #ffffff';
-        element.style.outlineOffset = '2px';
+        if (e.target === element || element.contains(e.target)) {
+            isDragging = true;
+            
+            // ====================================================================
+            // CORRECTION DU BLOCAGE : NETTOYAGE AGRESSIF DE TOUS LES OUTLINES
+            // ====================================================================
+            // Supprime l'outline de la variable mémorisée
+            if (window.billeSelectionneeCourante) {
+                window.billeSelectionneeCourante.style.outline = 'none';
+                window.billeSelectionneeCourante.style.outlineOffset = '';
+            }
+            
+            // Sécurité subsidiaire : Nettoie graphiquement toutes les billes du tapis
+            // pour éliminer les contours résiduels laissés par l'ouverture du picker
+            if (Array.isArray(activeBalls)) {
+                activeBalls.forEach(b => {
+                    b.style.outline = 'none';
+                    b.style.outlineOffset = '';
+                });
+            }
+            
+            // Mémorise la nouvelle bille sélectionnée
+            window.billeSelectionneeCourante = element; 
+            
+            // Applique le nouveau repère visuel actif
+            element.style.outline = '2px solid #ffffff';
+            element.style.outlineOffset = '2px';
 
-        // ÉTAPE A : Mettre à jour l'affichage dès la sélection / clic initial
-        mettreAJourAffichagePosition(element, xOffset, yOffset);
+            // Mettre à jour l'affichage et synchroniser la couleur de la palette
+            mettreAJourAffichagePosition(element, xOffset, yOffset);
+            
+            if (typeof rafraichirTexteBoutonsPalette === "function") {
+                rafraichirTexteBoutonsPalette();
+            }
+        }
     }
-}
+
 
 
     function drag(e) {

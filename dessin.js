@@ -29,6 +29,9 @@ window.outilTraceActif = "select";
 const boutonsOutils = document.querySelectorAll('.tool-btn');
 
 function gererLogiquePalette(btn, e) {
+	
+	  // SÉCURITÉ : Si c'est le bouton couleur, on stoppe la logique d'outil de tracé
+    if (btn.id === 'indicateur-couleur-tactique') return;
     if (e.cancelable) e.preventDefault();
     
     const toolSelected = btn.getAttribute('data-tool');
@@ -148,7 +151,30 @@ boutonsOutils.forEach(btn => {
 
 // Nouvelle fonction pour mettre à jour l'affichage dynamique avec libellé fixe
 function rafraichirTexteBoutonsPalette() {
-    // 1. Libellé pour le bouton "Repère X"
+    // --- 1. RÉCUPÉRATION DYNAMIQUE DE LA COULEUR ---
+    const colorSelect = document.getElementById('marker-color');
+    let couleurSelectionnee = colorSelect ? colorSelect.value : '#ffffff';
+    
+    if (window.billeSelectionneeCourante) {
+        couleurSelectionnee = window.billeSelectionneeCourante.style.backgroundColor;
+    }
+
+       // --- 2. MISE À JOUR DU NOUVEAU BOUTON INDICATEUR ---
+    const boutonCouleur = document.getElementById('indicateur-couleur-tactique');
+    if (boutonCouleur) {
+        const previewBox = boutonCouleur.querySelector('.color-preview-box');
+        if (previewBox) {
+            // NOUVEAU : Animation fluide sur le changement de couleur de fond et d'ombre
+            previewBox.style.transition = "background-color 0.35s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.35s ease, transform 0.2s ease";
+            
+            previewBox.style.backgroundColor = couleurSelectionnee;
+            previewBox.style.boxShadow = `0 0 6px ${couleurSelectionnee}`;
+        }
+    }
+
+
+
+    // --- 3. LOGIQUE DES AUTRES BOUTONS DE LA PALETTE ---
     const btnRepere = document.querySelector('.tool-btn[data-tool="repereX"]');
     if (btnRepere) {
         if (window.repereXTexte) {
@@ -160,29 +186,21 @@ function rafraichirTexteBoutonsPalette() {
         }
     }
 
-    // Libellé pour le bouton "Cible" avec abréviations des quadrants (BD, BG, HG, HD)
     const btnCible = document.querySelector('.tool-btn[data-tool="cible"]');
     if (btnCible) {
-        // Table de correspondance basée sur votre variable (0: Bas-Droite, 1: Bas-Gauche, 2: Haut-Gauche, 3: Haut-Droite)
         const correspondanceQuadrants = { 0: "BD", 1: "BG", 2: "HG", 3: "HD" };
         const labelQuadrant = correspondanceQuadrants[window.quadrantCibleCourant] || "BD";
-        
-
         btnCible.innerText = `🎯 Cible : ${labelQuadrant}`;
     }
 
-    // 3. Libellé pour le bouton "Carré" (Taille P, M, G + Orientation)
     const btnCarre = document.querySelector('.tool-btn[data-tool="carre"]');
     if (btnCarre) {
         let labelTaille = "P";
         if (window.tailleCarreCourante === 135) labelTaille = "M";
         if (window.tailleCarreCourante === 180) labelTaille = "G";
-
-        const rotationCarreDegres = (window.quadrantCibleCourant || 0) * 90;
         btnCarre.innerText = `🔲 Carré : ${labelTaille}`;
     }
 
-    // 4. Libellé pour le bouton "Contact"
     const btnContact = document.querySelector('.tool-btn[data-tool="pointContact"]');
     if (btnContact) {
         if (window.pourcentageContactCourant === 100) {
@@ -193,7 +211,6 @@ function rafraichirTexteBoutonsPalette() {
         }
     }
 
-    // 5. Libellé pour le bouton "Effet"
     const btnEffet = document.querySelector('.tool-btn[data-tool="effetBlanche"]');
     if (btnEffet) {
         if (window.niveauForceCourant === 0) {
@@ -204,7 +221,6 @@ function rafraichirTexteBoutonsPalette() {
         }
     }
 }
-
 
 
 
@@ -1214,12 +1230,27 @@ function annulerDernierTrace() {
     }
 }
 
-if (colorSelect) {
-    // 'input' permet de capter les changements en temps réel pendant la sélection
-    colorSelect.addEventListener('input', () => {
-        ctx.strokeStyle = colorSelect.value;
-    });
+const colorSelectElement = document.getElementById('marker-color');
+if (colorSelectElement) {
+    const mettreAJourCouleurPalette = () => {
+        // 1. Assigne la couleur au contexte du canvas
+        ctx.strokeStyle = colorSelectElement.value;
+        
+        // 2. Si une bille était sélectionnée, on annule sa sélection pour que la palette lise la couleur du picker
+        window.billeSelectionneeCourante = null; 
+        
+        // 3. Force le rafraîchissement immédiat du bouton couleur et des libellés
+        if (typeof rafraichirTexteBoutonsPalette === "function") {
+            rafraichirTexteBoutonsPalette();
+        }
+    };
+
+    // 'input' capte le changement en temps réel pendant le glissement sur PC/Mac
+    colorSelectElement.addEventListener('input', mettreAJourCouleurPalette);
+    // 'change' valide la sélection définitive (notamment sur iPad/iPhone)
+    colorSelectElement.addEventListener('change', mettreAJourCouleurPalette);
 }
+
 
 
 if (clearBtn) {
