@@ -148,7 +148,7 @@ boutonsOutils.forEach(btn => {
 
 // Nouvelle fonction pour mettre à jour l'affichage dynamique avec libellé fixe
 function rafraichirTexteBoutonsPalette() {
-    // 1. Libellé fixe pour le bouton "Repère X"
+    // 1. Libellé pour le bouton "Repère X"
     const btnRepere = document.querySelector('.tool-btn[data-tool="repereX"]');
     if (btnRepere) {
         if (window.repereXTexte) {
@@ -160,7 +160,29 @@ function rafraichirTexteBoutonsPalette() {
         }
     }
 
-    // 2. Libellé fixe pour le bouton "Contact"
+    // Libellé pour le bouton "Cible" avec abréviations des quadrants (BD, BG, HG, HD)
+    const btnCible = document.querySelector('.tool-btn[data-tool="cible"]');
+    if (btnCible) {
+        // Table de correspondance basée sur votre variable (0: Bas-Droite, 1: Bas-Gauche, 2: Haut-Gauche, 3: Haut-Droite)
+        const correspondanceQuadrants = { 0: "BD", 1: "BG", 2: "HG", 3: "HD" };
+        const labelQuadrant = correspondanceQuadrants[window.quadrantCibleCourant] || "BD";
+        
+
+        btnCible.innerText = `🎯 Cible : ${labelQuadrant}`;
+    }
+
+    // 3. Libellé pour le bouton "Carré" (Taille P, M, G + Orientation)
+    const btnCarre = document.querySelector('.tool-btn[data-tool="carre"]');
+    if (btnCarre) {
+        let labelTaille = "P";
+        if (window.tailleCarreCourante === 135) labelTaille = "M";
+        if (window.tailleCarreCourante === 180) labelTaille = "G";
+
+        const rotationCarreDegres = (window.quadrantCibleCourant || 0) * 90;
+        btnCarre.innerText = `🔲 Carré : ${labelTaille}`;
+    }
+
+    // 4. Libellé pour le bouton "Contact"
     const btnContact = document.querySelector('.tool-btn[data-tool="pointContact"]');
     if (btnContact) {
         if (window.pourcentageContactCourant === 100) {
@@ -171,7 +193,7 @@ function rafraichirTexteBoutonsPalette() {
         }
     }
 
-    // 3. Libellé fixe pour le bouton "Effet"
+    // 5. Libellé pour le bouton "Effet"
     const btnEffet = document.querySelector('.tool-btn[data-tool="effetBlanche"]');
     if (btnEffet) {
         if (window.niveauForceCourant === 0) {
@@ -874,6 +896,11 @@ function dessinerZoneGrille(zoneIndex, couleur, mode) {
         ctx.globalAlpha = 0.18; 
         ctx.fill();
         ctx.restore();
+    } else if (mode === 'sans-inscription') {
+        // === CAS ZONE ANONYME (SANS CHIFFRE NI LETTRE) : REMPLISSAGE SOLIDE SEUL ===
+        ctx.globalAlpha = 0.18; 
+        ctx.fillStyle = couleurBlanche;
+        ctx.fill();
     } else {
         // === CAS ZONE DÉPART (ZD) : REMPLISSAGE SOLIDE BLANC PÂLE ===
         ctx.globalAlpha = 0.18; 
@@ -881,36 +908,41 @@ function dessinerZoneGrille(zoneIndex, couleur, mode) {
         ctx.fill();
     }
 
-    // --- CONFIGURATION COMMUNE ET HARMONISÉE DU FILIGRANE BLANC ---
-    ctx.fillStyle = couleurBlanche;
-    ctx.font = "bold 20px sans-serif"; 
-    const marge = 18;                  
-    const opaciteTexte = 0.2;          
+    // --- LE BLOC CI-DESSOUS S'EXÉCUTE UNIQUEMENT SI LE MODE N'EST PAS 'sans-inscription' ---
+    if (mode !== 'sans-inscription') {
+        ctx.fillStyle = couleurBlanche;
+        ctx.font = "bold 20px sans-serif"; 
+        const marge = 18;                  
+        const opaciteTexte = 0.2;          
 
-    // 1. DESSIN DU TEXTE « ZD » OU « ZA » (PETIT, EN HAUT À DROITE)
-    ctx.save();
-    ctx.globalAlpha = opaciteTexte; 
-    ctx.textAlign = "right";
-    ctx.textBaseline = "top";
-    
-    const textPrefixe = (mode === 'alternatif') ? "ZA" : "ZD";
-    ctx.fillText(textPrefixe, x + pasX - marge, y + marge);
-    ctx.restore();
+        // 1. DESSIN DU TEXTE « ZD » OU « ZA » (PETIT, EN HAUT À DROITE)
+        ctx.save();
+        ctx.globalAlpha = opaciteTexte; 
+        ctx.textAlign = "right";
+        ctx.textBaseline = "top";
+        
+        const textPrefixe = (mode === 'alternatif') ? "ZA" : "ZD";
+        ctx.fillText(textPrefixe, x + pasX - marge, y + marge);
+        ctx.restore();
 
-    // 2. DESSIN DU CHIFFRE UNIQUE IDENTIQUE (EN BAS À GAUCHE)
-    ctx.save();
-    ctx.globalAlpha = opaciteTexte; 
-    ctx.textAlign = "left";        
-    ctx.textBaseline = "bottom";    
-    
-    const positionChiffreX = x + marge;
-    const positionChiffreY = y + pasY - marge;
-    
-    ctx.fillText(zoneIndex, positionChiffreX, positionChiffreY);
-    ctx.restore();
+        // 2. DESSIN DU CHIFFRE UNIQUE IDENTIQUE (EN BAS À GAUCHE)
+        ctx.save();
+        ctx.globalAlpha = opaciteTexte; 
+        ctx.textAlign = "left";        
+        ctx.textBaseline = "bottom";    
+        
+        const positionChiffreX = x + marge;
+        const positionChiffreY = y + pasY - marge;
+        
+        ctx.fillText(zoneIndex, positionChiffreX, positionChiffreY);
+        ctx.restore();
+    }
 
     ctx.restore();
 }
+
+
+
 function resizeCanvas() {
     // 1. Récupérer le facteur de zoom (pixel ratio) du navigateur
     const dpr = window.devicePixelRatio || 1;
@@ -1273,7 +1305,7 @@ document.addEventListener('keydown', (e) => {
         }
     }
 
-    // Gestion des zones de grille (1 à 8)
+        // Gestion des zones de grille (1 à 8) avec cycle à 4 états
     if (e.key >= '1' && e.key <= '8') {
         const zoneId = parseInt(e.key, 10);
         const indexZoneExistante = window.dessinsSauvegardes.findIndex(dessin => dessin.estZoneGrille && dessin.zoneId === zoneId);
@@ -1281,11 +1313,17 @@ document.addEventListener('keydown', (e) => {
         if (indexZoneExistante !== -1) {
             const zoneActive = window.dessinsSauvegardes[indexZoneExistante];
             if (!zoneActive.mode || zoneActive.mode === 'standard') {
+                // État 2 : Bascule vers Zone d'Arrivée (ZA) hachurée
                 zoneActive.mode = 'alternatif';
+            } else if (zoneActive.mode === 'alternatif') {
+                // État 3 (Nouveau) : Bascule vers la zone colorée pure sans texte ni chiffre
+                zoneActive.mode = 'sans-inscription';
             } else {
+                // État 4 : Suppression définitive au clic suivant
                 window.dessinsSauvegardes.splice(indexZoneExistante, 1);
             }
         } else {
+            // État 1 : Premier clic, création de la Zone de Départ (ZD)
             const couleurActive = colorSelect ? colorSelect.value : '#ffffff';
             window.dessinsSauvegardes.push({
                 couleur: couleurActive,
@@ -1297,6 +1335,7 @@ document.addEventListener('keydown', (e) => {
         }
         window.redessinerToutesLesLignes();
     }
+
 });
 
 document.addEventListener('keyup', (e) => {

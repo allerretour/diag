@@ -1121,9 +1121,23 @@ kbd {
 <!-- Palette d'outils de tracé & Formes tactiques complète -->
 <div class="drawing-tools-palette is-collapsed" id="drawing-tools-palette">
     <h4>Outils de Tracé & Tactique</h4>
+	
+	
+	
+	
+	
     <div class="tools-grid-container">
+	
+	
+	
+	
         <!-- Ligne 1 -->
         <button type="button" class="tool-btn active" data-tool="select" title="Sélection et déplacement des billes"><span class="btn-text">🖱️ Sélection</span></button>
+		
+		<label class="control-item" for="chk-dashed-lines">
+        <input type="checkbox" id="chk-dashed-lines"> Pointillés
+        </label>
+		
         <button type="button" class="tool-btn" data-tool="pencil" title="Dessin libre"><span class="btn-text">✏️ Crayon</span></button>
         <button type="button" class="tool-btn" data-tool="line" title="Ligne droite"><span class="btn-text">📏 Ligne</span></button>
         <button type="button" class="tool-btn" data-tool="arrow" title="Flèche droite"><span class="btn-text">🏹 Flèche</span></button>
@@ -1256,19 +1270,10 @@ kbd {
         <input type="checkbox" id="chk-magnetism"> Mag / bandes
     </label>
 	
-    <label class="control-item">
-        <input type="checkbox" id="chk-show-title"> Titre
-    </label>
     
-    <label class="control-item">
-        <input type="checkbox" id="chk-show-logo" checked> Logo
-    </label>
+    
+      
 	
-    <label class="control-item" for="chk-dashed-lines">
-        <input type="checkbox" id="chk-dashed-lines"> Pointillés
-    </label>
-	
-    <!-- AJOUT DE LA CLASSE ICI POUR HARMONISER L'AFFICHAGE -->
     <label class="control-item">
         <input type="checkbox" id="chk-toggle-balls-list" checked> Liste des billes
     </label>
@@ -1301,10 +1306,19 @@ kbd {
             <!-- Champ Titre -->
             <div class="form-group mb-3">
                 <label for="input-title" class="form-label">Titre de la configuration</label>
+				
+					<label class="control-item">
+        <input type="checkbox" id="chk-show-title"> Titre
+    </label>
+				
                 <div class="input-wrapper">
                     <span class="input-icon">✏️</span>
                     <input type="text" id="input-title" class="form-control" placeholder="Ex: Attaque en bande, Position de départ..." value="Ma configuration de billard">
                 </div>
+				
+			
+				
+				
             </div>
 
             <!-- Champ Description -->
@@ -1427,8 +1441,15 @@ kbd {
 
                 <div class="option-group small">
                     <label for="input-logo-file" class="d-block mb-1">Charger un Logo personnalisé :</label>
+					
+					<label class="control-item">
+					<input type="checkbox" id="chk-show-logo" checked> Logo
+					</label>
+	
+					<button id="btn-reset-logo" type="button" class="btn btn-action btn-xs py-1 px-2 mt-1">Réinitialiser le Logo</button>
+					
                     <input type="file" id="input-logo-file" accept="image/*" class="form-control form-control-sm mb-1 bg-dark text-white border-secondary">
-                    <button id="btn-reset-logo" type="button" class="btn btn-action btn-xs py-1 px-2 mt-1">Réinitialiser le Logo</button>
+                    
                 </div>
             </div>			
         </div>
