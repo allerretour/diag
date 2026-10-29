@@ -1096,10 +1096,12 @@ function annulerDernierTrace() {
 }
 
 if (colorSelect) {
-    colorSelect.addEventListener('change', () => {
+    // 'input' permet de capter les changements en temps réel pendant la sélection
+    colorSelect.addEventListener('input', () => {
         ctx.strokeStyle = colorSelect.value;
     });
 }
+
 
 if (clearBtn) {
     clearBtn.addEventListener('click', () => {

@@ -147,6 +147,36 @@ if (btnTogglePalette && paletteContainer) {
 }
 
 
+// --- GESTION DE LA BARRE LATÉRALE DES BILLES (AFFICHER/MASQUER) ---
+const btnToggleBalls = document.getElementById('btn-toggle-balls-sidebar');
+const ballsSidebarContainer = document.getElementById('balls-sidebar');
+const chkBallsListSync = document.getElementById('chk-toggle-balls-list');
+
+if (btnToggleBalls && ballsSidebarContainer) {
+    btnToggleBalls.addEventListener('click', () => {
+        // Alterne la visibilité en vérifiant l'état actuel
+        const estMasque = ballsSidebarContainer.style.display === 'none';
+        
+        if (estMasque) {
+            // On l'affiche (Flex/Grid par défaut)
+            ballsSidebarContainer.style.display = "";
+            btnToggleBalls.innerText = '🔮'; // Émoji quand la liste est ouverte (à adapter selon vos goûts)
+            btnToggleBalls.title = "Masquer la liste des billes";
+            if (chkBallsListSync) chkBallsListSync.checked = true;
+        } else {
+            // On la masque
+            ballsSidebarContainer.style.display = 'none';
+            btnToggleBalls.innerText = '🎱'; // Émoji quand la liste est fermée
+            btnToggleBalls.title = "Afficher la liste des billes";
+            if (chkBallsListSync) chkBallsListSync.checked = false;
+        }
+    });
+}
+
+
+
+
+
 
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -759,7 +789,7 @@ if (importTriggerBtn && fileImportInput) {
                     window.redessinerToutesLesLignes();
                 }
 
-                alert(`Configuration "${titreImported}" restaurée avec succès !`);
+                // alert(`Configuration "${titreImported}" restaurée avec succès !`);
                 
                 if (modalGuide) {
 					modalGuide.close();

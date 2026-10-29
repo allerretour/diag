@@ -1056,6 +1056,8 @@ kbd {
     🙈
 </button>
 
+		<button id="btn-toggle-balls-sidebar" class="btn-top-tool" title="Masquer la liste des billes" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #ffffff; padding: 5px; line-height: 1; transition: transform 0.2s;">🎱</button>
+
         
     </div>
 </div>
@@ -1274,9 +1276,7 @@ kbd {
     
       
 	
-    <label class="control-item">
-        <input type="checkbox" id="chk-toggle-balls-list" checked> Liste des billes
-    </label>
+    
 	
 	<label class="control-item">
 		<input type="checkbox" id="chk-toggle-drawings" checked> Dessins/tracés
@@ -1377,8 +1377,13 @@ kbd {
                 <option value="14">14 manches</option>
                 <option value="15">15 manches</option>
             </select>
+			
+			<label class="control-item">
+        		
         </div>
 
+		
+				
         <div class="control-group mb-3">
             <!-- Sélecteur de billes compact -->
             <div class="d-flex align-items-center gap-1 text-white bg-dark p-2 rounded mb-2">
@@ -1411,24 +1416,21 @@ kbd {
                         <option value="10">Jeu de la 10 (10)</option>
                     </optgroup>
                 </select>
+				
+				<input type="checkbox" id="chk-toggle-balls-list" checked> Liste des billes
+			</label>
+				
+				
             </div>
 
             <div class="drawing-controls">
-                <div class="mb-2">
-                    <label for="marker-color" class="small">🎨 Couleur du tracé :</label>
-                    <select id="marker-color" class="form-select form-select-sm d-inline-block w-auto">
-                        <option value="#ffffff">⚪ Blanc</option>
-                        <option value="#e74c3c">🔴 Rouge</option>
-                        <option value="#f1c40f">🟡 Jaune</option>
-                        <option value="#2ecc71">🟢 Vert fluo</option>
-                        <option value="#3498db">🔵 Bleu ciel</option>
-                        <option value="#1abc9c">🌐 Turquoise</option>
-                        <option value="#e67e22">🟠 Orange</option>
-                        <option value="#9b59b6">🟣 Violet</option>
-                        <option value="#e84393">💗 Rose</option>
-                        <option value="#2c3e50">⚫ Noir</option>
-                    </select>
-                </div>
+    <div class="mb-2">
+        <label for="marker-color" class="small">🎨 Couleur du tracé :</label>
+        <!-- Remplacement du select par l'input type="color" -->
+        <input type="color" id="marker-color" class="form-control form-control-sm d-inline-block w-auto" value="#ffffff" style="padding:0; width:40px; height:30px; cursor:pointer;">
+    </div>
+</div>
+
 
                 <fieldset class="control-group mb-2 p-2 rounded" style="border: 1px solid #333;">
                     <legend class="px-2 small text-muted" style="float: none; width: auto; font-size: 0.85rem; margin-bottom: 0;">🟢 Couleur du Tapis</legend>
