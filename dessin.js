@@ -1236,8 +1236,28 @@ if (colorSelectElement) {
         // 1. Assigne la couleur au contexte du canvas
         ctx.strokeStyle = colorSelectElement.value;
         
-        // 2. Si une bille était sélectionnée, on annule sa sélection pour que la palette lise la couleur du picker
-        window.billeSelectionneeCourante = null; 
+        // ====================================================================
+        // CORRECTION : NETTOYAGE COMPLET DES SÉLECTIONS ET DES CONTOURS (.ball)
+        // ====================================================================
+        // Supprime l'outline de la variable mémorisée
+        if (window.billeSelectionneeCourante) {
+            window.billeSelectionneeCourante.style.outline = 'none';
+            window.billeSelectionneeCourante.style.outlineOffset = '';
+            window.billeSelectionneeCourante = null; 
+        }
+        
+        // Sécurité : Nettoie graphiquement toutes les billes du tapis
+        if (Array.isArray(activeBalls)) {
+            activeBalls.forEach(b => {
+                b.style.outline = 'none';
+                b.style.outlineOffset = '';
+            });
+        }
+        
+        // Met à jour l'affichage de la liste latérale pour enlever la surbrillance active
+        if (typeof rafraichirListeLateraleBilles === "function") {
+            rafraichirListeLateraleBilles();
+        }
         
         // 3. Force le rafraîchissement immédiat du bouton couleur et des libellés
         if (typeof rafraichirTexteBoutonsPalette === "function") {
@@ -1250,6 +1270,7 @@ if (colorSelectElement) {
     // 'change' valide la sélection définitive (notamment sur iPad/iPhone)
     colorSelectElement.addEventListener('change', mettreAJourCouleurPalette);
 }
+
 
 
 
