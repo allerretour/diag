@@ -148,7 +148,7 @@ function clampPosition(x, y) {
  * en centrant le milieu de la bille sur les intersections.
  * Empêche le débordement sur les lignes de contour en repoussant la bille vers l'intérieur.
  */
-function calculerSnapGrille(x, y, element) {
+function calculerSnapGrille(x, y, element, estDessin = false) {
     // Si le magnétisme existe et qu'elle est décochée, on n'applique aucun filtre
     if (chkMagnetism && !chkMagnetism.checked) {
         return { x, y };
@@ -182,27 +182,28 @@ function calculerSnapGrille(x, y, element) {
     let snappedLocalCentreX = Math.round(localCentreX / pasX) * pasX;
     let snappedLocalCentreY = Math.round(localCentreY / pasY) * pasY;
 
-    // 4. MODIFICATION : Empêcher le chevauchement sur les bandes extérieures
-    // Si le centre est aimanté sur le bord 0, on le repousse vers l'intérieur d'un rayon de bille.
-    // Si le centre est aimanté sur le bord maximum, on le ramène vers l'intérieur d'un rayon de bille.
-    if (snappedLocalCentreX <= 0) {
-        snappedLocalCentreX = rayonBille;
-    } else if (snappedLocalCentreX >= gridWidth) {
-        snappedLocalCentreX = gridWidth - rayonBille;
+    // 4. MODIFICATION : Appliquer le bridage uniquement s'il ne s'agit pas d'un dessin de ligne
+    if (!estDessin) {
+        if (snappedLocalCentreX <= 0) {
+            snappedLocalCentreX = rayonBille;
+        } else if (snappedLocalCentreX >= gridWidth) {
+            snappedLocalCentreX = gridWidth - rayonBille;
+        }
+
+        if (snappedLocalCentreY <= 0) {
+            snappedLocalCentreY = rayonBille;
+        } else if (snappedLocalCentreY >= gridHeight) {
+            snappedLocalCentreY = gridHeight - rayonBille;
+        }
     }
 
-    if (snappedLocalCentreY <= 0) {
-        snappedLocalCentreY = rayonBille;
-    } else if (snappedLocalCentreY >= gridHeight) {
-        snappedLocalCentreY = gridHeight - rayonBille;
-    }
-
-    // 5. Reconvertir en coordonnées CSS de positionnement (Top/Left de la bille)
+    // 5. Reconvertir en coordonnées CSS de positionnement
     const finalX = (gridLeft + snappedLocalCentreX) - rayonBille;
     const finalY = (gridTop + snappedLocalCentreY) - rayonBille;
 
     return { x: finalX, y: finalY };
 }
+
 
 function resolveCollisions(currentBall) {
     let currentX = parseFloat(currentBall.style.left);

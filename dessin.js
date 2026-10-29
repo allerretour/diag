@@ -1433,16 +1433,25 @@ function declencherMouvementTrace(e) {
     if (e.cancelable) e.preventDefault();
 
     if (currentLine.estDroite) {
+        let targetX = x;
+        let targetY = y;
+        if (typeof calculerSnapGrille === "function") {
+            // Le 4e paramètre passé à true supprime la marge sur la bande
+            const pointAimante = calculerSnapGrille(x - 12, y - 12, null, true);
+            targetX = pointAimante.x + 12;
+            targetY = pointAimante.y + 12;
+        }
+
         window.redessinerToutesLesLignes();
         configurerStyleDessin(currentLine.couleur, currentLine.estPointille);
         ctx.beginPath();
         ctx.moveTo(startPoint.x, startPoint.y);
-        ctx.lineTo(x, y);
+        ctx.lineTo(targetX, targetY);
         ctx.stroke();
         if (currentLine.avecFleche) {
-            dessinerPointeFleche(startPoint.x, startPoint.y, x, y, currentLine.couleur);
+            dessinerPointeFleche(startPoint.x, startPoint.y, targetX, targetY, currentLine.couleur);
         }
-        currentLine.points = [startPoint, { x, y }];
+        currentLine.points = [startPoint, { x: targetX, y: targetY }];
     } else {
         ctx.lineTo(x, y);
         ctx.stroke();
@@ -1502,11 +1511,22 @@ function commencerDessin(e) {
     isDrawing = true;
     
     const coords = obtenirCoordonneesEvenement(e, table);
-    const x = coords.x;
-    const y = coords.y;
+    let x = coords.x;
+    let y = coords.y;
+
+    // --- NOUVEAU : AIMANTATION DU POINT DE DÉPART DE LA LIGNE SANS PADDING ---
+    const forceLigneDroite = (window.outilTraceActif === "line" || window.outilTraceActif === "arrow") || (window.outilTraceActif === "select" && (e.ctrlKey || e.metaKey || isCtrlPressed));
+    if (forceLigneDroite && typeof calculerSnapGrille === "function") {
+        // AJOUT DU 4E PARAMÈTRE (true) : Désactive la restriction des bandes pour les lignes
+        const pointAimante = calculerSnapGrille(x - 12, y - 12, null, true);
+        x = pointAimante.x + 12;
+        y = pointAimante.y + 12;
+    }
     
     canvas.style.pointerEvents = 'none';
-    const elementSousCurseur = document.elementFromPoint(e.touches ? e.touches[0].clientX : e.clientX, e.touches ? e.touches[0].clientY : e.clientY);
+    const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : e.clientY;
+    const elementSousCurseur = document.elementFromPoint(clientX, clientY);
     canvas.style.pointerEvents = 'auto';
 
     let billeSousCurseur = elementSousCurseur ? elementSousCurseur.closest('.ball') : null;
@@ -1532,14 +1552,10 @@ function commencerDessin(e) {
     ctx.moveTo(x, y);
     startPoint = { x, y }; 
 
-    let forceLigneDroite = false;
     let forceFleche = false;
-
     if (window.outilTraceActif !== "select") {
-        forceLigneDroite = (window.outilTraceActif === "line" || window.outilTraceActif === "arrow");
         forceFleche = (window.outilTraceActif === "arrow");
     } else {
-        forceLigneDroite = e.ctrlKey || e.metaKey || isCtrlPressed;
         forceFleche = forceLigneDroite && (e.shiftKey || isShiftPressed);
     }
 
@@ -1551,6 +1567,8 @@ function commencerDessin(e) {
         points: [{ x, y }]
     };
 }
+
+
 
 function finTrace() {
     if (isDrawing && currentLine) {
