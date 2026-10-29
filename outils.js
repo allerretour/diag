@@ -313,9 +313,17 @@ if (ballsCountSelect) {
                 }
             }
         }
+        
+        // 3. Rafraîchir la liste des billes à côté
         rafraichirListeLateraleBilles();
+
+        // --- NOUVEAU : Force le canvas à se rafraîchir pour afficher/masquer la breakbox ---
+        if (typeof window.redessinerToutesLesLignes === "function") {
+            window.redessinerToutesLesLignes();
+        }
     });
 }
+
 
 
 
@@ -384,6 +392,11 @@ function placerRackOfficiel(mode) {
             6:  { col: 3, row: -1.5 }, 7:  { col: 3, row: -0.5 }, 8: { col: 3, row: 0.5 }, 9: { col: 3, row: 1.5 }
         };
     }
+	
+	
+	
+	
+	
 
     // Application des positions physiques calculées aux éléments HTML
     Object.keys(schéma).forEach(id => {
