@@ -790,98 +790,99 @@ document.addEventListener("DOMContentLoaded", () => {
 	}
 
 	function dessinerCible(x, y, couleur) {
-		ctx.save(); // Sauvegarde l'état global du canvas
+	ctx.save(); // Sauvegarde l'état global du canvas
 
-		// === FORCE LES LIGNES PLEINES POUR LA CIBLE ===
-		ctx.setLineDash([]);
+	// === FORCE LES LIGNES PLEINES POUR LA CIBLE ===
+	ctx.setLineDash([]);
 
-		// --- 1. DÉFINITION DES BANDES DE SÉCURITÉ ---
-		let bandeGauche = 18;
-		let bandeDroite = 18;
-		let bandeHaut = 18;
-		let bandeBas = 18;
+	// --- 1. DÉFINITION DES BANDES DE SÉCURITÉ ---
+	let bandeGauche = 18;
+	let bandeDroite = 18;
+	let bandeHaut = 18;
+	let bandeBas = 18;
 
-		// --- 2. CRÉATION DE LA ZONE DE DÉCOUPE AVEC DIMENSIONS LOGIQUES (CORRIGÉ POUR LE ZOOM) ---
-		const dpr = window.devicePixelRatio || 1;
-		const canvasLogicalWidth = ctx.canvas.width / dpr;
-		const canvasLogicalHeight = ctx.canvas.height / dpr;
+	// --- 2. CRÉATION DE LA ZONE DE DÉCOUPE AVEC DIMENSIONS LOGIQUES ---
+	const dpr = window.devicePixelRatio || 1;
+	const canvasLogicalWidth = ctx.canvas.width / dpr;
+	const canvasLogicalHeight = ctx.canvas.height / dpr;
 
-		let zoneUtileX = bandeGauche;
-		let zoneUtileY = bandeHaut;
-		let zoneUtileLargeur = canvasLogicalWidth - bandeGauche - bandeDroite;
-		let zoneUtileHauteur = canvasLogicalHeight - bandeHaut - bandeBas;
+	let zoneUtileX = bandeGauche;
+	let zoneUtileY = bandeHaut;
+	let zoneUtileLargeur = canvasLogicalWidth - bandeGauche - bandeDroite;
+	let zoneUtileHauteur = canvasLogicalHeight - bandeHaut - bandeBas;
 
-		ctx.beginPath();
-		ctx.rect(zoneUtileX, zoneUtileY, zoneUtileLargeur, zoneUtileHauteur);
-		ctx.clip(); // Tronque parfaitement si la forme déborde au zoom
+	ctx.beginPath();
+	ctx.rect(zoneUtileX, zoneUtileY, zoneUtileLargeur, zoneUtileHauteur);
+	ctx.clip(); 
 
-		// --- 3. DESSIN DU FOND OPAQUE A 30% ---
-		ctx.save();
-		ctx.fillStyle = couleur;
-		ctx.globalAlpha = 0.30;
+	// --- 3. DESSIN DU FOND OPAQUE A 30% (Dimensions réduites de 10px) ---
+	ctx.save();
+	ctx.fillStyle = couleur;
+	ctx.globalAlpha = 0.30;
 
-		ctx.beginPath();
-		ctx.roundRect(x - 92.5, y - 92.5, 185, 185, 8);
-		ctx.fill();
-		ctx.restore();
+	ctx.beginPath();
+	ctx.roundRect(x - 87.5, y - 87.5, 175, 175, 8);
+	ctx.fill();
+	ctx.restore();
 
-		// --- 4. DESSIN DES CONTOURS DE LA CIBLE ---
-		ctx.strokeStyle = couleur;
-		ctx.lineWidth = 2;
+	// --- 4. DESSIN DES CONTOURS DE LA CIBLE ---
+	ctx.strokeStyle = couleur;
+	ctx.lineWidth = 2;
 
-		// Carré extérieur avec coins arrondis
-		ctx.beginPath();
-		ctx.roundRect(x - 92.5, y - 92.5, 185, 185, 8);
-		ctx.stroke();
+	// Carré extérieur avec coins arrondis (Dimensions réduites de 10px)
+	ctx.beginPath();
+	ctx.roundRect(x - 87.5, y - 87.5, 175, 175, 8);
+	ctx.stroke();
 
-		// Cercles de la cible
-		let r1 = 92.5;
-		let r2 = 92.5 * (2 / 3);
-		let r3 = 92.5 * (1 / 3);
+	// Cercles de la cible (Rayon r1 réduit de 5px pour enlever 10px sur le diamètre)
+	let r1 = 87.5;
+	let r2 = r1 * (2 / 3);
+	let r3 = r1 * (1 / 3);
 
-		ctx.beginPath();
-		ctx.arc(x, y, r1, 0, 2 * Math.PI);
-		ctx.stroke();
-		ctx.beginPath();
-		ctx.arc(x, y, r2, 0, 2 * Math.PI);
-		ctx.stroke();
-		ctx.beginPath();
-		ctx.arc(x, y, r3, 0, 2 * Math.PI);
-		ctx.stroke();
+	ctx.beginPath();
+	ctx.arc(x, y, r1, 0, 2 * Math.PI);
+	ctx.stroke();
+	ctx.beginPath();
+	ctx.arc(x, y, r2, 0, 2 * Math.PI);
+	ctx.stroke();
+	ctx.beginPath();
+	ctx.arc(x, y, r3, 0, 2 * Math.PI);
+	ctx.stroke();
 
-		// Lignes réticulaires se croisant au centre
-		ctx.beginPath();
-		ctx.moveTo(x - r1, y);
-		ctx.lineTo(x + r1, y);
-		ctx.moveTo(x, y - r1);
-		ctx.lineTo(x, y + r1);
-		ctx.stroke();
+	// Lignes réticulaires se croisant au centre
+	ctx.beginPath();
+	ctx.moveTo(x - r1, y);
+	ctx.lineTo(x + r1, y);
+	ctx.moveTo(x, y - r1);
+	ctx.lineTo(x, y + r1);
+	ctx.stroke();
 
-		// --- 5. CONFIGURATION ET ROTATION DU CADRAN DES CHIFFRES ---
-		ctx.fillStyle = couleur;
-		ctx.font = "bold 14px sans-serif";
-		ctx.textAlign = "center";
-		ctx.textBaseline = "middle";
+	// --- 5. CONFIGURATION ET ROTATION DU CADRAN DES CHIFFRES ---
+	ctx.fillStyle = couleur;
+	ctx.font = "bold 14px sans-serif";
+	ctx.textAlign = "center";
+	ctx.textBaseline = "middle";
 
-		let distCoin = r1 * Math.sqrt(2);
-		let dist1 = r1 + (distCoin - r1) / 2;
-		let dist2 = r2 + (r1 - r2) / 2;
-		let dist3 = r3 + (r2 - r3) / 2;
-		let dist5 = r3 / 2;
+	let distCoin = r1 * Math.sqrt(2);
+	let dist1 = r1 + (distCoin - r1) / 2;
+	let dist2 = r2 + (r1 - r2) / 2;
+	let dist3 = r3 + (r2 - r3) / 2;
+	let dist5 = r3 / 2;
 
-		const indexQuadrant = window.quadrantCibleCourant || 0;
-		const angleRotation = (Math.PI / 4) + (indexQuadrant * (Math.PI / 2));
+	const indexQuadrant = window.quadrantCibleCourant || 0;
+	const angleRotation = (Math.PI / 4) + (indexQuadrant * (Math.PI / 2));
 
-		const cosAngle = Math.cos(angleRotation);
-		const sinAngle = Math.sin(angleRotation);
+	const cosAngle = Math.cos(angleRotation);
+	const sinAngle = Math.sin(angleRotation);
 
-		ctx.fillText("1", x + dist1 * cosAngle, y + dist1 * sinAngle);
-		ctx.fillText("2", x + dist2 * cosAngle, y + dist2 * sinAngle);
-		ctx.fillText("3", x + dist3 * cosAngle, y + dist3 * sinAngle);
-		ctx.fillText("5", x + dist5 * cosAngle, y + dist5 * sinAngle);
+	ctx.fillText("1", x + dist1 * cosAngle, y + dist1 * sinAngle);
+	ctx.fillText("2", x + dist2 * cosAngle, y + dist2 * sinAngle);
+	ctx.fillText("3", x + dist3 * cosAngle, y + dist3 * sinAngle);
+	ctx.fillText("5", x + dist5 * cosAngle, y + dist5 * sinAngle);
 
-		ctx.restore(); // Annule le clip global
-	}
+	ctx.restore(); 
+}
+
 
 	function dessinerCarre(x, y, couleur) {
 		ctx.save();
