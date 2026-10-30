@@ -56,15 +56,18 @@ if (inputLogoFile && tableLogoOverlay) {
 }
 
 
-// Déclencheur du colorpicker natif compatible avec l'environnement iOS (iPad/iPhone)
+// ====================================================================
+// GESTION DU COLORPICKER COMPATIBLE IOS (IPAD/IPHONE) ET NAVIGATEURS PC
+// ====================================================================
 const boutonCouleurTactique = document.getElementById('indicateur-couleur-tactique');
 const selecteurCouleurOrigine = document.getElementById('marker-color');
 
 function ouvrirColorPicker(e) {
     if (!selecteurCouleurOrigine) return;
-    if (e.cancelable) e.preventDefault();
     
-    // NOUVEAU : API standard moderne supportée par iOS pour ouvrir les inputs natifs
+    // --- CORRECTIF IOS : Ne JAMAIS faire de preventDefault() ici ---
+    
+    // API standard moderne supportée par iOS pour ouvrir les inputs natifs
     if (typeof selecteurCouleurOrigine.showPicker === "function") {
         selecteurCouleurOrigine.showPicker();
     } else {
@@ -74,9 +77,8 @@ function ouvrirColorPicker(e) {
 }
 
 if (boutonCouleurTactique) {
-    // Écouteur tactile ultra-réactif pour l'environnement iPad/iPhone
-    boutonCouleurTactique.addEventListener('touchstart', ouvrirColorPicker, { passive: false });
-    // Écouteur standard pour le clic souris classique sur PC/Mac
+    // --- CORRECTIF IOS : Suppression définitive de l'écouteur touchstart parasite ---
+    // Écouteur universel standard (gère nativement le tactile réactif sur iOS)
     boutonCouleurTactique.addEventListener('click', ouvrirColorPicker);
 }
 
