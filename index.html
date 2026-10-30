@@ -1,1649 +1,1760 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
 
-    
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Concepteur de diagramme</title>
-    <style>
-	 /* ====================================================================
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<title>Concepteur de diagramme</title>
+	<style>
+		/* ====================================================================
    DÉFINITION DES VARIABLES DE COULEUR (Faciles à changer)
    ==================================================================== */
-:root {
-    /* Changez uniquement cette ligne pour changer la couleur du billard ! */
-    --tapis-couleur-principale: #1f4e79; /* Bleu tournoi officiel */
+		:root {
+			/* Changez uniquement cette ligne pour changer la couleur du billard ! */
+			--tapis-couleur-principale: #1f4e79;
+			/* Bleu tournoi officiel */
 
-    /* Nuances calculées automatiquement pour les volumes (Ombres et Lumières) */
-    --tapis-eclat-centre:       #2a6ba2; /* Point lumineux sous la lampe */
-    --tapis-ombre-profonde:     #0f273d; /* Coins sombres de la table */
-    --bande-dessus-lumineux:    #245c8f; /* Sommet de la bande plastique */
-    --bande-ombre-exterieure:   #12304c; /* Ombre de raccord au cadre bois */
-    --bande-ombre-interieure:   #163654; /* Chute de la bande vers le tapis */
-}
-	
-	
-        * { box-sizing: border-box; }
-        body {
-            background-color: #1e272e;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: #dcdde1;
-            user-select: none;
-        }
-        h1 { margin-bottom: 5px; font-size: 26px; letter-spacing: 1px; }
-        p { margin-top: 0; margin-bottom: 25px; color: #718093; }
+			/* Nuances calculées automatiquement pour les volumes (Ombres et Lumières) */
+			--tapis-eclat-centre: #2a6ba2;
+			/* Point lumineux sous la lampe */
+			--tapis-ombre-profonde: #0f273d;
+			/* Coins sombres de la table */
+			--bande-dessus-lumineux: #245c8f;
+			/* Sommet de la bande plastique */
+			--bande-ombre-exterieure: #12304c;
+			/* Ombre de raccord au cadre bois */
+			--bande-ombre-interieure: #163654;
+			/* Chute de la bande vers le tapis */
+		}
 
-                /* Style réaliste pour les mouches (repères diamants) */
-        .diamond {
-            width: 8px;
-            height: 8px;
-            background-color: #f1f2f6;
-            transform: rotate(45deg);
-            box-shadow: 1px 1px 2px rgba(0,0,0,0.6), inset -1px -1px 1px rgba(0,0,0,0.3);
-            opacity: 0.85;
-            pointer-events: none;
-        }
+		* {
+			box-sizing: border-box;
+		}
 
+		body {
+			background-color: #1e272e;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			min-height: 100vh;
+			margin: 0;
+			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+			color: #dcdde1;
+			user-select: none;
+		}
 
-@media print {
-    /* 1. Configuration de la page d'impression sans marges parasites */
-    @page {
-        size: auto;
-        margin: 0;
-    }
+		h1 {
+			margin-bottom: 5px;
+			font-size: 26px;
+			letter-spacing: 1px;
+		}
 
-    /* 2. Forcer le fond de la page entière en blanc pur et fixer les limites */
-    html, body {
-        background: #ffffff !important;
-        background-color: #ffffff !important;
-        background-image: none !important;
-        width: 100%;
-        height: 100%;
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-    }
+		p {
+			margin-top: 0;
+			margin-bottom: 25px;
+			color: #718093;
+		}
 
-    /* 3. Masquer l'intégralité de l'interface utilisateur et le titre applicatif */
-    body * {
-        visibility: hidden;
-    }
-    #main-app-title {
-        display: none !important;
-    }
+		/* Style réaliste pour les mouches (repères diamants) */
+		.diamond {
+			width: 8px;
+			height: 8px;
+			background-color: #f1f2f6;
+			transform: rotate(45deg);
+			box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6), inset -1px -1px 1px rgba(0, 0, 0, 0.3);
+			opacity: 0.85;
+			pointer-events: none;
+		}
 
-    /* 4. Réactiver la table, la zone de notes, la liste des billes et tout leur contenu */
-    #table-frame, #table-frame *,
-    #tactical-notes-area, #tactical-notes-area *,
-    #balls-sidebar, #balls-sidebar * {
-        visibility: visible;
-    }
+		@media print {
 
-    /* Masquer spécifiquement les boutons et éléments de contrôle sur le papier */
-    #btn-toggle-notes, #btn-toggle-balls-sidebar, #chk-toggle-balls-list {
-        display: none !important;
-    }
-    #balls-sidebar h3 {
-        display: none !important; 
-    }
+			/* 1. Configuration de la page d'impression sans marges parasites */
+			@page {
+				size: auto;
+				margin: 0;
+			}
 
-    /* 5. ÉLÉMENT 1 (HAUT) : Positionnement de la zone de notes tactiques tout en haut */
-    #tactical-notes-area {
-        display: block !important; 
-        position: absolute !important;
-        left: 50% !important;
-        top: 6% !important; /* Calé au sommet de la page */
-        transform: translateX(-50%) !important;
-        width: 860px !important; 
-        background-color: #0b0f17 !important;
-        border: 1px solid rgba(0, 0, 0, 0.15) !important;
-        box-shadow: none !important;
-        margin: 0 !important;
-        print-color-adjust: exact;
-        -webkit-print-color-adjust: exact;
-    }
+			/* 2. Forcer le fond de la page entière en blanc pur et fixer les limites */
+			html,
+			body {
+				background: #ffffff !important;
+				background-color: #ffffff !important;
+				background-image: none !important;
+				width: 100%;
+				height: 100%;
+				margin: 0;
+				padding: 0;
+				overflow: hidden;
+			}
 
-    /* 6. ÉLÉMENT 2 (MILIEU) : Positionnement de la table de billard indexé sous la zone tactique */
-    #table-frame {
-        position: absolute !important;
-        left: 50% !important;
-        /* Aligné dynamiquement sous la zone tactique (ajustez le décalage en px au besoin) */
-        top: 700px !important; 
-        transform: translate(-50%, -50%) !important;
-        margin: 0 !important;
-        print-color-adjust: exact;
-        -webkit-print-color-adjust: exact; 
-    }
+			/* 3. Masquer l'intégralité de l'interface utilisateur et le titre applicatif */
+			body * {
+				visibility: hidden;
+			}
 
-    /* 7. ÉLÉMENT 3 (BAS) : Positionnement de la liste des billes avec le décalage d'un pouce sous la table */
-    #balls-sidebar {
-        display: block !important; 
-        position: absolute !important;
-        left: 50% !important;
-        
-        top: 1000px !important; 
-        transform: translateX(-50%) !important;
-        width: 860px !important; 
-        margin: 0 !important;
-        padding: 0 !important;
-        background: none !important;
-        border: none !important;
-    }
+			#main-app-title {
+				display: none !important;
+			}
 
+			/* 4. Réactiver la table, la zone de notes, la liste des billes et tout leur contenu */
+			#table-frame,
+			#table-frame *,
+			#tactical-notes-area,
+			#tactical-notes-area *,
+			#balls-sidebar,
+			#balls-sidebar * {
+				visibility: visible;
+			}
 
-    /* Masquer les lignes des billes "(enlevées)" dans la liste latérale */
-    .sidebar-ball-item.is-hidden-ball {
-        display: none !important;
-    }
+			/* Masquer spécifiquement les boutons et éléments de contrôle sur le papier */
+			#btn-toggle-notes,
+			#btn-toggle-balls-sidebar,
+			#chk-toggle-balls-list {
+				display: none !important;
+			}
 
+			#balls-sidebar h3 {
+				display: none !important;
+			}
 
-    /* Configuration du conteneur de la liste de vos billes */
-    #visible-balls-list {
-        display: grid !important;
-        grid-template-columns: repeat(4, 1fr) !important; 
-        gap: 12px 18px !important; 
-        width: 100% !important;
-    }
+			/* 5. ÉLÉMENT 1 (HAUT) : Positionnement de la zone de notes tactiques tout en haut */
+			#tactical-notes-area {
+				display: block !important;
+				position: absolute !important;
+				left: 50% !important;
+				top: 6% !important;
+				/* Calé au sommet de la page */
+				transform: translateX(-50%) !important;
+				width: 860px !important;
+				background-color: #0b0f17 !important;
+				border: 1px solid rgba(0, 0, 0, 0.15) !important;
+				box-shadow: none !important;
+				margin: 0 !important;
+				print-color-adjust: exact;
+				-webkit-print-color-adjust: exact;
+			}
 
-    /* Ajustement des lignes de billes pour l'impression papier */
-    .sidebar-ball-item {
-        background-color: rgba(11, 15, 23, 0.05) !important;
-        border: 1px solid rgba(0, 0, 0, 0.1) !important;
-        border-radius: 6px !important;
-        padding: 6px 10px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: flex-start !important;
-    }
+			/* 6. ÉLÉMENT 2 (MILIEU) : Positionnement de la table de billard indexé sous la zone tactique */
+			#table-frame {
+				position: absolute !important;
+				left: 50% !important;
+				/* Aligné dynamiquement sous la zone tactique (ajustez le décalage en px au besoin) */
+				top: 700px !important;
+				transform: translate(-50%, -50%) !important;
+				margin: 0 !important;
+				print-color-adjust: exact;
+				-webkit-print-color-adjust: exact;
+			}
 
-    .sidebar-ball-coords {
-        color: #333333 !important; 
-        font-weight: 600 !important;
-        font-size: 12px !important;
-    }
+			/* 7. ÉLÉMENT 3 (BAS) : Positionnement de la liste des billes avec le décalage d'un pouce sous la table */
+			#balls-sidebar {
+				display: block !important;
+				position: absolute !important;
+				left: 50% !important;
 
-    /* Ajustements graphiques pour vos notes */
-    .tactical-panel-full h3 {
-        color: #ffffff !important;
-    }
-    .tactical-panel-full .panel-content-full {
-        background-color: #ffffff !important;
-        color: #000000 !important;
-        border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
-        print-color-adjust: exact;
-        -webkit-print-color-adjust: exact;
-    }
-}
+				top: 1000px !important;
+				transform: translateX(-50%) !important;
+				width: 860px !important;
+				margin: 0 !important;
+				padding: 0 !important;
+				background: none !important;
+				border: none !important;
+			}
 
+			/* Masquer les lignes des billes "(enlevées)" dans la liste latérale */
+			.sidebar-ball-item.is-hidden-ball {
+				display: none !important;
+			}
 
+			/* Configuration du conteneur de la liste de vos billes */
+			#visible-balls-list {
+				display: grid !important;
+				grid-template-columns: repeat(4, 1fr) !important;
+				gap: 12px 18px !important;
+				width: 100% !important;
+			}
 
+			/* Ajustement des lignes de billes pour l'impression papier */
+			.sidebar-ball-item {
+				background-color: rgba(11, 15, 23, 0.05) !important;
+				border: 1px solid rgba(0, 0, 0, 0.1) !important;
+				border-radius: 6px !important;
+				padding: 6px 10px !important;
+				display: flex !important;
+				align-items: center !important;
+				justify-content: flex-start !important;
+			}
 
+			.sidebar-ball-coords {
+				color: #333333 !important;
+				font-weight: 600 !important;
+				font-size: 12px !important;
+			}
 
-#table-frame {
-    position: relative;
-    width: 860px;
-    height: 460px;
-    /* Valeurs de secours par défaut sur le Chêne foncé (#52321a / #301d0f) */
-    background: linear-gradient(135deg, var(--bois-clair, #52321a), var(--bois-fonce, #301d0f));
-    border: 4px solid var(--bois-bordure, #1f120a);
-    border-radius: 18px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.7), inset 0 2px 5px rgba(255,255,255,0.2);
-    padding: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
+			/* Ajustements graphiques pour vos notes */
+			.tactical-panel-full h3 {
+				color: #ffffff !important;
+			}
 
-/* ====================================================================
+			.tactical-panel-full .panel-content-full {
+				background-color: #ffffff !important;
+				color: #000000 !important;
+				border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
+				print-color-adjust: exact;
+				-webkit-print-color-adjust: exact;
+			}
+		}
+
+		#table-frame {
+			position: relative;
+			width: 860px;
+			height: 460px;
+			/* Valeurs de secours par défaut sur le Chêne foncé (#52321a / #301d0f) */
+			background: linear-gradient(135deg, var(--bois-clair, #52321a), var(--bois-fonce, #301d0f));
+			border: 4px solid var(--bois-bordure, #1f120a);
+			border-radius: 18px;
+			box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7), inset 0 2px 5px rgba(255, 255, 255, 0.2);
+			padding: 30px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+
+		/* ====================================================================
    STRUCTURE ET INTEGRATION DES VARIABLES
    ==================================================================== */
-#pool-table {
-    position: relative;
-    width: 800px;
-    height: 400px;
-    /* Valeurs de secours par défaut sur le Tapis Vert (#27ae60 / #1e7e43 / #165b30) */
-    background: radial-gradient(
-        circle at 50% 50%, 
-        var(--tapis-eclat-centre, #27ae60) 0%, 
-        var(--tapis-couleur-principale, #1e7e43) 75%, 
-        var(--tapis-ombre-profonde, #165b30) 100%
-    );
-    box-shadow: inset 0 10px 20px rgba(0,0,0,0.5);
-}
+		#pool-table {
+			position: relative;
+			width: 800px;
+			height: 400px;
+			/* Valeurs de secours par défaut sur le Tapis Vert (#27ae60 / #1e7e43 / #165b30) */
+			background: radial-gradient(circle at 50% 50%,
+					var(--tapis-eclat-centre, #27ae60) 0%,
+					var(--tapis-couleur-principale, #1e7e43) 75%,
+					var(--tapis-ombre-profonde, #165b30) 100%);
+			box-shadow: inset 0 10px 20px rgba(0, 0, 0, 0.5);
+		}
 
+		/* Base commune pour toutes les bandes physiques */
+		.cushion {
+			position: absolute;
+			background-color: var(--tapis-couleur-principale);
+			z-index: 2;
+			box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.4);
+		}
 
+		/* Bandes Supérieures (Haut Gauche et Haut Droite) */
+		.cushion.top-left,
+		.cushion.top-right {
+			background-image: linear-gradient(to bottom,
+					var(--bande-ombre-exterieure) 0%,
+					var(--bande-dessus-lumineux) 30%,
+					var(--bande-ombre-interieure) 100%);
+		}
 
+		/* Bandes Inférieures (Bas Gauche et Bas Droite) */
+		.cushion.bottom-left,
+		.cushion.bottom-right {
+			background-image: linear-gradient(to top,
+					var(--bande-ombre-exterieure) 0%,
+					var(--bande-dessus-lumineux) 30%,
+					var(--bande-ombre-interieure) 100%);
+		}
 
+		/* Bande Verticale Gauche */
+		.cushion.left {
+			background-image: linear-gradient(to right,
+					var(--bande-ombre-exterieure) 0%,
+					var(--bande-dessus-lumineux) 30%,
+					var(--bande-ombre-interieure) 100%);
+		}
 
-/* Base commune pour toutes les bandes physiques */
-.cushion { 
-    position: absolute; 
-    background-color: var(--tapis-couleur-principale);
-    z-index: 2;
-    box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.4);
-}
+		/* Bande Verticale Droite */
+		.cushion.right {
+			background-image: linear-gradient(to left,
+					var(--bande-ombre-exterieure) 0%,
+					var(--bande-dessus-lumineux) 30%,
+					var(--bande-ombre-interieure) 100%);
+		}
 
-/* Bandes Supérieures (Haut Gauche et Haut Droite) */
-.cushion.top-left, 
-.cushion.top-right {
-    background-image: linear-gradient(
-        to bottom,
-        var(--bande-ombre-exterieure) 0%,
-        var(--bande-dessus-lumineux) 30%,
-        var(--bande-ombre-interieure) 100%
-    );
-}
-
-/* Bandes Inférieures (Bas Gauche et Bas Droite) */
-.cushion.bottom-left, 
-.cushion.bottom-right {
-    background-image: linear-gradient(
-        to top,
-        var(--bande-ombre-exterieure) 0%,
-        var(--bande-dessus-lumineux) 30%,
-        var(--bande-ombre-interieure) 100%
-    );
-}
-
-/* Bande Verticale Gauche */
-.cushion.left {
-    background-image: linear-gradient(
-        to right,
-        var(--bande-ombre-exterieure) 0%,
-        var(--bande-dessus-lumineux) 30%,
-        var(--bande-ombre-interieure) 100%
-    );
-}
-
-/* Bande Verticale Droite */
-.cushion.right {
-    background-image: linear-gradient(
-        to left,
-        var(--bande-ombre-exterieure) 0%,
-        var(--bande-dessus-lumineux) 30%,
-        var(--bande-ombre-interieure) 100%
-    );
-}
-
-/* ====================================================================
+		/* ====================================================================
    STRUCTURE GÉOMÉTRIQUE ET COUPE (Strictement inchangée)
    ==================================================================== */
-.cushion.top-left { 
-    top: 0; left: 30px; width: 346px; height: 18px; 
-    clip-path: polygon(0 0, 100% 0, calc(100% - 5px) 100%, 18px 100%);
-}
-.cushion.top-right { 
-    top: 0; right: 30px; width: 346px; height: 18px; 
-    clip-path: polygon(0 0, 100% 0, calc(100% - 18px) 100%, 5px 100%);
-}
-.cushion.bottom-left { 
-    bottom: 0; left: 30px; width: 346px; height: 18px; 
-    clip-path: polygon(18px 0, calc(100% - 5px) 0, 100% 100%, 0 100%);
-}
-.cushion.bottom-right { 
-    bottom: 0; right: 30px; width: 346px; height: 18px; 
-    clip-path: polygon(5px 0, calc(100% - 18px) 0, 100% 100%, 0 100%);
-}
-.cushion.left { 
-    top: 30px; left: 0; width: 18px; height: 340px; 
-    clip-path: polygon(0 0, 100% 18px, 100% calc(100% - 18px), 0 100%);
-}
-.cushion.right { 
-    top: 30px; right: 0; width: 18px; height: 340px; 
-    clip-path: polygon(100% 0, 100% 100%, 0 calc(100% - 18px), 0 18px);
-}
+		.cushion.top-left {
+			top: 0;
+			left: 30px;
+			width: 346px;
+			height: 18px;
+			clip-path: polygon(0 0, 100% 0, calc(100% - 5px) 100%, 18px 100%);
+		}
 
+		.cushion.top-right {
+			top: 0;
+			right: 30px;
+			width: 346px;
+			height: 18px;
+			clip-path: polygon(0 0, 100% 0, calc(100% - 18px) 100%, 5px 100%);
+		}
 
+		.cushion.bottom-left {
+			bottom: 0;
+			left: 30px;
+			width: 346px;
+			height: 18px;
+			clip-path: polygon(18px 0, calc(100% - 5px) 0, 100% 100%, 0 100%);
+		}
 
+		.cushion.bottom-right {
+			bottom: 0;
+			right: 30px;
+			width: 346px;
+			height: 18px;
+			clip-path: polygon(5px 0, calc(100% - 18px) 0, 100% 100%, 0 100%);
+		}
 
+		.cushion.left {
+			top: 30px;
+			left: 0;
+			width: 18px;
+			height: 340px;
+			clip-path: polygon(0 0, 100% 18px, 100% calc(100% - 18px), 0 100%);
+		}
 
-        /* Poches rabaissées au z-index: 1 pour passer SOUS les billes (qui ont un z-index supérieur) */
-        .pocket { position: absolute; width: 44px; height: 44px; background: radial-gradient(circle, #000 60%, #222 100%); border-radius: 50%; border: 3px solid #333; z-index: 1; }
-        .tl { top: -14px; left: -14px; box-shadow: 3px 3px 5px rgba(0,0,0,0.5); }
-        .tc { top: -18px; left: 374px; box-shadow: 0px 3px 5px rgba(0,0,0,0.5); }
-        .tr { top: -14px; right: -14px; box-shadow: -3px 3px 5px rgba(0,0,0,0.5); }
-        .bl { bottom: -14px; left: -14px; box-shadow: 3px -3px 5px rgba(0,0,0,0.5); }
-        .bc { bottom: -18px; left: 374px; box-shadow: 0px -3px 5px rgba(0,0,0,0.5); }
-        .br { bottom: -14px; right: -14px; box-shadow: -3px -3px 5px rgba(0,0,0,0.5); }
+		.cushion.right {
+			top: 30px;
+			right: 0;
+			width: 18px;
+			height: 340px;
+			clip-path: polygon(100% 0, 100% 100%, 0 calc(100% - 18px), 0 18px);
+		}
 
-        /* z-index: 10 pour que les billes passent au-dessus des poches et des bandes */
-        
-                /* Style des billes avec rendu 3D sphérique amélioré */
-        .ball {
-            position: absolute;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            cursor: move;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-            box-shadow: 3px 5px 6px rgba(0, 0, 0, 0.4); /* Ombre sur le tapis */
-	    user-select: none; /* Empêche le texte ou la bille de se surligner en bleu au double-clic */
+		/* Poches rabaissées au z-index: 1 pour passer SOUS les billes (qui ont un z-index supérieur) */
+		.pocket {
+			position: absolute;
+			width: 44px;
+			height: 44px;
+			background: radial-gradient(circle, #000 60%, #222 100%);
+			border-radius: 50%;
+			border: 3px solid #333;
+			z-index: 1;
+		}
 
-        }
+		.tl {
+			top: -14px;
+			left: -14px;
+			box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.5);
+		}
 
+		.tc {
+			top: -18px;
+			left: 374px;
+			box-shadow: 0px 3px 5px rgba(0, 0, 0, 0.5);
+		}
 
-		
+		.tr {
+			top: -14px;
+			right: -14px;
+			box-shadow: -3px 3px 5px rgba(0, 0, 0, 0.5);
+		}
 
-        
-        /* Effet de brillance 3D universel (appliqué via un pseudo-élément ::after) */
-        .ball::after {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            border-radius: 50%;
-            /* Ombre interne et reflet blanc brillant en haut à gauche */
-            background-image: radial-gradient(circle at 8px 8px, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 45%, rgba(0,0,0,0.35) 100%);
-            pointer-events: none;
-            z-index: 3;
-        }
-        
-        .ball:active { 
-            box-shadow: 6px 12px 10px rgba(0, 0, 0, 0.5); 
-            z-index: 1000; 
-        }
+		.bl {
+			bottom: -14px;
+			left: -14px;
+			box-shadow: 3px -3px 5px rgba(0, 0, 0, 0.5);
+		}
 
-        /* Pastille blanche interne pour le numéro */
-        .ball-num { 
-            background-color: white; 
-            width: 13px; 
-            height: 13px; 
-            border-radius: 50%; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            color: black; 
-            font-family: 'Arial Black', sans-serif; 
-			font-weight: bold; /* Force l'affichage en gras */ 
-            font-size: 8px; 
-            box-shadow: inset 1px 1px 2px rgba(0,0,0,0.4);
-            z-index: 2; /* Passe sous le reflet brillant, mais sur la rayure */
-        }
-        
-        /* NOURRITURE VISUELLE : Vraie rayure de billard américain (9 à 15) */
-        /* Utilise la couleur de fond héritée (b.color) injectée par le JS pour créer la bande centrale */
-        .striped {
-            background-color: white !important; /* Les calottes polaires deviennent blanches */
-            background-image: linear-gradient(
-                to bottom,
-                #ffffff 22%,
-                var(--ball-color) 22%,
-                var(--ball-color) 78%,
-                #ffffff 78%
-            ) !important;
-        }
+		.bc {
+			bottom: -18px;
+			left: 374px;
+			box-shadow: 0px -3px 5px rgba(0, 0, 0, 0.5);
+		}
 
-/* Assurez-vous que votre table est bien en position relative */
-#pool-table {
-    position: relative;
-}
+		.br {
+			bottom: -14px;
+			right: -14px;
+			box-shadow: -3px -3px 5px rgba(0, 0, 0, 0.5);
+		}
 
-/* Le conteneur de la grille qui recouvre toute la table */
-.grid-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: grid;
-    grid-template-columns: repeat(17, 1fr); /* 17 colonnes */
-    grid-template-rows: repeat(9, 1fr);     /* 9 lignes */
-    pointer-events: none;                   /* Permet de cliquer à travers sur les billes */
-    z-index: 1;                             /* Reste sous les billes mais sur le tapis */
-}
+		/* z-index: 10 pour que les billes passent au-dessus des poches et des bandes */
 
-/* Les lignes de la grille */
-.grid-overlay div {
-    border-right: 1px dashed rgba(255, 255, 255, 0.15);
-    border-bottom: 1px dashed rgba(255, 255, 255, 0.15);
-}
+		/* Style des billes avec rendu 3D sphérique amélioré */
+		.ball {
+			position: absolute;
+			width: 24px;
+			height: 24px;
+			border-radius: 50%;
+			cursor: move;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			z-index: 10;
+			box-shadow: 3px 5px 6px rgba(0, 0, 0, 0.4);
+			/* Ombre sur le tapis */
+			user-select: none;
+			/* Empêche le texte ou la bille de se surligner en bleu au double-clic */
 
-/* Bordures extérieures optionnelles pour fermer la grille */
-.grid-overlay {
-    border-top: 1px dashed rgba(255, 255, 255, 0.15);
-    border-left: 1px dashed rgba(255, 255, 255, 0.15);
-}
+		}
 
-#grid-overlay {
-    display: none; /* Masqué par défaut */
-    pointer-events: none; /* Laisse passer les clics pour glisser les billes */
-    box-sizing: border-box;
-}
+		/* Effet de brillance 3D universel (appliqué via un pseudo-élément ::after) */
+		.ball::after {
+			content: '';
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			border-radius: 50%;
+			/* Ombre interne et reflet blanc brillant en haut à gauche */
+			background-image: radial-gradient(circle at 8px 8px, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 45%, rgba(0, 0, 0, 0.35) 100%);
+			pointer-events: none;
+			z-index: 3;
+		}
 
-#grid-overlay div {
-    border: 1px solid rgba(255, 255, 255, 0.08); /* Lignes subtiles pour le tapis */
-    box-sizing: border-box;
-}
+		.ball:active {
+			box-shadow: 6px 12px 10px rgba(0, 0, 0, 0.5);
+			z-index: 1000;
+		}
 
-/* Conteneur principal pliable ajusté à la table */
-.controls-accordion {
-    background-color: #2c3e50;
-    color: #ffffff;
-    border-radius: 8px;
-    margin: 15px auto; /* Centrage automatique si la table est centrée */
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-    border: 1px solid #34495e;
-    
-    /* --- ALIGNEMENT SUR LA LARGEUR DE LA TABLE --- */
-    width: 100%;
-    max-width: 1200px; /* Aligné sur la coordonnée maximale de 800px définie dans clampPosition */
-    box-sizing: border-box; /* Évite que les paddings/bordures dépassent de la largeur */
-}
+		/* Pastille blanche interne pour le numéro */
+		.ball-num {
+			background-color: white;
+			width: 13px;
+			height: 13px;
+			border-radius: 50%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			color: black;
+			font-family: 'Arial Black', sans-serif;
+			font-weight: bold;
+			/* Force l'affichage en gras */
+			font-size: 8px;
+			box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.4);
+			z-index: 2;
+			/* Passe sous le reflet brillant, mais sur la rayure */
+		}
 
-/* En-tête cliquable */
-.controls-summary {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 6px 20px;
-    font-weight: bold;
-    cursor: pointer;
-    user-select: none;
-    background-color: #34495e;
-    transition: background-color 0.2s ease;
-    box-sizing: border-box;
-}
+		/* NOURRITURE VISUELLE : Vraie rayure de billard américain (9 à 15) */
+		/* Utilise la couleur de fond héritée (b.color) injectée par le JS pour créer la bande centrale */
+		.striped {
+			background-color: white !important;
+			/* Les calottes polaires deviennent blanches */
+			background-image: linear-gradient(to bottom,
+					#ffffff 22%,
+					var(--ball-color) 22%,
+					var(--ball-color) 78%,
+					#ffffff 78%) !important;
+		}
 
-.controls-summary:hover {
-    background-color: #415b76;
-}
+		/* Assurez-vous que votre table est bien en position relative */
+		#pool-table {
+			position: relative;
+		}
 
-/* Masquer la flèche native du navigateur */
-.controls-summary::-webkit-details-marker,
-.controls-summary::marker {
-    display: none;
-}
+		/* Le conteneur de la grille qui recouvre toute la table */
+		.grid-overlay {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			display: grid;
+			grid-template-columns: repeat(17, 1fr);
+			/* 17 colonnes */
+			grid-template-rows: repeat(9, 1fr);
+			/* 9 lignes */
+			pointer-events: none;
+			/* Permet de cliquer à travers sur les billes */
+			z-index: 1;
+			/* Reste sous les billes mais sur le tapis */
+		}
 
-/* Animation du chevron */
-.controls-summary .summary-chevron {
-    font-size: 0.8rem;
-    transition: transform 0.2s ease;
-}
+		/* Les lignes de la grille */
+		.grid-overlay div {
+			border-right: 1px dashed rgba(255, 255, 255, 0.15);
+			border-bottom: 1px dashed rgba(255, 255, 255, 0.15);
+		}
 
-/* Rotation du chevron quand le panneau est ouvert */
-.controls-accordion[open] .summary-chevron {
-    transform: rotate(180deg);
-}
+		/* Bordures extérieures optionnelles pour fermer la grille */
+		.grid-overlay {
+			border-top: 1px dashed rgba(255, 255, 255, 0.15);
+			border-left: 1px dashed rgba(255, 255, 255, 0.15);
+		}
 
-/* Contenu interne */
-.controls-content {
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    box-sizing: border-box;
-}
+		#grid-overlay {
+			display: none;
+			/* Masqué par défaut */
+			pointer-events: none;
+			/* Laisse passer les clics pour glisser les billes */
+			box-sizing: border-box;
+		}
 
-/* Section regroupant les textes */
-.text-fields-section {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    width: 100%;
-    box-sizing: border-box;
-}
+		#grid-overlay div {
+			border: 1px solid rgba(255, 255, 255, 0.08);
+			/* Lignes subtiles pour le tapis */
+			box-sizing: border-box;
+		}
 
-/* Groupe de formulaire (Label + Champ) */
-.form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    width: 100%;
-}
+		/* Conteneur principal pliable ajusté à la table */
+		.controls-accordion {
+			background-color: #2c3e50;
+			color: #ffffff;
+			border-radius: 8px;
+			margin: 15px auto;
+			/* Centrage automatique si la table est centrée */
+			box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+			overflow: hidden;
+			border: 1px solid #34495e;
 
-/* Style des étiquettes (Labels) */
-.form-label {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #b9bbbe; /* Gris clair élégant */
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
+			/* --- ALIGNEMENT SUR LA LARGEUR DE LA TABLE --- */
+			width: 100%;
+			max-width: 1200px;
+			/* Aligné sur la coordonnée maximale de 800px définie dans clampPosition */
+			box-sizing: border-box;
+			/* Évite que les paddings/bordures dépassent de la largeur */
+		}
 
-/* Conteneur pour inclure l'icône dans le titre */
-.input-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-}
+		/* En-tête cliquable */
+		.controls-summary {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding: 6px 20px;
+			font-weight: bold;
+			cursor: pointer;
+			user-select: none;
+			background-color: #34495e;
+			transition: background-color 0.2s ease;
+			box-sizing: border-box;
+		}
 
-.input-wrapper .input-icon {
-    position: absolute;
-    left: 12px;
-    font-size: 0.95rem;
-    pointer-events: none;
-    opacity: 0.7;
-}
+		.controls-summary:hover {
+			background-color: #415b76;
+		}
 
-/* Style commun pour l'Input et le Textarea */
-.form-control {
-    width: 100%;
-    background-color: #1e2b38; /* Plus sombre que le fond du panneau pour du contraste */
-    color: #ffffff;
-    border: 1px solid #3d566e;
-    border-radius: 6px;
-    padding: 10px 12px;
-    font-family: inherit;
-    font-size: 0.95rem;
-    box-sizing: border-box;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
-}
+		/* Masquer la flèche native du navigateur */
+		.controls-summary::-webkit-details-marker,
+		.controls-summary::marker {
+			display: none;
+		}
 
-/* Ajustement spécifique pour le titre avec icône (décalage à gauche) */
-.input-wrapper .form-control {
-    padding-left: 36px;
-}
+		/* Animation du chevron */
+		.controls-summary .summary-chevron {
+			font-size: 0.8rem;
+			transition: transform 0.2s ease;
+		}
 
-/* Ajustement spécifique pour la zone de texte */
-.textarea-control {
-    resize: vertical; /* Permet à l'utilisateur d'ajuster la hauteur uniquement */
-    min-height: 80px;
-    line-height: 1.4;
-}
+		/* Rotation du chevron quand le panneau est ouvert */
+		.controls-accordion[open] .summary-chevron {
+			transform: rotate(180deg);
+		}
 
-/* Styles au survol (Hover) */
-.form-control:hover {
-    border-color: #5d7e9e;
-    background-color: #223140;
-}
+		/* Contenu interne */
+		.controls-content {
+			padding: 20px;
+			display: flex;
+			flex-direction: column;
+			gap: 15px;
+			box-sizing: border-box;
+		}
 
-/* Styles lors de la saisie (Focus) */
-.form-control:focus {
-    outline: none;
-    border-color: #3498db; /* Bleu vif pour attirer l'attention de manière propre */
-    background-color: #1e2b38;
-    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.25); /* Effet de halo doux */
-}
+		/* Section regroupant les textes */
+		.text-fields-section {
+			display: flex;
+			flex-direction: column;
+			gap: 16px;
+			width: 100%;
+			box-sizing: border-box;
+		}
 
-/* Style des placeholders (textes d'aide en fond) */
-.form-control::placeholder {
-    color: #627d98;
-    font-style: italic;
-    opacity: 0.8;
-}
+		/* Groupe de formulaire (Label + Champ) */
+		.form-group {
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+			width: 100%;
+		}
 
-/* Conteneur de la ligne de boutons */
-.actions-button-row {
-    display: flex;
-    gap: 10px; /* Espace uniforme entre chaque bouton */
-    width: 100%;
-    margin-top: 8px;
-    box-sizing: border-box;
-}
+		/* Style des étiquettes (Labels) */
+		.form-label {
+			font-size: 0.85rem;
+			font-weight: 600;
+			color: #b9bbbe;
+			/* Gris clair élégant */
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+		}
 
-/* Base commune pour tous les boutons */
-.btn {
-    flex: 1; /* Permet aux boutons de prendre exactement la même largeur */
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 10px 16px;
-    font-family: inherit;
-    font-size: 0.9rem;
-    font-weight: 600;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    user-select: none;
-    transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
-}
+		/* Conteneur pour inclure l'icône dans le titre */
+		.input-wrapper {
+			position: relative;
+			display: flex;
+			align-items: center;
+		}
 
-/* Effet d'enfoncement au clic pour tous les boutons */
-.btn:active {
-    transform: scale(0.98);
-}
+		.input-wrapper .input-icon {
+			position: absolute;
+			left: 12px;
+			font-size: 0.95rem;
+			pointer-events: none;
+			opacity: 0.7;
+		}
 
-.btn .btn-icon {
-    font-size: 1rem;
-}
+		/* Style commun pour l'Input et le Textarea */
+		.form-control {
+			width: 100%;
+			background-color: #1e2b38;
+			/* Plus sombre que le fond du panneau pour du contraste */
+			color: #ffffff;
+			border: 1px solid #3d566e;
+			border-radius: 6px;
+			padding: 10px 12px;
+			font-family: inherit;
+			font-size: 0.95rem;
+			box-sizing: border-box;
+			transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+		}
 
-/* 1. Bouton Exporter (Action principale) */
-.btn-primary {
-    background-color: #3498db;
-    color: #ffffff;
-}
-.btn-primary:hover {
-    background-color: #2980b9;
-    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.25);
-}
+		/* Ajustement spécifique pour le titre avec icône (décalage à gauche) */
+		.input-wrapper .form-control {
+			padding-left: 36px;
+		}
 
-/* 2. Bouton Importer */
-.btn-secondary {
-    background-color: #34495e;
-    color: #ffffff;
-    border: 1px solid #4f6f8f;
-}
-.btn-secondary:hover {
-    background-color: #415b76;
-    border-color: #5d7e9e;
-}
+		/* Ajustement spécifique pour la zone de texte */
+		.textarea-control {
+			resize: vertical;
+			/* Permet à l'utilisateur d'ajuster la hauteur uniquement */
+			min-height: 80px;
+			line-height: 1.4;
+		}
 
-/* 3. Bouton Annuler Tracé */
-.btn-action {
-    background-color: #16a085;
-    color: #ffffff;
-}
-.btn-action:hover {
-    background-color: #117a65;
-    box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.25);
-}
+		/* Styles au survol (Hover) */
+		.form-control:hover {
+			border-color: #5d7e9e;
+			background-color: #223140;
+		}
 
-/* 4. Bouton Effacer Tout (Danger) */
-.btn-danger {
-    background-color: #e74c3c;
-    color: #ffffff;
-}
-.btn-danger:hover {
-    background-color: #c0392b;
-    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.25);
-}
+		/* Styles lors de la saisie (Focus) */
+		.form-control:focus {
+			outline: none;
+			border-color: #3498db;
+			/* Bleu vif pour attirer l'attention de manière propre */
+			background-color: #1e2b38;
+			box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.25);
+			/* Effet de halo doux */
+		}
 
-/* Classes d'ajustement pour le mode ultra-compact */
-.btn-xs {
-    padding: 0.2rem 0.4rem !important; /* Réduit le rembourrage interne du bouton */
-    font-size: 0.75rem !important;      /* Diminue la taille globale du texte */
-    line-height: 1.2;
-}
-.actions-button-row .btn span {
-    font-size: 0.85rem; /* Ajuste la taille des émojis */
-}
+		/* Style des placeholders (textes d'aide en fond) */
+		.form-control::placeholder {
+			color: #627d98;
+			font-style: italic;
+			opacity: 0.8;
+		}
 
+		/* Conteneur de la ligne de boutons */
+		.actions-button-row {
+			display: flex;
+			gap: 10px;
+			/* Espace uniforme entre chaque bouton */
+			width: 100%;
+			margin-top: 8px;
+			box-sizing: border-box;
+		}
 
+		/* Base commune pour tous les boutons */
+		.btn {
+			flex: 1;
+			/* Permet aux boutons de prendre exactement la même largeur */
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			gap: 8px;
+			padding: 10px 16px;
+			font-family: inherit;
+			font-size: 0.9rem;
+			font-weight: 600;
+			border: none;
+			border-radius: 6px;
+			cursor: pointer;
+			user-select: none;
+			transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+		}
 
+		/* Effet d'enfoncement au clic pour tous les boutons */
+		.btn:active {
+			transform: scale(0.98);
+		}
 
+		.btn .btn-icon {
+			font-size: 1rem;
+		}
 
-/* Gestion de la réactivité si l'écran devient trop petit */
-@media (max-width: 600px) {
-    .actions-button-row {
-        flex-direction: column; /* Aligne les boutons verticalement sur mobile */
-        gap: 8px;
-    }
-}
+		/* 1. Bouton Exporter (Action principale) */
+		.btn-primary {
+			background-color: #3498db;
+			color: #ffffff;
+		}
 
-#table-title-overlay {
-    position: absolute;
-    top: 10%;
-    left: 45px;           /* Aligne à gauche (laisse ~45px de marge pour éviter la poche de coin gauche) */
-    transform: translateY(-30%); /* Retire le -50% horizontal pour annuler le centrage */
-    font-family: sans-serif;
-    font-size: 18px;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    pointer-events: none; /* Laisse passer les clics pour pouvoir bouger les billes dessous */
-    z-index: 1;           /* Derrière les billes mais visible sur le tapis */
-    
-    /* Couleur très discrète : blanc avec une très forte transparence */
-    color: rgba(255, 255, 255, 0.08); 
-    
-    /* MODIFICATIONS POUR LE RETOUR À LA LIGNE + ALIGNEMENT GAUCHE */
-    white-space: normal;    /* Autorise le changement de ligne */
-    text-align: left;       /* CHANGÉ : Aligne le texte à gauche sur les nouvelles lignes */
-    
-    /* Pour la largeur, on utilise calc() pour forcer le texte à s'arrêter avant le bord droit de la table */
-    width: calc(100% - 90px); /* 100% moins les marges gauche et droite */
-    max-width: 1200px;       /* Optionnel : empêche le conteneur de devenir trop large sur grand écran */
-    user-select: none;
-}
+		.btn-primary:hover {
+			background-color: #2980b9;
+			box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.25);
+		}
 
+		/* 2. Bouton Importer */
+		.btn-secondary {
+			background-color: #34495e;
+			color: #ffffff;
+			border: 1px solid #4f6f8f;
+		}
 
-#table-logo-overlay {
-    position: absolute;
-    width: 300px;
-    height: 300px;
-    object-fit: contain;
-    
-    /* Centrage absolu par rapport au conteneur #pool-table */
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    
-    /* Sécurité critique : empêche le logo de bloquer les clics/drag */
-    pointer-events: none; 
-    z-index: 1; 
+		.btn-secondary:hover {
+			background-color: #415b76;
+			border-color: #5d7e9e;
+		}
 
-    /* ==========================================
+		/* 3. Bouton Annuler Tracé */
+		.btn-action {
+			background-color: #16a085;
+			color: #ffffff;
+		}
+
+		.btn-action:hover {
+			background-color: #117a65;
+			box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.25);
+		}
+
+		/* 4. Bouton Effacer Tout (Danger) */
+		.btn-danger {
+			background-color: #e74c3c;
+			color: #ffffff;
+		}
+
+		.btn-danger:hover {
+			background-color: #c0392b;
+			box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.25);
+		}
+
+		/* Classes d'ajustement pour le mode ultra-compact */
+		.btn-xs {
+			padding: 0.2rem 0.4rem !important;
+			/* Réduit le rembourrage interne du bouton */
+			font-size: 0.75rem !important;
+			/* Diminue la taille globale du texte */
+			line-height: 1.2;
+		}
+
+		.actions-button-row .btn span {
+			font-size: 0.85rem;
+			/* Ajuste la taille des émojis */
+		}
+
+		/* Gestion de la réactivité si l'écran devient trop petit */
+		@media (max-width: 600px) {
+			.actions-button-row {
+				flex-direction: column;
+				/* Aligne les boutons verticalement sur mobile */
+				gap: 8px;
+			}
+		}
+
+		#table-title-overlay {
+			position: absolute;
+			top: 10%;
+			left: 45px;
+			/* Aligne à gauche (laisse ~45px de marge pour éviter la poche de coin gauche) */
+			transform: translateY(-30%);
+			/* Retire le -50% horizontal pour annuler le centrage */
+			font-family: sans-serif;
+			font-size: 18px;
+			font-weight: bold;
+			text-transform: uppercase;
+			letter-spacing: 2px;
+			pointer-events: none;
+			/* Laisse passer les clics pour pouvoir bouger les billes dessous */
+			z-index: 1;
+			/* Derrière les billes mais visible sur le tapis */
+
+			/* Couleur très discrète : blanc avec une très forte transparence */
+			color: rgba(255, 255, 255, 0.08);
+
+			/* MODIFICATIONS POUR LE RETOUR À LA LIGNE + ALIGNEMENT GAUCHE */
+			white-space: normal;
+			/* Autorise le changement de ligne */
+			text-align: left;
+			/* CHANGÉ : Aligne le texte à gauche sur les nouvelles lignes */
+
+			/* Pour la largeur, on utilise calc() pour forcer le texte à s'arrêter avant le bord droit de la table */
+			width: calc(100% - 90px);
+			/* 100% moins les marges gauche et droite */
+			max-width: 1200px;
+			/* Optionnel : empêche le conteneur de devenir trop large sur grand écran */
+			user-select: none;
+		}
+
+		#table-logo-overlay {
+			position: absolute;
+			width: 300px;
+			height: 300px;
+			object-fit: contain;
+
+			/* Centrage absolu par rapport au conteneur #pool-table */
+			left: 50%;
+			top: 50%;
+			transform: translate(-50%, -50%);
+
+			/* Sécurité critique : empêche le logo de bloquer les clics/drag */
+			pointer-events: none;
+			z-index: 1;
+
+			/* ==========================================
        SOLUTION UNIVERSELLE : L'effet Filigrane
        ========================================== */
-    
-    /* 1. Rend le logo monochrome gris moyen (uniformise toutes les couleurs) */
-    filter: grayscale(1) brightness(1) contrast(1);
-    
-    /* 2. Fusionne doucement le gris avec le vert du tapis */
-    mix-blend-mode: luminosity;
-    
-    /* 3. Ajustement fin de l'opacité globale */
-    opacity: 0.22;
-}
 
-.table-controls {
-    display: flex;
-    justify-content: center; /* Centre horizontalement toutes les cases à cocher */
-    align-items: center;     /* Aligne verticalement les cases et les écritures sur la même ligne */
-    flex-wrap: wrap;         /* Si l'écran est trop petit, les boutons passent à la ligne proprement */
-    gap: 15px;               /* Crée un espacement régulier entre chaque élément */
-    margin: 15px auto;       /* Centre le bloc complet et l'espace de la table */
-    width: 100%;             /* Force le conteneur à occuper toute la largeur disponible */
-}
+			/* 1. Rend le logo monochrome gris moyen (uniformise toutes les couleurs) */
+			filter: grayscale(1) brightness(1) contrast(1);
 
+			/* 2. Fusionne doucement le gris avec le vert du tapis */
+			mix-blend-mode: luminosity;
 
-/* Style spécifique pour le texte de position de la bille */
-#ball-position-display {
-    color: #999999;           /* Font Dark Grey */
-	margin-left: auto;
-    font-weight: 500;
-    
-}
+			/* 3. Ajustement fin de l'opacité globale */
+			opacity: 0.22;
+		}
 
-/* Style optionnel pour harmoniser la couleur des labels des cases à cocher */
-.control-item {
-    color: #555555;           /* Harmonise également les textes "Titre" et "Logo" en gris foncé */
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-	
-    gap: 5px;                 /* Espace entre la case elle-même et son texte */
-}
+		.table-controls {
+			display: flex;
+			justify-content: center;
+			/* Centre horizontalement toutes les cases à cocher */
+			align-items: center;
+			/* Aligne verticalement les cases et les écritures sur la même ligne */
+			flex-wrap: wrap;
+			/* Si l'écran est trop petit, les boutons passent à la ligne proprement */
+			gap: 15px;
+			/* Crée un espacement régulier entre chaque élément */
+			margin: 15px auto;
+			/* Centre le bloc complet et l'espace de la table */
+			width: 100%;
+			/* Force le conteneur à occuper toute la largeur disponible */
+		}
 
-/* Gère l'alignement côte à côte de la table et du panneau */
-.app-layout {
-    display: flex;
-    flex-direction: row;
-    justify-content: center; /* Centre le bloc global à l'écran */
-    align-items: flex-start; /* Aligne les hauts des deux blocs */
-    gap: 10px;               /* Espace de 20px entre le billard et la liste */
-    margin-top: 20px;        /* Espace sous le menu options */
-    width: 100%;
-    max-width: 1200px;       /* Ajustez selon la taille de votre table de billard */
-    margin-left: auto;
-    margin-right: auto;
-}
+		/* Style spécifique pour le texte de position de la bille */
+		#ball-position-display {
+			color: #999999;
+			/* Font Dark Grey */
+			margin-left: auto;
+			font-weight: 500;
 
-/* Force la table de billard à rester stable à gauche */
-#table-frame {
-    flex-shrink: 0;          /* Empêche le billard de se compresser */
-    position: relative;      /* Conserve l'affichage absolu de vos diamants */
-}
+		}
 
-/* Configure le panneau latéral à droite */
-#balls-sidebar {
-    width: 320px;            /* Fixe la largeur de votre liste */
-    flex-shrink: 0;          /* Empêche la liste de se déformer */
-    background-color: #2c3e50; /* Exemple de fond pour lisibilité, ajustez à votre guise */
-    color: white;
-    padding: 15px;
-    border-radius: 8px;
-}
+		/* Style optionnel pour harmoniser la couleur des labels des cases à cocher */
+		.control-item {
+			color: #555555;
+			/* Harmonise également les textes "Titre" et "Logo" en gris foncé */
+			cursor: pointer;
+			display: inline-flex;
+			align-items: center;
 
-#balls-sidebar h3 {
-    margin-top: 0;
-    border-bottom: 2px solid #34495e;
-    padding-bottom: 4px;
-    font-size: 16px;
-}
+			gap: 5px;
+			/* Espace entre la case elle-même et son texte */
+		}
 
-.sidebar-ball-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 10px;
-    background: #34495e;
-    padding: 6px 8px;
-    border-radius: 6px;
-}
+		/* Gère l'alignement côte à côte de la table et du panneau */
+		.app-layout {
+			display: flex;
+			flex-direction: row;
+			justify-content: center;
+			/* Centre le bloc global à l'écran */
+			align-items: flex-start;
+			/* Aligne les hauts des deux blocs */
+			gap: 10px;
+			/* Espace de 20px entre le billard et la liste */
+			margin-top: 20px;
+			/* Espace sous le menu options */
+			width: 100%;
+			max-width: 1200px;
+			/* Ajustez selon la taille de votre table de billard */
+			margin-left: auto;
+			margin-right: auto;
+		}
 
-/* Version miniature pour la liste latérale */
-#balls-sidebar .ball {
-    position: relative !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 22px !important;
-    height: 22px !important;
-    border-radius: 50%;
-    display: flex !important;
-    align-items: center;
-    justify-content: center;
-    box-sizing: border-box;
-}
+		/* Force la table de billard à rester stable à gauche */
+		#table-frame {
+			flex-shrink: 0;
+			/* Empêche le billard de se compresser */
+			position: relative;
+			/* Conserve l'affichage absolu de vos diamants */
+		}
 
-#balls-sidebar .ball-num {
-    font-size: 8px !important;
-    font-weight: bold;
-}
+		/* Configure le panneau latéral à droite */
+		#balls-sidebar {
+			width: 320px;
+			/* Fixe la largeur de votre liste */
+			flex-shrink: 0;
+			/* Empêche la liste de se déformer */
+			background-color: #2c3e50;
+			/* Exemple de fond pour lisibilité, ajustez à votre guise */
+			color: white;
+			padding: 15px;
+			border-radius: 8px;
+		}
 
-.sidebar-ball-coords {
-    font-size: 12px;
-}
+		#balls-sidebar h3 {
+			margin-top: 0;
+			border-bottom: 2px solid #34495e;
+			padding-bottom: 4px;
+			font-size: 16px;
+		}
 
-#visible-balls-list {
-    display: grid;
-    /* Modifiez 200px selon la largeur souhaitée */
-    grid-template-columns: 140px 140px; 
-    gap: 4px 8px;
-}
+		.sidebar-ball-item {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			margin-bottom: 10px;
+			background: #34495e;
+			padding: 6px 8px;
+			border-radius: 6px;
+		}
 
+		/* Version miniature pour la liste latérale */
+		#balls-sidebar .ball {
+			position: relative !important;
+			left: 0 !important;
+			top: 0 !important;
+			width: 22px !important;
+			height: 22px !important;
+			border-radius: 50%;
+			display: flex !important;
+			align-items: center;
+			justify-content: center;
+			box-sizing: border-box;
+		}
 
-/* Style de surbrillance pour la bille sélectionnée dans la liste latérale */
-.sidebar-ball-item.active-highlight {
-    background: #1abc9c !important; /* Vert émeraude pour la démarquer du bleu #34495e */
-    box-shadow: 0 0 8px rgba(26, 188, 156, 0.6);
-    border: 1px solid #ffffff;
-}
+		#balls-sidebar .ball-num {
+			font-size: 8px !important;
+			font-weight: bold;
+		}
 
+		.sidebar-ball-coords {
+			font-size: 12px;
+		}
 
-/* Style de l'accordéon d'aide */
-.shortcuts-help {
-    background-color: #1e293b; /* Bleu nuit/Ardoise sombre */
-    border: 1px solid #334155;
-    border-radius: 6px;
-    margin: 10px 0;
-    color: #f8fafc;
-    font-family: sans-serif;
-}
+		#visible-balls-list {
+			display: grid;
+			/* Modifiez 200px selon la largeur souhaitée */
+			grid-template-columns: 140px 140px;
+			gap: 4px 8px;
+		}
 
-.shortcuts-help summary {
-    padding: 10px;
-    font-weight: bold;
-    cursor: pointer;
-    user-select: none;
-}
+		/* Style de surbrillance pour la bille sélectionnée dans la liste latérale */
+		.sidebar-ball-item.active-highlight {
+			background: #1abc9c !important;
+			/* Vert émeraude pour la démarquer du bleu #34495e */
+			box-shadow: 0 0 8px rgba(26, 188, 156, 0.6);
+			border: 1px solid #ffffff;
+		}
 
-.shortcuts-grid {
-    padding: 10px;
-    border-top: 1px solid #334155;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    max-height: 400px;
-    overflow-y: auto;
-}
+		/* Style de l'accordéon d'aide */
+		.shortcuts-help {
+			background-color: #1e293b;
+			/* Bleu nuit/Ardoise sombre */
+			border: 1px solid #334155;
+			border-radius: 6px;
+			margin: 10px 0;
+			color: #f8fafc;
+			font-family: sans-serif;
+		}
 
-.shortcut-group h4 {
-    margin: 0 0 8px 0;
-    color: #3b82f6; /* Accent bleu */
-    font-size: 14px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
+		.shortcuts-help summary {
+			padding: 10px;
+			font-weight: bold;
+			cursor: pointer;
+			user-select: none;
+		}
 
-.shortcut-group ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
+		.shortcuts-grid {
+			padding: 10px;
+			border-top: 1px solid #334155;
+			display: flex;
+			flex-direction: column;
+			gap: 15px;
+			max-height: 400px;
+			overflow-y: auto;
+		}
 
-.shortcut-group li {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    font-size: 13px;
-    line-height: 1.4;
-    color: #cbd5e1;
-}
+		.shortcut-group h4 {
+			margin: 0 0 8px 0;
+			color: #3b82f6;
+			/* Accent bleu */
+			font-size: 14px;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+		}
 
-/* Style des touches de clavier virtuelles (KBD) */
-kbd {
-    background: #0f172a;
-    border: 1px solid #475569;
-    border-radius: 4px;
-    box-shadow: 0 2px 0 #475569;
-    color: #f8fafc;
-    display: inline-block;
-    font-family: monospace;
-    font-size: 11px;
-    font-weight: bold;
-    padding: 2px 6px;
-    text-align: center;
-    min-width: 15px;
-    white-space: nowrap;
-}
+		.shortcut-group ul {
+			list-style: none;
+			padding: 0;
+			margin: 0;
+			display: flex;
+			flex-direction: column;
+			gap: 8px;
+		}
 
+		.shortcut-group li {
+			display: flex;
+			align-items: flex-start;
+			gap: 10px;
+			font-size: 13px;
+			line-height: 1.4;
+			color: #cbd5e1;
+		}
 
-.modal-dialog {
-    border: none;
-    border-radius: 8px;
-    padding: 0;
-    max-width: 700px;
-    width: 90%;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-}
-.modal-dialog::backdrop {
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(2px);
-}
-.modal-contenu { padding: 20px; }
-.modal-header { display: flex; justify-content: space-between; align-items: center; }
-.btn-fermer { background: none; border: none; font-size: 24px; cursor: pointer; }
+		/* Style des touches de clavier virtuelles (KBD) */
+		kbd {
+			background: #0f172a;
+			border: 1px solid #475569;
+			border-radius: 4px;
+			box-shadow: 0 2px 0 #475569;
+			color: #f8fafc;
+			display: inline-block;
+			font-family: monospace;
+			font-size: 11px;
+			font-weight: bold;
+			padding: 2px 6px;
+			text-align: center;
+			min-width: 15px;
+			white-space: nowrap;
+		}
 
+		.modal-dialog {
+			border: none;
+			border-radius: 8px;
+			padding: 0;
+			max-width: 700px;
+			width: 90%;
+			box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+		}
 
-/* Alignement sur une seule ligne */
-.header-titre-aide {
-    display: flex;
-    align-items: center;
-    gap: 12px; /* Espace discret entre le titre et l'icône */
-}
+		.modal-dialog::backdrop {
+			background: rgba(0, 0, 0, 0.6);
+			backdrop-filter: blur(2px);
+		}
 
-.header-titre-aide h1 {
-    margin: 0; /* Évite les décalages de hauteur */
-}
+		.modal-contenu {
+			padding: 20px;
+		}
 
-/* Positionnement fixe dans le coin supérieur droit de l'écran */
-.btn-icone-aide {
-    position: fixed;
-    top: 20px;    /* Distance par rapport au haut de l'écran */
-    right: 20px;  /* Distance par rapport à la droite de l'écran */
-    z-index: 1000; /* S'assure que l'icône reste au-dessus du tapis et de la grille */
-    
-    /* Style de la bulle d'aide circulaire */
-    background-color: rgba(20, 20, 20, 0.75); /* Fond sombre semi-transparent pour être lisible sur tout fond */
-    color: #ffffff;
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    border-radius: 50%;
-    width: 32px;  /* Légèrement agrandi pour faciliter le clic à la volée */
-    height: 32px;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3); /* Ombre portée pour détacher du contenu */
-    transition: all 0.2s ease-in-out;
-}
+		.modal-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+		}
 
-/* Effet interactif au survol */
-.btn-icone-aide:hover {
-    background-color: #1e7e43; /* Couleur verte de votre tapis officiel */
-    border-color: #27ae60;
-    transform: scale(1.1); /* Léger effet de grossissement */
-}
+		.btn-fermer {
+			background: none;
+			border: none;
+			font-size: 24px;
+			cursor: pointer;
+		}
 
-#modal-options::backdrop {
-    background-color: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(2px);
-}
+		/* Alignement sur une seule ligne */
+		.header-titre-aide {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			/* Espace discret entre le titre et l'icône */
+		}
 
-/* Centre verticalement et horizontalement les deux modales */
-#modal-guide, 
-#modal-options {
-    position: fixed;
-    top: 50% !important;
-    left: 50% !important;
-    transform: translate(-50%, -50%) !important;
-    margin: 0 !important; /* Annule les marges par défaut du navigateur */
-}
+		.header-titre-aide h1 {
+			margin: 0;
+			/* Évite les décalages de hauteur */
+		}
 
+		/* Positionnement fixe dans le coin supérieur droit de l'écran */
+		.btn-icone-aide {
+			position: fixed;
+			top: 20px;
+			/* Distance par rapport au haut de l'écran */
+			right: 20px;
+			/* Distance par rapport à la droite de l'écran */
+			z-index: 1000;
+			/* S'assure que l'icône reste au-dessus du tapis et de la grille */
 
-/* Style appliqué à la ligne complète dans la liste latérale lorsqu'elle est masquée */
-.sidebar-ball-item.is-hidden-ball {
-    opacity: 0.45; /* On réduit l'opacité globale de la ligne sans toucher aux tailles */
-    filter: grayscale(80%); /* Rend l'élément plus gris et neutre */
-    transition: opacity 0.2s ease, filter 0.2s ease;
-}
+			/* Style de la bulle d'aide circulaire */
+			background-color: rgba(20, 20, 20, 0.75);
+			/* Fond sombre semi-transparent pour être lisible sur tout fond */
+			color: #ffffff;
+			border: 1px solid rgba(255, 255, 255, 0.4);
+			border-radius: 50%;
+			width: 32px;
+			/* Légèrement agrandi pour faciliter le clic à la volée */
+			height: 32px;
+			font-size: 16px;
+			font-weight: bold;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+			/* Ombre portée pour détacher du contenu */
+			transition: all 0.2s ease-in-out;
+		}
 
-/* On force l'élément miniature de la bille à conserver ses dimensions strictes */
-.sidebar-ball-item.is-hidden-ball .ball {
-    flex-shrink: 0; /* Empêche le conteneur flexbox de l'écraser ou de le déformer */
-    transform: none !important; /* Annule tout effet de distorsion dynamique */
-}
+		/* Effet interactif au survol */
+		.btn-icone-aide:hover {
+			background-color: #1e7e43;
+			/* Couleur verte de votre tapis officiel */
+			border-color: #27ae60;
+			transform: scale(1.1);
+			/* Léger effet de grossissement */
+		}
 
-/* Effet de survol doux pour inviter au clic */
-.sidebar-ball-item.is-hidden-ball:hover {
-    opacity: 0.85;
-    filter: grayscale(0%);
-    background-color: rgba(255, 255, 255, 0.08);
-}
+		#modal-options::backdrop {
+			background-color: rgba(0, 0, 0, 0.7);
+			backdrop-filter: blur(2px);
+		}
 
+		/* Centre verticalement et horizontalement les deux modales */
+		#modal-guide,
+		#modal-options {
+			position: fixed;
+			top: 50% !important;
+			left: 50% !important;
+			transform: translate(-50%, -50%) !important;
+			margin: 0 !important;
+			/* Annule les marges par défaut du navigateur */
+		}
 
-.drawing-tools-palette {
-        /* Alignement sur le style des modales et panneaux de l'application (rgba sombre et feutré) */
-        background-color: rgba(16, 20, 30, 0.92);
-        padding: 15px;
-        border-radius: 8px;
-        max-width: 650px; /* Légèrement élargi pour maximiser le confort de lecture */
-        width: 100%;
-        box-sizing: border-box;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-    }
-    
-    .drawing-tools-palette h4 {
-        margin-top: 0;
-        margin-bottom: 12px;
-        color: rgba(255, 255, 255, 0.95);
-        font-family: sans-serif;
-        font-weight: bold;
-        font-size: 14px;
-        letter-spacing: 0.5px;
-        text-transform: uppercase;
-    }
-    
-    .tools-grid-container {
-        display: grid;
-        /* Grille stricte de 5 colonnes qui empêche le texte de pousser les murs */
-        grid-template-columns: repeat(5, minmax(0, 1fr)); 
-        gap: 10px;
-    }
-    
-    .tool-btn {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 6px 4px;
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        border-radius: 4px;
-        background-color: rgba(255, 255, 255, 0.05);
-        color: rgba(255, 255, 255, 0.85);
-        cursor: pointer;
-        font-family: sans-serif;
-        font-size: 12px;
-        font-weight: 500;
-        height: 52px; /* Hauteur fixe pour un alignement parfait de la grille */
-        box-sizing: border-box;
-        text-align: center;
-        transition: background-color 0.2s, border-color 0.2s, color 0.2s;
-    }
-    
-    /* Style au survol (Hover) - Harmonisé avec le reste de la table */
-    .tool-btn:hover {
-        background-color: rgba(255, 255, 255, 0.15);
-        color: #ffffff;
-        border-color: rgba(255, 255, 255, 0.3);
-    }
-    
-    /* État Actif (Bouton sélectionné) - Calqué sur le contour blanc des billes sélectionnées */
-    .tool-btn.active {
-        background-color: rgba(255, 255, 255, 0.25);
-        color: #ffffff;
-        border-color: #ffffff;
-        box-shadow: 0 0 4px rgba(255, 255, 255, 0.4);
-        font-weight: bold;
-    }
-    
-    /* Bouton spécifique pour la Gomme (Erase) */
-    .tool-btn.tool-eraser:hover {
-        background-color: rgba(231, 76, 60, 0.2);
-        border-color: #e74c3c;
-        color: #ef9a9a;
-    }
-    .tool-btn.tool-eraser.active {
-        background-color: #e74c3c;
-        border-color: #ffcdd2;
-        color: #ffffff;
-    }
+		/* Style appliqué à la ligne complète dans la liste latérale lorsqu'elle est masquée */
+		.sidebar-ball-item.is-hidden-ball {
+			opacity: 0.45;
+			/* On réduit l'opacité globale de la ligne sans toucher aux tailles */
+			filter: grayscale(80%);
+			/* Rend l'élément plus gris et neutre */
+			transition: opacity 0.2s ease, filter 0.2s ease;
+		}
 
-    /* Conteneur interne pour limiter le texte à 2 lignes maximum */
-    .tool-btn .btn-text {
-        display: -webkit-box;
-        -webkit-line-clamp: 2; /* Blocage strict à 2 lignes maximum */
-        -webkit-box-orient: vertical;  
-        overflow: hidden;
-        text-overflow: ellipsis; /* Ajout automatique de "..." si un mot est trop long */
-        line-height: 1.2;
-    }
+		/* On force l'élément miniature de la bille à conserver ses dimensions strictes */
+		.sidebar-ball-item.is-hidden-ball .ball {
+			flex-shrink: 0;
+			/* Empêche le conteneur flexbox de l'écraser ou de le déformer */
+			transform: none !important;
+			/* Annule tout effet de distorsion dynamique */
+		}
 
-/* Cache la grille de boutons lorsque la palette est repliée */
-.drawing-tools-palette.is-collapsed .tools-grid-container {
-    display: none !important;
-}
+		/* Effet de survol doux pour inviter au clic */
+		.sidebar-ball-item.is-hidden-ball:hover {
+			opacity: 0.85;
+			filter: grayscale(0%);
+			background-color: rgba(255, 255, 255, 0.08);
+		}
 
-/* Cache le titre (H4) de la palette lorsqu'elle est repliée */
-.drawing-tools-palette.is-collapsed h4 {
-    display: none !important;
-}
+		.drawing-tools-palette {
+			/* Alignement sur le style des modales et panneaux de l'application (rgba sombre et feutré) */
+			background-color: rgba(16, 20, 30, 0.92);
+			padding: 15px;
+			border-radius: 8px;
+			max-width: 650px;
+			/* Légèrement élargi pour maximiser le confort de lecture */
+			width: 100%;
+			box-sizing: border-box;
+			border: 1px solid rgba(255, 255, 255, 0.1);
+			box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+		}
 
-/* Réduit la boîte au minimum et retire les bordures/panneaux transparents quand elle est complètement cachée */
-.drawing-tools-palette.is-collapsed {
-    padding: 0px !important;
-    border: none !important;
-    background: none !important;
-    box-shadow: none !important;
-}
+		.drawing-tools-palette h4 {
+			margin-top: 0;
+			margin-bottom: 12px;
+			color: rgba(255, 255, 255, 0.95);
+			font-family: sans-serif;
+			font-weight: bold;
+			font-size: 14px;
+			letter-spacing: 0.5px;
+			text-transform: uppercase;
+		}
 
+		.tools-grid-container {
+			display: grid;
+			/* Grille stricte de 5 colonnes qui empêche le texte de pousser les murs */
+			grid-template-columns: repeat(5, minmax(0, 1fr));
+			gap: 10px;
+		}
 
+		.tool-btn {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			padding: 6px 4px;
+			border: 1px solid rgba(255, 255, 255, 0.15);
+			border-radius: 4px;
+			background-color: rgba(255, 255, 255, 0.05);
+			color: rgba(255, 255, 255, 0.85);
+			cursor: pointer;
+			font-family: sans-serif;
+			font-size: 12px;
+			font-weight: 500;
+			height: 52px;
+			/* Hauteur fixe pour un alignement parfait de la grille */
+			box-sizing: border-box;
+			text-align: center;
+			transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+		}
 
-.tactical-panel-full {
-    margin-top: 20px;
-    background-color: rgba(11, 15, 23, 0.94);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
-    /* Largeur totale exacte du cadre extérieur en bois (Table Frame) */
-    width: 860px; 
-    margin-left: auto;
-    margin-right: auto;
-    color: #ffffff;
-    font-family: system-ui, -apple-system, sans-serif;
-    box-sizing: border-box;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-}
+		/* Style au survol (Hover) - Harmonisé avec le reste de la table */
+		.tool-btn:hover {
+			background-color: rgba(255, 255, 255, 0.15);
+			color: #ffffff;
+			border-color: rgba(255, 255, 255, 0.3);
+		}
 
-.tactical-panel-full .panel-header-full {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 14px 20px;
-    background-color: rgba(255, 255, 255, 0.03);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
+		/* État Actif (Bouton sélectionné) - Calqué sur le contour blanc des billes sélectionnées */
+		.tool-btn.active {
+			background-color: rgba(255, 255, 255, 0.25);
+			color: #ffffff;
+			border-color: #ffffff;
+			box-shadow: 0 0 4px rgba(255, 255, 255, 0.4);
+			font-weight: bold;
+		}
 
-/* Titre principal beaucoup plus gros */
-.tactical-panel-full h3 {
-    margin: 0;
-    font-size: 20px; 
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    color: #ffffff;
-}
+		/* Bouton spécifique pour la Gomme (Erase) */
+		.tool-btn.tool-eraser:hover {
+			background-color: rgba(231, 76, 60, 0.2);
+			border-color: #e74c3c;
+			color: #ef9a9a;
+		}
 
-/* Bouton pour fermer/masquer la zone */
-.tactical-panel-full button {
-    background-color: rgba(255, 255, 255, 0.07);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.8);
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 10px;
-    font-weight: 600;
-    padding: 6px 12px;
-    transition: all 0.2s ease;
-}
+		.tool-btn.tool-eraser.active {
+			background-color: #e74c3c;
+			border-color: #ffcdd2;
+			color: #ffffff;
+		}
 
-.tactical-panel-full button:hover {
-    background-color: rgba(231, 76, 60, 0.2);
-    border-color: rgba(231, 76, 60, 0.4);
-    color: #ffffff;
-}
+		/* Conteneur interne pour limiter le texte à 2 lignes maximum */
+		.tool-btn .btn-text {
+			display: -webkit-box;
+			-webkit-line-clamp: 2;
+			/* Blocage strict à 2 lignes maximum */
+			-webkit-box-orient: vertical;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			/* Ajout automatique de "..." si un mot est trop long */
+			line-height: 1.2;
+		}
 
-/* Description / Notes beaucoup plus grosses */
-.tactical-panel-full .panel-content-full {
-    padding: 18px 20px;
-    font-size: 15px; 
-    color: rgba(211, 220, 230, 0.95);
-    line-height: 1.6;
-    white-space: pre-wrap;
-}
+		/* Cache la grille de boutons lorsque la palette est repliée */
+		.drawing-tools-palette.is-collapsed .tools-grid-container {
+			display: none !important;
+		}
 
+		/* Cache le titre (H4) de la palette lorsqu'elle est repliée */
+		.drawing-tools-palette.is-collapsed h4 {
+			display: none !important;
+		}
 
+		/* Réduit la boîte au minimum et retire les bordures/panneaux transparents quand elle est complètement cachée */
+		.drawing-tools-palette.is-collapsed {
+			padding: 0px !important;
+			border: none !important;
+			background: none !important;
+			box-shadow: none !important;
+		}
 
+		.tactical-panel-full {
+			margin-top: 20px;
+			background-color: rgba(11, 15, 23, 0.94);
+			border: 1px solid rgba(255, 255, 255, 0.08);
+			border-radius: 12px;
+			/* Largeur totale exacte du cadre extérieur en bois (Table Frame) */
+			width: 860px;
+			margin-left: auto;
+			margin-right: auto;
+			color: #ffffff;
+			font-family: system-ui, -apple-system, sans-serif;
+			box-sizing: border-box;
+			box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+		}
 
+		.tactical-panel-full .panel-header-full {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding: 14px 20px;
+			background-color: rgba(255, 255, 255, 0.03);
+			border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+		}
 
+		/* Titre principal beaucoup plus gros */
+		.tactical-panel-full h3 {
+			margin: 0;
+			font-size: 20px;
+			font-weight: 700;
+			letter-spacing: 0.5px;
+			color: #ffffff;
+		}
 
+		/* Bouton pour fermer/masquer la zone */
+		.tactical-panel-full button {
+			background-color: rgba(255, 255, 255, 0.07);
+			border: 1px solid rgba(255, 255, 255, 0.1);
+			color: rgba(255, 255, 255, 0.8);
+			border-radius: 6px;
+			cursor: pointer;
+			font-size: 10px;
+			font-weight: 600;
+			padding: 6px 12px;
+			transition: all 0.2s ease;
+		}
 
-    </style>
+		.tactical-panel-full button:hover {
+			background-color: rgba(231, 76, 60, 0.2);
+			border-color: rgba(231, 76, 60, 0.4);
+			color: #ffffff;
+		}
+
+		/* Description / Notes beaucoup plus grosses */
+		.tactical-panel-full .panel-content-full {
+			padding: 18px 20px;
+			font-size: 15px;
+			color: rgba(211, 220, 230, 0.95);
+			line-height: 1.6;
+			white-space: pre-wrap;
+		}
+	</style>
 </head>
+
 <body>
 
-  <div class="header-container" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-    <h1 style="margin: 0; font-size: 1.8rem;">Concepteur de diagramme</h1>
-    
-    <!-- Zone des boutons d'outils isolée en POSITION FIXE en haut à droite (3 boutons inclus) -->
-    <div class="top-tools-actions" style="position: fixed; top: 15px; right: 15px; z-index: 9999; display: flex; gap: 12px; align-items: center; background-color: rgba(0, 0, 0, 0.5); padding: 5px 12px; border-radius: 20px; backdrop-filter: blur(4px); border: 1px solid rgba(255, 255, 255, 0.1);">
-        
-        <!-- Bouton engrenage Options -->
-        <button id="btn-ouvrir-options" class="btn-top-tool" title="Ouvrir les Options" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #ffffff; padding: 5px; line-height: 1; transition: transform 0.2s;">
-            ⚙️
-        </button>
+	<div class="header-container" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+		<h1 style="margin: 0; font-size: 1.8rem;">Concepteur de diagramme</h1>
 
-        <!-- Bouton Guide (point d'interrogation) -->
-        <button id="btn-ouvrir-guide" class="btn-top-tool" title="Guide des Raccourcis" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #ffffff; padding: 5px; line-height: 1; transition: transform 0.2s;">
-            ❓
-        </button>
+		<!-- Zone des boutons d'outils isolée en POSITION FIXE en haut à droite (3 boutons inclus) -->
+		<div class="top-tools-actions" style="position: fixed; top: 15px; right: 15px; z-index: 9999; display: flex; gap: 12px; align-items: center; background-color: rgba(0, 0, 0, 0.5); padding: 5px 12px; border-radius: 20px; backdrop-filter: blur(4px); border: 1px solid rgba(255, 255, 255, 0.1);">
 
-        <!-- NOUVEAU : 3ème bouton pour afficher/cacher la boîte d'outils tactiques -->
-        <!-- Bouton mis à jour dans la zone .top-tools-actions -->
-<button id="btn-toggle-palette" class="btn-top-tool" title="Afficher les outils" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #ffffff; padding: 5px; line-height: 1; transition: transform 0.2s;">
-    🙈
-</button>
+			<!-- Bouton engrenage Options -->
+			<button id="btn-ouvrir-options" class="btn-top-tool" title="Ouvrir les Options" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #ffffff; padding: 5px; line-height: 1; transition: transform 0.2s;">
+				⚙️
+			</button>
 
-		<button id="btn-toggle-balls-sidebar" class="btn-top-tool" title="Masquer la liste des billes" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #ffffff; padding: 5px; line-height: 1; transition: transform 0.2s;">🎱</button>
+			<!-- Bouton Guide (point d'interrogation) -->
+			<button id="btn-ouvrir-guide" class="btn-top-tool" title="Guide des Raccourcis" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #ffffff; padding: 5px; line-height: 1; transition: transform 0.2s;">
+				❓
+			</button>
 
-        
-    </div>
-</div>
+			<!-- NOUVEAU : 3ème bouton pour afficher/cacher la boîte d'outils tactiques -->
+			<!-- Bouton mis à jour dans la zone .top-tools-actions -->
+			<button id="btn-toggle-palette" class="btn-top-tool" title="Afficher les outils" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #ffffff; padding: 5px; line-height: 1; transition: transform 0.2s;">
+				🙈
+			</button>
+
+			<button id="btn-toggle-balls-sidebar" class="btn-top-tool" title="Masquer la liste des billes" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #ffffff; padding: 5px; line-height: 1; transition: transform 0.2s;">🎱</button>
 
 
+		</div>
+	</div>
 
 
-<!-- Structure de la Fenêtre Modale -->
-<dialog id="modal-guide" class="modal-dialog">
-    <div class="modal-contenu">
-        <div class="modal-header">
-            <h3>⌨ Guide des Raccourcis Clavier</h3>
-            <button id="btn-fermer-guide" class="btn-fermer">&times;</button>
-        </div>
-        <div class="modal-body">
-            <div class="shortcut-group">
-                <h4>🎨 Formes Tactiques (Aperçus)</h4>
-                <ul>
-                    <li><kbd>T</kbd> <span><b>Cible de visée</b> (Refaire T pour changer de quadrant)</span></li>
-                    <li><kbd>Z</kbd> <span><b>Carré de zone</b> (Refaire Z pour changer la taille)</span></li>
-                    <li><kbd>9</kbd> <span><b>Repère X</b> (Refaire 9 pour Étoile 4/6 ou Cercle)</span></li>
-                    <li><kbd>0</kbd> <span><b>Effets Bille Blanche</b> (Grand réticule & Force)</span></li>
-                    <li><kbd>P</kbd> <span><b>Point de contact / Quantité</b> (Défilement de 0% à 100% | Remplacé par "Plein" à 100%)</span></li>
-                    <li><kbd>Shift</kbd> <span><b>Inverser le côté de l'impact</b> (Gauche / Droite, lorsque l'outil P est actif)</span></li>
-                    <li><kbd>Échap</kbd> <span>Annuler l'outil actif / Masquer l'aperçu</span></li>
-                </ul>
-            </div>
-            
-            <div class="shortcut-group">
-                <h4>📐 Zones de Jeu (Grille)</h4>
-                <ul>
-                    <li><kbd>1</kbd> à <kbd>8</kbd> <span><b>Activer / Modifier une Zone</b><br>1er clic: Départ (ZD) | 2e clic: Arrivée (ZA) | 3e clic: Effacer</span></li>
-                </ul>
-            </div>
+	<!-- Structure de la Fenêtre Modale -->
+	<dialog id="modal-guide" class="modal-dialog">
+		<div class="modal-contenu">
+			<div class="modal-header">
+				<h3>⌨ Guide des Raccourcis Clavier</h3>
+				<button id="btn-fermer-guide" class="btn-fermer">&times;</button>
+			</div>
+			<div class="modal-body">
+				<div class="shortcut-group">
+					<h4>🎨 Formes Tactiques (Aperçus)</h4>
+					<ul>
+						<li><kbd>T</kbd> <span><b>Cible de visée</b> (Refaire T pour changer de quadrant)</span></li>
+						<li><kbd>Z</kbd> <span><b>Carré de zone</b> (Refaire Z pour changer la taille)</span></li>
+						<li><kbd>9</kbd> <span><b>Repère X</b> (Refaire 9 pour Étoile 4/6 ou Cercle)</span></li>
+						<li><kbd>0</kbd> <span><b>Effets Bille Blanche</b> (Grand réticule & Force)</span></li>
+						<li><kbd>P</kbd> <span><b>Point de contact / Quantité</b> (Défilement de 0% à 100% | Remplacé par "Plein" à 100%)</span></li>
+						<li><kbd>Shift</kbd> <span><b>Inverser le côté de l'impact</b> (Gauche / Droite, lorsque l'outil P est actif)</span></li>
+						<li><kbd>Échap</kbd> <span>Annuler l'outil actif / Masquer l'aperçu</span></li>
+					</ul>
+				</div>
 
-            <div class="shortcut-group">
-                <h4>🖌️ Dessin & Tracés</h4>
-                <ul>
-                    <li><kbd>Clic Droit</kbd> <span><b>Dessin libre</b> (Prend la couleur de la bille active)</span></li>
-                    <li><kbd>Ctrl</kbd> + <kbd>Glisser</kbd> <span>Force une <b>Ligne Droite</b></span></li>
-                    <li><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Glisser</kbd> <span>Ligne Droite avec <b>Flèche</b></span></li>
-                    <li><kbd>E</kbd> ou <kbd>Suppr</kbd> <span><b>Effacer l'élément</b> sous le curseur</span></li>
-                    <li><kbd>Ctrl + Z</kbd> <span><b>Annuler</b> le dernier dessin</span></li>
-                    <li><kbd>H</kbd> <span><b>Masquer / Afficher</b> tous les dessins</span></li>
-                </ul>
-            </div>
+				<div class="shortcut-group">
+					<h4>📐 Zones de Jeu (Grille)</h4>
+					<ul>
+						<li><kbd>1</kbd> à <kbd>8</kbd> <span><b>Activer / Modifier une Zone</b><br>1er clic: Départ (ZD) | 2e clic: Arrivée (ZA) | 3e clic: Effacer</span></li>
+					</ul>
+				</div>
 
-            <div class="shortcut-group">
-                <h4>🔮 Gestion des Billes</h4>
-                <ul>
-                    <li><kbd>Clic Gauche</kbd> <span>Sélectionner une bille (Contour blanc)</span></li>
-                    <li><kbd>Double-Clic</kbd> <span><b>Masquer / Retirer</b> la bille du tapis</span></li>
-                </ul>
-            </div>
-        </div>
-    </div>
-</dialog>
+				<div class="shortcut-group">
+					<h4>🖌️ Dessin & Tracés</h4>
+					<ul>
+						<li><kbd>Clic Droit</kbd> <span><b>Dessin libre</b> (Prend la couleur de la bille active)</span></li>
+						<li><kbd>Ctrl</kbd> + <kbd>Glisser</kbd> <span>Force une <b>Ligne Droite</b></span></li>
+						<li><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Glisser</kbd> <span>Ligne Droite avec <b>Flèche</b></span></li>
+						<li><kbd>E</kbd> ou <kbd>Suppr</kbd> <span><b>Effacer l'élément</b> sous le curseur</span></li>
+						<li><kbd>Ctrl + Z</kbd> <span><b>Annuler</b> le dernier dessin</span></li>
+						<li><kbd>H</kbd> <span><b>Masquer / Afficher</b> tous les dessins</span></li>
+					</ul>
+				</div>
 
-
+				<div class="shortcut-group">
+					<h4>🔮 Gestion des Billes</h4>
+					<ul>
+						<li><kbd>Clic Gauche</kbd> <span>Sélectionner une bille (Contour blanc)</span></li>
+						<li><kbd>Double-Clic</kbd> <span><b>Masquer / Retirer</b> la bille du tapis</span></li>
+					</ul>
+				</div>
+			</div>
+		</div>
+	</dialog>
 
 
-
-<!-- Palette d'outils de tracé & Formes tactiques complète -->
-<div class="drawing-tools-palette is-collapsed" id="drawing-tools-palette">
-    <h4>Outils de Tracé & Tactique</h4>
-	
-	
-	
-	
-	
-    <div class="tools-grid-container">
-	
-	
-	
-	
-        <!-- Ligne 1 -->
-        <button type="button" class="tool-btn active" data-tool="select" title="Sélection et déplacement des billes"><span class="btn-text">🖱️ Sélection</span></button>
-		
-		<label class="control-item" for="chk-dashed-lines">
-        <input type="checkbox" id="chk-dashed-lines"> Pointillés
-        </label>
-		
-		<label class="control-item">
-        <input type="checkbox" id="chk-magnetism"> Magnétisme
-    </label>
-		
-        <button type="button" class="tool-btn" data-tool="pencil" title="Dessin libre"><span class="btn-text">✏️ Crayon</span></button>
-        <button type="button" class="tool-btn" data-tool="line" title="Ligne droite"><span class="btn-text">📏 Ligne</span></button>
-        <button type="button" class="tool-btn" data-tool="arrow" title="Flèche droite"><span class="btn-text">🏹 Flèche</span></button>
-        <button type="button" class="tool-btn tool-shape" data-tool="pointContact" title="Point de contact (P)"><span class="btn-text">🎯 Contact (P)</span></button>
-
-        <!-- Ligne 2 -->
-        <button type="button" class="tool-btn tool-shape" data-tool="cible" title="Cible de visée (T)"><span class="btn-text">🎯 Cible (T)</span></button>
-        <button type="button" class="tool-btn tool-shape" data-tool="carre" title="Carré de zone (Z)"><span class="btn-text">🔲 Carré (Z)</span></button>
-        <button type="button" class="tool-btn tool-shape" data-tool="effetBlanche" title="Effets Bille Blanche (0)"><span class="btn-text">🔮 Effet (0)</span></button>
-        <button type="button" class="tool-btn tool-shape" data-tool="repereX" title="Repère visuel X (9)"><span class="btn-text">❌ Repère (9)</span></button>
-        <button type="button" class="tool-btn tool-eraser" data-tool="erase" title="Effacer un élément (Gomme)"><span class="btn-text">🧼 Gomme</span></button>
+	<!-- Palette d'outils de tracé & Formes tactiques complète -->
+	<div class="drawing-tools-palette is-collapsed" id="drawing-tools-palette">
+		<h4>Outils de Tracé & Tactique</h4>
 
 
-<!-- Bouton Unique fusionné (Colorpicker natif + Design personnalisé) -->
-<button type="button" class="tool-btn" id="indicateur-couleur-tactique" title="Changer la couleur du tracé (Colorpicker)" style="position: relative; overflow: hidden;">
-    <span class="btn-text" style="display: flex; align-items: center; gap: 6px; pointer-events: none;">
-        <span class="color-preview-box" style="display: inline-block; width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.2); pointer-events: none;"></span>
-        Couleur
-    </span>
-    <!-- L'input unique est étiré sur tout le bouton mais rendu invisible. Un clic sur le bouton cliquera obligatoirement sur l'input. -->
-    <input type="color" id="marker-color" value="#ffffff" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; margin: 0; padding: 0; border: none;">
-</button>
-
-	<button type="button" class="tool-btn tool-shape" id="btn-undo-lines" title="Annuler le dernier tracé">
-                <span>↩️ Annuler</span>
-            </button>
-
-       <button type="button" class="tool-btn tool-shape" id="btn-clear-lines" title="Tout effacer">
-                <span>🗑️ Effacer</span>
-            </button>
-
-	
-    </div>
-
-</div>
-    
+		<div class="tools-grid-container">
 
 
+			<!-- Ligne 1 -->
+			<button type="button" class="tool-btn active" data-tool="select" title="Sélection et déplacement des billes"><span class="btn-text">🖱️ Sélection</span></button>
 
-<div class="app-layout">
-
-        <!-- La table de billard avec mouches et spots -->
-    <div id="table-frame">
-    <!-- Les 18 Diamants (Mouches) sur la structure en bois -->
-        <!-- Bande Haut -->
-        <div class="diamond th-1" style="position: absolute; top: 11px; left: 138px;"></div>
-        <div class="diamond th-2" style="position: absolute; top: 11px; left: 234px;"></div>
-        <div class="diamond th-3" style="position: absolute; top: 11px; left: 327px;"></div>
-        <div class="diamond th-4" style="position: absolute; top: 11px; left: 420px;"></div> <!-- Diamant Central -->
-        <div class="diamond th-5" style="position: absolute; top: 11px; left: 517px;"></div>
-        <div class="diamond th-6" style="position: absolute; top: 11px; left: 611px;"></div>
-        <div class="diamond th-7" style="position: absolute; top: 11px; left: 705px;"></div>
-
-        <!-- Bande Bas -->
-        <div class="diamond bh-1" style="position: absolute; bottom: 11px; left: 138px;"></div>
-        <div class="diamond bh-2" style="position: absolute; bottom: 11px; left: 234px;"></div>
-        <div class="diamond bh-3" style="position: absolute; bottom: 11px; left: 327px;"></div>
-        <div class="diamond bh-4" style="position: absolute; bottom: 11px; left: 420px;"></div> <!-- Diamant Central -->
-        <div class="diamond bh-5" style="position: absolute; bottom: 11px; left: 517px;"></div>
-        <div class="diamond bh-6" style="position: absolute; bottom: 11px; left: 611px;"></div>
-        <div class="diamond bh-7" style="position: absolute; bottom: 11px; left: 705px;"></div>
-
-        <!-- Bande Gauche -->
-        <div class="diamond lv-1" style="position: absolute; left: 11px; top: 128px;"></div>
-        <div class="diamond lv-2" style="position: absolute; left: 11px; top: 223px;"></div>
-        <div class="diamond lv-3" style="position: absolute; left: 11px; top: 316px;"></div>
-
-        <!-- Bande Droite -->
-        <div class="diamond rv-1" style="position: absolute; right: 11px; top: 128px;"></div>
-        <div class="diamond rv-2" style="position: absolute; right: 11px; top: 223px;"></div>
-        <div class="diamond rv-3" style="position: absolute; right: 11px; top: 316px;"></div>
-
-
-        <div id="pool-table">
-
-		<!-- Logo centré en arrière-plan sur le tapis -->
-<img id="table-logo-overlay" src="logo.png" alt="" onerror="this.style.display='none';">
-
-		
-		<div id="table-title-overlay" style="display: none;"></div>
-
-
-
-            <!-- À insérer à l'intérieur de <div id="pool-table"> -->
-<!-- À insérer à l'intérieur de <div id="pool-table"> -->
-<canvas id="drawing-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;"></canvas>
-
-            <!-- Traçage du tapis : Head string (Ligne de cadre) -->
-            <div style="position: absolute; top: 18px; bottom: 18px; left: 208px; width: 1px; background-color: rgba(255,255,255,0.15); pointer-events: none; z-index: 0;"></div>
-
-<!-- À insérer à l'intérieur de <div id="pool-table">...</div> -->
-<div id="grid-overlay" class="grid-overlay" style="display: none;"></div>
-            
-            <!-- Les Points réglementaires (Spots) -->
-            <!-- Head Spot (Point de choc pour la blanche) -->
-            <div style="position: absolute; left: 208px; top: 200px; width: 6px; height: 6px; background-color: #fff; border-radius: 50%; transform: translate(-50%, -50%); opacity: 0.6; pointer-events: none; z-index: 0; box-shadow: 0 0 4px #000;"></div>
-            <!-- Foot Spot (Point de replacement / Sommet du triangle à 3/4 de la table) -->
-            <div style="position: absolute; left: 585px; top: 200px; width: 6px; height: 6px; background-color: #fff; border-radius: 50%; transform: translate(-50%, -50%); opacity: 0.6; pointer-events: none; z-index: 0; box-shadow: 0 0 4px #000;"></div>
-
-            <!-- Bandes physiques -->
-            <div class="cushion top-left"></div>
-            <div class="cushion top-right"></div>
-            <div class="cushion bottom-left"></div>
-            <div class="cushion bottom-right"></div>
-            <div class="cushion left"></div>
-            <div class="cushion right"></div>
-
-            <!-- Poches -->
-            <div class="pocket tl"></div>
-            <div class="pocket tc"></div>
-            <div class="pocket tr"></div>
-            <div class="pocket bl"></div>
-            <div class="pocket bc"></div>
-            <div class="pocket br"></div>
-        </div>
-		
-			
-    </div>
-
-	
-<!-- La liste latérale déplacée à droite (à l'intérieur du conteneur principal) -->
-    <div id="balls-sidebar">
-        <h3>Billes sur la table</h3>
-        <div id="visible-balls-list"></div>	
-		
-		
-    </div>
-	
-</div>
-
-
-<!-- Zone de notes tactiques masquable sous la table -->
-<div id="tactical-notes-area" class="tactical-panel-full">
-    <div class="panel-header-full">
-        <h3 id="display-title">Ma configuration de billard</h3>
-        <button id="btn-toggle-notes" title="Masquer complètement les notes">❌</button>
-    </div>
-    <div class="panel-content-full">
-        <p id="display-desc">Aucune description ou note tactique saisie.</p>
-    </div>
-</div>
-
-
-
-<div class="table-controls">
-	
-    <label class="control-item">
-        <input type="checkbox" id="chk-toggle-grid"> Grille
-    </label>
-
-    <label class="control-item">
-        <input type="checkbox" id="chk-high-density-grid"> HD 16x8
-    </label>
-	
-	<label class="control-item">
-		<input type="checkbox" id="chk-toggle-drawings" checked> Dessins/tracés
-	</label>
-</div>
-
-
-
-
-
-
-
-
-
-<!-- Fenêtre Modale des Options -->
-<dialog id="modal-options" class="controls-accordion" style="padding: 0; border: none; border-radius: 8px; max-width: 800px; width: 95%; background-color: #1a1a1a; color: #ffffff; box-shadow: 0 4px 20px rgba(0,0,0,0.5); position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); margin: 0;">
-  
-    <!-- En-tête de la Modale -->
-    <div class="modal-header d-flex justify-content-between align-items-center p-3" style="border-bottom: 1px solid #333; background-color: #111;">
-        <h3 class="m-0 font-size-md" style="color: #fff; font-size: 1.1rem;">⚙️ Options de Configuration</h3>
-        <!-- Bouton de fermeture (la croix ×) -->
-        <button id="btn-fermer-options" class="close-button" style="background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; line-height: 1;">&times;</button>
-    </div>
-    
-    <!-- Corps de la Modale -->
-    <div class="modal-body p-3 controls-content" style="max-height: 75vh; overflow-y: auto;">
-        
-        <div class="text-fields-section">
-            <!-- Champ Titre -->
-            <div class="form-group mb-3">
-                <label for="input-title" class="form-label">Titre de la configuration</label>
-				
-					<label class="control-item">
-        <input type="checkbox" id="chk-show-title"> Titre
-    </label>
-				
-                <div class="input-wrapper">
-                    <span class="input-icon">✏️</span>
-                    <input type="text" id="input-title" class="form-control" placeholder="Ex: Attaque en bande, Position de départ..." value="Ma configuration de billard">
-                </div>
-				
-			
-				
-				
-            </div>
-
-            <!-- Champ Description -->
-            <div class="form-group mb-3">
-                <label for="input-desc" class="form-label">Description & Notes tactiques</label>
-                <textarea id="input-desc" class="form-control textarea-control" rows="3" placeholder="Ajoutez des détails sur les effets, la force du coup ou l'objectif de l'exercice..."></textarea>
-            </div>
-        </div>
-
-        <!-- Barre d'actions horizontale ultra-compacte -->
-        <div class="actions-button-row d-flex flex-wrap gap-1 align-items-center mb-3">
-            <button id="btn-export" class="btn btn-primary btn-xs py-1 px-2 font-size-xs" title="Exporter le JSON">
-                <span>💾</span> Exp.
-            </button>
-            
-            <button id="btn-import-trigger" class="btn btn-secondary btn-xs py-1 px-2 font-size-xs" title="Importer un JSON">
-                <span>📂</span> Imp.
-            </button>
-            <input type="file" id="file-import" accept=".json" style="display: none;">
-
-            <button id="btn-export-text" class="btn btn-primary btn-xs py-1 px-2 font-size-xs" title="Exporter les positions en texte">
-                <span>📄</span> Pos.
-            </button>
-
-            
-            <button id="btn-show-notes" title="Afficher la zone de notes tactiques" style="display: none;">👁️ Notes</button>
-            
-            
-            <button id="btn-random-hd" class="btn btn-xs text-white fw-bold py-1 px-2 font-size-xs" style="background-color: #e67e22; border: none;" title="Générer un tapis Aléatoire HD">
-                <span>🎲</span> Rand
-            </button>
-            
-            <button id="btn-export-serie-aleatoire" class="btn btn-xs text-white fw-bold py-1 px-2 font-size-xs" style="background-color: #d35400; border: none;" title="Générer une série progressive du nombre mentionné">
-                <span>🎲</span> progX
-            </button>
-
-            <label for="input-nb-manches" class="mb-0 small">à générer :</label>
-            <select id="input-nb-manches" class="form-select form-select-sm w-auto py-0">
-                <option value="1">1 manches</option>
-                <option value="2">2 manches</option>
-                <option value="3">3 manches</option>
-                <option value="4">4 manches</option>
-                <option value="5">5 manches</option>
-                <option value="6">6 manches</option>
-                <option value="7">7 manches</option>
-                <option value="8">8 manches</option>
-                <option value="9">9 manches</option>
-                <option value="10" selected>10 manches (par défaut)</option>
-                <option value="11">11 manches</option>
-                <option value="12">12 manches</option>
-                <option value="13">13 manches</option>
-                <option value="14">14 manches</option>
-                <option value="15">15 manches</option>
-            </select>
-			
-			<label class="control-item">
-        		
-        </div>
-
-		
-				
-        <div class="control-group mb-3">
-            <!-- Sélecteur de billes compact -->
-            <div class="d-flex align-items-center gap-1 text-white bg-dark p-2 rounded mb-2">
-                <label for="select-balls-count" class="small mb-0">🎱</label>
-                <select id="select-balls-count" class="form-select form-select-sm w-auto py-0">
-                    <optgroup label="Mode Libre" data-placement="libre">
-                        <option value="0">⚪ Seule</option>
-                        <option value="1">⚪ + 1</option>
-                        <option value="2">⚪ + 2</option>
-                        <option value="3">⚪ + 3</option>
-                        <option value="4">⚪ + 4</option>
-                        <option value="5">⚪ + 5</option>
-                        <option value="6">⚪ + 6</option>
-                        <option value="7">⚪ + 7</option>
-                        <option value="8">⚪ + 8</option>
-                        <option value="9-libre" >⚪ + 9</option>
-                        <option value="10-libre">⚪ + 10</option>
-                        <option value="11">⚪ + 11</option>
-                        <option value="12">⚪ + 12</option>
-                        <option value="13">⚪ + 13</option>
-                        <option value="14">⚪ + 14</option>
-                        <option value="15-libre" selected >⚪ + 15</option>
-                    </optgroup>
-                    <optgroup label="Jeux Officiels (Auto)" data-placement="auto">
-                        <option value="15">Jeu de la 8 (15)</option>
-                        <option value="14.1">Jeu du 14.1 (Re-rack 14+1)</option>
-                        
-                        <option value="9">Jeu de la 9 (9)</option>
-                        <option value="9-matchroom">Jeu de la 9 (Matchroom - 9 sur l'Apex)</option>
-                        <option value="10">Jeu de la 10 (10)</option>
-                    </optgroup>
-                </select>
-				
-				<input type="checkbox" id="chk-toggle-balls-list" checked> Liste des billes
+			<label class="control-item" for="chk-dashed-lines">
+				<input type="checkbox" id="chk-dashed-lines"> Pointillés
 			</label>
-				
-				
-            </div>
 
-            <div class="drawing-controls">
-    <div class="mb-2">
-        
-    </div>
-</div>
+			<label class="control-item">
+				<input type="checkbox" id="chk-magnetism"> Magnétisme
+			</label>
+
+			<button type="button" class="tool-btn" data-tool="pencil" title="Dessin libre"><span class="btn-text">✏️ Crayon</span></button>
+			<button type="button" class="tool-btn" data-tool="line" title="Ligne droite"><span class="btn-text">📏 Ligne</span></button>
+			<button type="button" class="tool-btn" data-tool="arrow" title="Flèche droite"><span class="btn-text">🏹 Flèche</span></button>
+			<button type="button" class="tool-btn tool-shape" data-tool="pointContact" title="Point de contact (P)"><span class="btn-text">🎯 Contact (P)</span></button>
+
+			<!-- Ligne 2 -->
+			<button type="button" class="tool-btn tool-shape" data-tool="cible" title="Cible de visée (T)"><span class="btn-text">🎯 Cible (T)</span></button>
+			<button type="button" class="tool-btn tool-shape" data-tool="carre" title="Carré de zone (Z)"><span class="btn-text">🔲 Carré (Z)</span></button>
+			<button type="button" class="tool-btn tool-shape" data-tool="effetBlanche" title="Effets Bille Blanche (0)"><span class="btn-text">🔮 Effet (0)</span></button>
+			<button type="button" class="tool-btn tool-shape" data-tool="repereX" title="Repère visuel X (9)"><span class="btn-text">❌ Repère (9)</span></button>
+			<button type="button" class="tool-btn tool-eraser" data-tool="erase" title="Effacer un élément (Gomme)"><span class="btn-text">🧼 Gomme</span></button>
 
 
-                <fieldset class="control-group mb-2 p-2 rounded" style="border: 1px solid #333;">
-                    <legend class="px-2 small text-muted" style="float: none; width: auto; font-size: 0.85rem; margin-bottom: 0;">🟢 Couleur du Tapis</legend>
-                    <div class="felt-color-picker d-flex gap-3 mt-1">
-                        <label class="felt-option small mb-0"><input type="radio" name="felt-color" value="vert" checked> Vert Club</label>
-                        <label class="felt-option small mb-0"><input type="radio" name="felt-color" value="bleu"> Bleu Tournoi</label>
-                        <label class="felt-option small mb-0"><input type="radio" name="felt-color" value="gris"> Gris Moderne</label>
-                    </div>
-                </fieldset>
+			<!-- Bouton Unique fusionné (Colorpicker natif + Design personnalisé) -->
+			<button type="button" class="tool-btn" id="indicateur-couleur-tactique" title="Changer la couleur du tracé (Colorpicker)" style="position: relative; overflow: hidden;">
+				<span class="btn-text" style="display: flex; align-items: center; gap: 6px; pointer-events: none;">
+					<span class="color-preview-box" style="display: inline-block; width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.2); pointer-events: none;"></span>
+					Couleur
+				</span>
+				<!-- L'input unique est étiré sur tout le bouton mais rendu invisible. Un clic sur le bouton cliquera obligatoirement sur l'input. -->
+				<input type="color" id="marker-color" value="#ffffff" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; margin: 0; padding: 0; border: none;">
+			</button>
 
-                <div class="option-group small">
-                    <label for="input-logo-file" class="d-block mb-1">Charger un Logo personnalisé :</label>
-					
+			<button type="button" class="tool-btn tool-shape" id="btn-undo-lines" title="Annuler le dernier tracé">
+				<span>↩️ Annuler</span>
+			</button>
+
+			<button type="button" class="tool-btn tool-shape" id="btn-clear-lines" title="Tout effacer">
+				<span>🗑️ Effacer</span>
+			</button>
+
+
+		</div>
+
+	</div>
+
+
+	<div class="app-layout">
+
+		<!-- La table de billard avec mouches et spots -->
+		<div id="table-frame">
+			<!-- Les 18 Diamants (Mouches) sur la structure en bois -->
+			<!-- Bande Haut -->
+			<div class="diamond th-1" style="position: absolute; top: 11px; left: 138px;"></div>
+			<div class="diamond th-2" style="position: absolute; top: 11px; left: 234px;"></div>
+			<div class="diamond th-3" style="position: absolute; top: 11px; left: 327px;"></div>
+			<div class="diamond th-4" style="position: absolute; top: 11px; left: 420px;"></div> <!-- Diamant Central -->
+			<div class="diamond th-5" style="position: absolute; top: 11px; left: 517px;"></div>
+			<div class="diamond th-6" style="position: absolute; top: 11px; left: 611px;"></div>
+			<div class="diamond th-7" style="position: absolute; top: 11px; left: 705px;"></div>
+
+			<!-- Bande Bas -->
+			<div class="diamond bh-1" style="position: absolute; bottom: 11px; left: 138px;"></div>
+			<div class="diamond bh-2" style="position: absolute; bottom: 11px; left: 234px;"></div>
+			<div class="diamond bh-3" style="position: absolute; bottom: 11px; left: 327px;"></div>
+			<div class="diamond bh-4" style="position: absolute; bottom: 11px; left: 420px;"></div> <!-- Diamant Central -->
+			<div class="diamond bh-5" style="position: absolute; bottom: 11px; left: 517px;"></div>
+			<div class="diamond bh-6" style="position: absolute; bottom: 11px; left: 611px;"></div>
+			<div class="diamond bh-7" style="position: absolute; bottom: 11px; left: 705px;"></div>
+
+			<!-- Bande Gauche -->
+			<div class="diamond lv-1" style="position: absolute; left: 11px; top: 128px;"></div>
+			<div class="diamond lv-2" style="position: absolute; left: 11px; top: 223px;"></div>
+			<div class="diamond lv-3" style="position: absolute; left: 11px; top: 316px;"></div>
+
+			<!-- Bande Droite -->
+			<div class="diamond rv-1" style="position: absolute; right: 11px; top: 128px;"></div>
+			<div class="diamond rv-2" style="position: absolute; right: 11px; top: 223px;"></div>
+			<div class="diamond rv-3" style="position: absolute; right: 11px; top: 316px;"></div>
+
+
+			<div id="pool-table">
+
+				<!-- Logo centré en arrière-plan sur le tapis -->
+				<img id="table-logo-overlay" src="logo.png" alt="" onerror="this.style.display='none';">
+
+
+				<div id="table-title-overlay" style="display: none;"></div>
+
+
+				<!-- À insérer à l'intérieur de <div id="pool-table"> -->
+				<!-- À insérer à l'intérieur de <div id="pool-table"> -->
+				<canvas id="drawing-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;"></canvas>
+
+				<!-- Traçage du tapis : Head string (Ligne de cadre) -->
+				<div style="position: absolute; top: 18px; bottom: 18px; left: 208px; width: 1px; background-color: rgba(255,255,255,0.15); pointer-events: none; z-index: 0;"></div>
+
+				<!-- À insérer à l'intérieur de <div id="pool-table">...</div> -->
+				<div id="grid-overlay" class="grid-overlay" style="display: none;"></div>
+
+				<!-- Les Points réglementaires (Spots) -->
+				<!-- Head Spot (Point de choc pour la blanche) -->
+				<div style="position: absolute; left: 208px; top: 200px; width: 6px; height: 6px; background-color: #fff; border-radius: 50%; transform: translate(-50%, -50%); opacity: 0.6; pointer-events: none; z-index: 0; box-shadow: 0 0 4px #000;"></div>
+				<!-- Foot Spot (Point de replacement / Sommet du triangle à 3/4 de la table) -->
+				<div style="position: absolute; left: 585px; top: 200px; width: 6px; height: 6px; background-color: #fff; border-radius: 50%; transform: translate(-50%, -50%); opacity: 0.6; pointer-events: none; z-index: 0; box-shadow: 0 0 4px #000;"></div>
+
+				<!-- Bandes physiques -->
+				<div class="cushion top-left"></div>
+				<div class="cushion top-right"></div>
+				<div class="cushion bottom-left"></div>
+				<div class="cushion bottom-right"></div>
+				<div class="cushion left"></div>
+				<div class="cushion right"></div>
+
+				<!-- Poches -->
+				<div class="pocket tl"></div>
+				<div class="pocket tc"></div>
+				<div class="pocket tr"></div>
+				<div class="pocket bl"></div>
+				<div class="pocket bc"></div>
+				<div class="pocket br"></div>
+			</div>
+
+
+		</div>
+
+
+		<!-- La liste latérale déplacée à droite (à l'intérieur du conteneur principal) -->
+		<div id="balls-sidebar">
+			<h3>Billes sur la table</h3>
+			<div id="visible-balls-list"></div>
+
+
+		</div>
+
+	</div>
+
+
+	<!-- Zone de notes tactiques masquable sous la table -->
+	<div id="tactical-notes-area" class="tactical-panel-full">
+		<div class="panel-header-full">
+			<h3 id="display-title">Ma configuration de billard</h3>
+			<button id="btn-toggle-notes" title="Masquer complètement les notes">❌</button>
+		</div>
+		<div class="panel-content-full">
+			<p id="display-desc">Aucune description ou note tactique saisie.</p>
+		</div>
+	</div>
+
+
+	<div class="table-controls">
+
+		<label class="control-item">
+			<input type="checkbox" id="chk-toggle-grid"> Grille
+		</label>
+
+		<label class="control-item">
+			<input type="checkbox" id="chk-high-density-grid"> HD 16x8
+		</label>
+
+		<label class="control-item">
+			<input type="checkbox" id="chk-toggle-drawings" checked> Dessins/tracés
+		</label>
+	</div>
+
+
+	<!-- Fenêtre Modale des Options -->
+	<dialog id="modal-options" class="controls-accordion" style="padding: 0; border: none; border-radius: 8px; max-width: 800px; width: 95%; background-color: #1a1a1a; color: #ffffff; box-shadow: 0 4px 20px rgba(0,0,0,0.5); position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); margin: 0;">
+
+		<!-- En-tête de la Modale -->
+		<div class="modal-header d-flex justify-content-between align-items-center p-3" style="border-bottom: 1px solid #333; background-color: #111;">
+			<h3 class="m-0 font-size-md" style="color: #fff; font-size: 1.1rem;">⚙️ Options de Configuration</h3>
+			<!-- Bouton de fermeture (la croix ×) -->
+			<button id="btn-fermer-options" class="close-button" style="background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; line-height: 1;">&times;</button>
+		</div>
+
+		<!-- Corps de la Modale -->
+		<div class="modal-body p-3 controls-content" style="max-height: 75vh; overflow-y: auto;">
+
+			<div class="text-fields-section">
+				<!-- Champ Titre -->
+				<div class="form-group mb-3">
+					<label for="input-title" class="form-label">Titre de la configuration</label>
+
 					<label class="control-item">
-					<input type="checkbox" id="chk-show-logo" checked> Logo
+						<input type="checkbox" id="chk-show-title"> Titre
 					</label>
-	
+
+					<div class="input-wrapper">
+						<span class="input-icon">✏️</span>
+						<input type="text" id="input-title" class="form-control" placeholder="Ex: Attaque en bande, Position de départ..." value="Ma configuration de billard">
+					</div>
+
+
+				</div>
+
+				<!-- Champ Description -->
+				<div class="form-group mb-3">
+					<label for="input-desc" class="form-label">Description & Notes tactiques</label>
+					<textarea id="input-desc" class="form-control textarea-control" rows="3" placeholder="Ajoutez des détails sur les effets, la force du coup ou l'objectif de l'exercice..."></textarea>
+				</div>
+			</div>
+
+			<!-- Barre d'actions horizontale ultra-compacte -->
+			<div class="actions-button-row d-flex flex-wrap gap-1 align-items-center mb-3">
+				<button id="btn-export" class="btn btn-primary btn-xs py-1 px-2 font-size-xs" title="Exporter le JSON">
+					<span>💾</span> Exp.
+				</button>
+
+				<button id="btn-import-trigger" class="btn btn-secondary btn-xs py-1 px-2 font-size-xs" title="Importer un JSON">
+					<span>📂</span> Imp.
+				</button>
+				<input type="file" id="file-import" accept=".json" style="display: none;">
+
+				<button id="btn-export-text" class="btn btn-primary btn-xs py-1 px-2 font-size-xs" title="Exporter les positions en texte">
+					<span>📄</span> Pos.
+				</button>
+
+
+				<button id="btn-show-notes" title="Afficher la zone de notes tactiques" style="display: none;">👁️ Notes</button>
+
+
+				<button id="btn-random-hd" class="btn btn-xs text-white fw-bold py-1 px-2 font-size-xs" style="background-color: #e67e22; border: none;" title="Générer un tapis Aléatoire HD">
+					<span>🎲</span> Rand
+				</button>
+
+				<button id="btn-export-serie-aleatoire" class="btn btn-xs text-white fw-bold py-1 px-2 font-size-xs" style="background-color: #d35400; border: none;" title="Générer une série progressive du nombre mentionné">
+					<span>🎲</span> progX
+				</button>
+
+				<label for="input-nb-manches" class="mb-0 small">à générer :</label>
+				<select id="input-nb-manches" class="form-select form-select-sm w-auto py-0">
+					<option value="1">1 manches</option>
+					<option value="2">2 manches</option>
+					<option value="3">3 manches</option>
+					<option value="4">4 manches</option>
+					<option value="5">5 manches</option>
+					<option value="6">6 manches</option>
+					<option value="7">7 manches</option>
+					<option value="8">8 manches</option>
+					<option value="9">9 manches</option>
+					<option value="10" selected>10 manches (par défaut)</option>
+					<option value="11">11 manches</option>
+					<option value="12">12 manches</option>
+					<option value="13">13 manches</option>
+					<option value="14">14 manches</option>
+					<option value="15">15 manches</option>
+				</select>
+
+				<label class="control-item">
+
+			</div>
+
+
+			<div class="control-group mb-3">
+				<!-- Sélecteur de billes compact -->
+				<div class="d-flex align-items-center gap-1 text-white bg-dark p-2 rounded mb-2">
+					<label for="select-balls-count" class="small mb-0">🎱</label>
+					<select id="select-balls-count" class="form-select form-select-sm w-auto py-0">
+						<optgroup label="Mode Libre" data-placement="libre">
+							<option value="0">⚪ Seule</option>
+							<option value="1">⚪ + 1</option>
+							<option value="2">⚪ + 2</option>
+							<option value="3">⚪ + 3</option>
+							<option value="4">⚪ + 4</option>
+							<option value="5">⚪ + 5</option>
+							<option value="6">⚪ + 6</option>
+							<option value="7">⚪ + 7</option>
+							<option value="8">⚪ + 8</option>
+							<option value="9-libre">⚪ + 9</option>
+							<option value="10-libre">⚪ + 10</option>
+							<option value="11">⚪ + 11</option>
+							<option value="12">⚪ + 12</option>
+							<option value="13">⚪ + 13</option>
+							<option value="14">⚪ + 14</option>
+							<option value="15-libre" selected>⚪ + 15</option>
+						</optgroup>
+						<optgroup label="Jeux Officiels (Auto)" data-placement="auto">
+							<option value="15">Jeu de la 8 (15)</option>
+							<option value="14.1">Jeu du 14.1 (Re-rack 14+1)</option>
+
+							<option value="9">Jeu de la 9 (9)</option>
+							<option value="9-matchroom">Jeu de la 9 (Matchroom - 9 sur l'Apex)</option>
+							<option value="10">Jeu de la 10 (10)</option>
+						</optgroup>
+					</select>
+
+					<input type="checkbox" id="chk-toggle-balls-list" checked> Liste des billes
+					</label>
+
+
+				</div>
+
+				<div class="drawing-controls">
+					<div class="mb-2">
+
+					</div>
+				</div>
+
+
+				<fieldset class="control-group mb-2 p-2 rounded" style="border: 1px solid #333;">
+					<legend class="px-2 small text-muted" style="float: none; width: auto; font-size: 0.85rem; margin-bottom: 0;">🟢 Couleur du Tapis</legend>
+					<div class="felt-color-picker d-flex gap-3 mt-1">
+						<label class="felt-option small mb-0"><input type="radio" name="felt-color" value="vert" checked> Vert Club</label>
+						<label class="felt-option small mb-0"><input type="radio" name="felt-color" value="bleu"> Bleu Tournoi</label>
+						<label class="felt-option small mb-0"><input type="radio" name="felt-color" value="gris"> Gris Moderne</label>
+					</div>
+				</fieldset>
+
+				<div class="option-group small">
+					<label for="input-logo-file" class="d-block mb-1">Charger un Logo personnalisé :</label>
+
+					<label class="control-item">
+						<input type="checkbox" id="chk-show-logo" checked> Logo
+					</label>
+
 					<button id="btn-reset-logo" type="button" class="btn btn-action btn-xs py-1 px-2 mt-1">Réinitialiser le Logo</button>
-					
-                    <input type="file" id="input-logo-file" accept="image/*" class="form-control form-control-sm mb-1 bg-dark text-white border-secondary">
-                    
-                </div>
-            </div>			
-        </div>
-    </div>
-</dialog>
+
+					<input type="file" id="input-logo-file" accept="image/*" class="form-control form-control-sm mb-1 bg-dark text-white border-secondary">
+
+				</div>
+			</div>
+		</div>
+		</div>
+	</dialog>
 
 
+	</div> <!-- Fin de app-layout -->
 
 
-</div> <!-- Fin de app-layout -->	
+	<script src="jszip.min.js"></script>
 
 
-	
+	<!-- Liaison avec vos deux scripts séparés -->
+	<script src="physique.js"></script>
+	<script src="outils.js"></script>
+	<script src="dessin.js"></script>
 
-<script src="jszip.min.js"></script>
-	
 
-        <!-- Liaison avec vos deux scripts séparés -->
-    <script src="physique.js"></script>
-    <script src="outils.js"></script>
-    <script src="dessin.js"></script>
-    
-    
 </body>
-</html>
 
+</html>
