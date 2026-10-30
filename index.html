@@ -127,15 +127,22 @@
         display: block !important; 
         position: absolute !important;
         left: 50% !important;
-        /* Aligné dynamiquement sous le bas de la table de billard (top de la table + hauteur/2 + espace d'un pouce) */
+        
         top: 1000px !important; 
         transform: translateX(-50%) !important;
-        width: 800px !important; 
+        width: 860px !important; 
         margin: 0 !important;
         padding: 0 !important;
         background: none !important;
         border: none !important;
     }
+
+
+    /* Masquer les lignes des billes "(enlevées)" dans la liste latérale */
+    .sidebar-ball-item.is-hidden-ball {
+        display: none !important;
+    }
+
 
     /* Configuration du conteneur de la liste de vos billes */
     #visible-balls-list {
