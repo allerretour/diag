@@ -1298,16 +1298,41 @@ if (colorSelectElement) {
 
 
 
+// === CORRECTIF HYBRIDE IOS POUR EFFACER ET ANNULER ===
 if (clearBtn) {
-    clearBtn.addEventListener('click', () => {
+    // Événement pour l'iPad / iPhone
+    clearBtn.addEventListener('touchstart', (e) => {
+        if (e.cancelable) e.preventDefault();
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        window.dessinsSauvegardes = []; 
+        window.dessinsSauvegardes = [];
+        if (typeof window.redessinerToutesLesLignes === "function") window.redessinerToutesLesLignes();
+    }, { passive: false });
+
+    // Événement pour le PC / Mac
+    clearBtn.addEventListener('click', (e) => {
+        if (e.pointerType === 'touch' || (e.clientX === 0 && e.clientY === 0)) return; // Évite le double déclenchement
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        window.dessinsSauvegardes = [];
+        if (typeof window.redessinerToutesLesLignes === "function") window.redessinerToutesLesLignes();
     });
 }
 
 if (undoBtn) {
-    undoBtn.addEventListener('click', annulerDernierTrace);
+    // Événement pour l'iPad / iPhone
+    undoBtn.addEventListener('touchstart', (e) => {
+        if (e.cancelable) e.preventDefault();
+        annulerDernierTrace();
+    }, { passive: false });
+
+    // Événement pour le PC / Mac
+    undoBtn.addEventListener('click', (e) => {
+        if (e.pointerType === 'touch' || (e.clientX === 0 && e.clientY === 0)) return; // Évite le double déclenchement
+        annulerDernierTrace();
+    });
 }
+
+
+
 
 // === GESTION AUTONOME DE LA CASE À COCHER "DESSINS/TRACÉS" ===
 if (toggleDrawingsCheck) {
