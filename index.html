@@ -1156,6 +1156,7 @@ kbd {
         <button type="button" class="tool-btn tool-shape" data-tool="repereX" title="Repère visuel X (9)"><span class="btn-text">❌ Repère (9)</span></button>
         <button type="button" class="tool-btn tool-eraser" data-tool="erase" title="Effacer un élément (Gomme)"><span class="btn-text">🧼 Gomme</span></button>
 
+
 <!-- Bouton Unique fusionné (Colorpicker natif + Design personnalisé) -->
 <button type="button" class="tool-btn" id="indicateur-couleur-tactique" title="Changer la couleur du tracé (Colorpicker)" style="position: relative; overflow: hidden;">
     <span class="btn-text" style="display: flex; align-items: center; gap: 6px; pointer-events: none;">
@@ -1165,6 +1166,15 @@ kbd {
     <!-- L'input unique est étiré sur tout le bouton mais rendu invisible. Un clic sur le bouton cliquera obligatoirement sur l'input. -->
     <input type="color" id="marker-color" value="#ffffff" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; margin: 0; padding: 0; border: none;">
 </button>
+
+	<button type="button" class="tool-btn tool-shape" id="btn-undo-lines" title="Annuler le dernier tracé">
+                <span>↩️ Annuler</span>
+            </button>
+
+       <button type="button" class="tool-btn tool-shape" id="btn-clear-lines" title="Tout effacer">
+                <span>🗑️ Effacer</span>
+            </button>
+
 	
     </div>
 
@@ -1356,13 +1366,9 @@ kbd {
                 <span>📄</span> Pos.
             </button>
 
-            <button id="btn-undo-lines" class="btn btn-action btn-xs py-1 px-2" title="Annuler le dernier tracé">
-                <span>↩️</span>
-            </button>
+            
 
-            <button id="btn-clear-lines" class="btn btn-danger btn-xs py-1 px-2" title="Tout effacer">
-                <span>🗑️</span>
-            </button>
+            
             
             <button id="btn-random-hd" class="btn btn-xs text-white fw-bold py-1 px-2 font-size-xs" style="background-color: #e67e22; border: none;" title="Générer un tapis Aléatoire HD">
                 <span>🎲</span> Rand

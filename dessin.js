@@ -379,7 +379,7 @@ function dessinerPointContact(x, y, couleur, pctFige, coteFige) {
 
     // --- LIGNE D'AXE HORIZONTALE DE RÉFÉRENCE ---
     ctx.beginPath();
-    ctx.moveTo(cadreX + 12, centreCadreY); // Correction ici : remplacement du ; par une virgule
+    ctx.moveTo(cadreX + 12, centreCadreY); 
     ctx.lineTo(cadreX + largeurCadre - 12, centreCadreY);
     ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
     ctx.lineWidth = 1;
