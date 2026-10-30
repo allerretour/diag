@@ -180,6 +180,65 @@ if (btnToggleBalls && ballsSidebarContainer) {
 
 
 
+// --- CENTRALISATION DES ÉLÉMENTS DE LA ZONE DE NOTES ---
+const inputTitle = document.getElementById('input-title');
+const inputDesc = document.getElementById('input-desc');
+const displayTitle = document.getElementById('display-title');
+const displayDesc = document.getElementById('display-desc');
+const notesPanel = document.getElementById('tactical-notes-area');
+
+// Nouveaux boutons de contrôle
+const btnToggleNotes = document.getElementById('btn-toggle-notes'); // Le bouton "❌ Masquer" dans la zone
+const btnShowNotes = document.getElementById('btn-show-notes');   // Le bouton "👁️ Notes" en haut à droite
+
+function rafraichirZoneNotes() {
+    if (inputTitle && displayTitle) {
+        const txtTitre = inputTitle.value.trim();
+        displayTitle.innerText = txtTitre !== "" ? txtTitre : "Configuration sans titre";
+        // --- CONFIGURATION DYNAMIQUE DU NOM DU FICHIER PDF ---
+        document.title = txtTitre !== "" ? txtTitre : "Configuration_Billard";
+    }
+    if (inputDesc && displayDesc) {
+        const txtDesc = inputDesc.value.trim();
+        displayDesc.innerText = txtDesc !== "" ? txtDesc : "Aucune description ou note tactique saisie.";
+    }
+    
+    // Si l'utilisateur tape du texte, on réaffiche automatiquement la zone
+    afficherLaZoneDeNotes();
+}
+
+function afficherLaZoneDeNotes() {
+    if (notesPanel && btnShowNotes) {
+        notesPanel.style.display = 'block';      // Affiche la grande zone en bas
+        btnShowNotes.style.display = 'none';     // Masque le bouton de secours en haut
+    }
+}
+
+function masquerLaZoneDeNotes() {
+    if (notesPanel && btnShowNotes) {
+        notesPanel.style.display = 'none';       // Masque la grande zone en bas
+        btnShowNotes.style.display = 'inline-block'; // Affiche le bouton de secours en haut
+    }
+}
+
+// Écouteurs sur vos champs de saisie existants
+if (inputTitle) inputTitle.addEventListener('input', rafraichirZoneNotes);
+if (inputDesc) inputDesc.addEventListener('input', rafraichirZoneNotes);
+
+// Écouteur sur le bouton "❌ Masquer les notes" (dans la zone en bas)
+if (btnToggleNotes) {
+    btnToggleNotes.addEventListener('click', masquerLaZoneDeNotes);
+}
+
+// Écouteur sur le nouveau bouton "👁️ Notes" (en haut à droite)
+if (btnShowNotes) {
+    btnShowNotes.addEventListener('click', afficherLaZoneDeNotes);
+}
+
+
+
+
+
 
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -700,6 +759,9 @@ if (importTriggerBtn && fileImportInput) {
                 // 3. Mettre à jour les champs de texte éditables
                 if (titleInput) titleInput.value = titreImported;
                 if (descInput) descInput.value = descImported;
+
+                // AJOUT DE SÉCURITÉ ICI :
+                rafraichirZoneNotes();
 
                 // ====================================================================
                 // AJOUT ICI : RESTAURATION ET DÉCLENCHEMENT DES TOGGLES VISUELS

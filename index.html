@@ -71,33 +71,112 @@
         overflow: hidden;
     }
 
-    /* 3. Masquer l'intégralité de l'interface utilisateur */
+    /* 3. Masquer l'intégralité de l'interface utilisateur et le titre applicatif */
     body * {
         visibility: hidden;
     }
+    #main-app-title {
+        display: none !important;
+    }
 
-    /* 4. Réactiver uniquement la table et tout ce qu'elle contient */
-    #table-frame, #table-frame * {
+    /* 4. Réactiver la table, la zone de notes, la liste des billes et tout leur contenu */
+    #table-frame, #table-frame *,
+    #tactical-notes-area, #tactical-notes-area *,
+    #balls-sidebar, #balls-sidebar * {
         visibility: visible;
     }
 
-    /* 5. Centrage horizontal ET vertical absolu au pixel près sur la feuille */
+    /* Masquer spécifiquement les boutons et éléments de contrôle sur le papier */
+    #btn-toggle-notes, #btn-toggle-balls-sidebar, #chk-toggle-balls-list {
+        display: none !important;
+    }
+    #balls-sidebar h3 {
+        display: none !important; 
+    }
+
+    /* 5. ÉLÉMENT 1 (HAUT) : Positionnement de la zone de notes tactiques tout en haut */
+    #tactical-notes-area {
+        display: block !important; 
+        position: absolute !important;
+        left: 50% !important;
+        top: 6% !important; /* Calé au sommet de la page */
+        transform: translateX(-50%) !important;
+        width: 860px !important; 
+        background-color: #0b0f17 !important;
+        border: 1px solid rgba(0, 0, 0, 0.15) !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+
+    /* 6. ÉLÉMENT 2 (MILIEU) : Positionnement de la table de billard indexé sous la zone tactique */
     #table-frame {
         position: absolute !important;
         left: 50% !important;
-        top: 50% !important;
+        /* Aligné dynamiquement sous la zone tactique (ajustez le décalage en px au besoin) */
+        top: 700px !important; 
         transform: translate(-50%, -50%) !important;
         margin: 0 !important;
-        
-        /* Assure que l'imprimante applique le tapis vert, le bois et les billes */
         print-color-adjust: exact;
         -webkit-print-color-adjust: exact; 
     }
 
-    
-	
-	
+    /* 7. ÉLÉMENT 3 (BAS) : Positionnement de la liste des billes avec le décalage d'un pouce sous la table */
+    #balls-sidebar {
+        display: block !important; 
+        position: absolute !important;
+        left: 50% !important;
+        /* Aligné dynamiquement sous le bas de la table de billard (top de la table + hauteur/2 + espace d'un pouce) */
+        top: 1000px !important; 
+        transform: translateX(-50%) !important;
+        width: 800px !important; 
+        margin: 0 !important;
+        padding: 0 !important;
+        background: none !important;
+        border: none !important;
+    }
+
+    /* Configuration du conteneur de la liste de vos billes */
+    #visible-balls-list {
+        display: grid !important;
+        grid-template-columns: repeat(4, 1fr) !important; 
+        gap: 12px 18px !important; 
+        width: 100% !important;
+    }
+
+    /* Ajustement des lignes de billes pour l'impression papier */
+    .sidebar-ball-item {
+        background-color: rgba(11, 15, 23, 0.05) !important;
+        border: 1px solid rgba(0, 0, 0, 0.1) !important;
+        border-radius: 6px !important;
+        padding: 6px 10px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+    }
+
+    .sidebar-ball-coords {
+        color: #333333 !important; 
+        font-weight: 600 !important;
+        font-size: 12px !important;
+    }
+
+    /* Ajustements graphiques pour vos notes */
+    .tactical-panel-full h3 {
+        color: #ffffff !important;
+    }
+    .tactical-panel-full .panel-content-full {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
 }
+
+
+
 
 
 #table-frame {
@@ -1030,6 +1109,73 @@ kbd {
 
 
 
+.tactical-panel-full {
+    margin-top: 20px;
+    background-color: rgba(11, 15, 23, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    /* Largeur totale exacte du cadre extérieur en bois (Table Frame) */
+    width: 860px; 
+    margin-left: auto;
+    margin-right: auto;
+    color: #ffffff;
+    font-family: system-ui, -apple-system, sans-serif;
+    box-sizing: border-box;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.tactical-panel-full .panel-header-full {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px;
+    background-color: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Titre principal beaucoup plus gros */
+.tactical-panel-full h3 {
+    margin: 0;
+    font-size: 20px; 
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #ffffff;
+}
+
+/* Bouton pour fermer/masquer la zone */
+.tactical-panel-full button {
+    background-color: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 6px 12px;
+    transition: all 0.2s ease;
+}
+
+.tactical-panel-full button:hover {
+    background-color: rgba(231, 76, 60, 0.2);
+    border-color: rgba(231, 76, 60, 0.4);
+    color: #ffffff;
+}
+
+/* Description / Notes beaucoup plus grosses */
+.tactical-panel-full .panel-content-full {
+    padding: 18px 20px;
+    font-size: 15px; 
+    color: rgba(211, 220, 230, 0.95);
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+
+
+
+
+
+
     </style>
 </head>
 <body>
@@ -1264,21 +1410,26 @@ kbd {
     </div>
 
 	
-	<!-- La liste latérale déplacée à droite (à l'intérieur du conteneur principal) -->
+<!-- La liste latérale déplacée à droite (à l'intérieur du conteneur principal) -->
     <div id="balls-sidebar">
         <h3>Billes sur la table</h3>
-        <div id="visible-balls-list"></div>
-		
-		
-		
-		
-
-		
-		
+        <div id="visible-balls-list"></div>	
 		
 		
     </div>
 	
+</div>
+
+
+<!-- Zone de notes tactiques masquable sous la table -->
+<div id="tactical-notes-area" class="tactical-panel-full">
+    <div class="panel-header-full">
+        <h3 id="display-title">Ma configuration de billard</h3>
+        <button id="btn-toggle-notes" title="Masquer complètement les notes">❌</button>
+    </div>
+    <div class="panel-content-full">
+        <p id="display-desc">Aucune description ou note tactique saisie.</p>
+    </div>
 </div>
 
 
@@ -1292,21 +1443,15 @@ kbd {
     <label class="control-item">
         <input type="checkbox" id="chk-high-density-grid"> HD 16x8
     </label>
-
-    
-	
-    
-    
-      
-	
-    
 	
 	<label class="control-item">
 		<input type="checkbox" id="chk-toggle-drawings" checked> Dessins/tracés
 	</label>
-
-
 </div>
+
+
+
+
 
 
 
@@ -1367,7 +1512,7 @@ kbd {
             </button>
 
             
-
+            <button id="btn-show-notes" title="Afficher la zone de notes tactiques" style="display: none;">👁️ Notes</button>
             
             
             <button id="btn-random-hd" class="btn btn-xs text-white fw-bold py-1 px-2 font-size-xs" style="background-color: #e67e22; border: none;" title="Générer un tapis Aléatoire HD">
