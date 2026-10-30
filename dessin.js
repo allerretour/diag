@@ -133,8 +133,13 @@ return;
 
 
 
-// Double attachement : tactile (touchstart) ET souris (click)
+// Trouvez ce bloc à la fin de la configuration de votre palette (Source 2)
+// et remplacez-le par cette version sécurisée :
+
 boutonsOutils.forEach(btn => {
+    // ÉCHAPPE COMPLÈTEMENT LE BOUTON COULEUR POUR ÉVITER LES CONFLITS IOS
+    if (btn.id === 'indicateur-couleur-tactique') return;
+
     // Pour l'iPad / iPhone
     btn.addEventListener('touchstart', (e) => {
         gererLogiquePalette(btn, e);
@@ -142,7 +147,6 @@ boutonsOutils.forEach(btn => {
 
     // Pour l'ordinateur de bureau (PC/Mac)
     btn.addEventListener('click', (e) => {
-        // Si l'événement vient d'un doigt, on ignore le clic fantôme généré par le navigateur
         if (e.pointerType === 'touch' || (e.clientX === 0 && e.clientY === 0)) return;
         gererLogiquePalette(btn, e);
     });
