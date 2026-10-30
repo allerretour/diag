@@ -859,7 +859,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	// --- 5. CONFIGURATION ET ROTATION DU CADRAN DES CHIFFRES ---
 	ctx.fillStyle = couleur;
-	ctx.font = "bold 14px sans-serif";
+	ctx.font = "bold 12px sans-serif";
 	ctx.textAlign = "center";
 	ctx.textBaseline = "middle";
 
