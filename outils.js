@@ -56,52 +56,6 @@ if (inputLogoFile && tableLogoOverlay) {
 }
 
 
-// ====================================================================
-// GESTION DU BOUTON DE COULEUR TACTIQUE AVEC INPUT DÉDIÉ POUR IOS
-// ====================================================================
-const boutonCouleurTactique = document.getElementById('indicateur-couleur-tactique');
-const selecteurCouleurOrigine = document.getElementById('marker-color');
-const selecteurCouleurTactique = document.getElementById('marker-color-tactique'); // Nouvel input dédié
-
-function ouvrirColorPicker(e) {
-    if (!selecteurCouleurTactique) return;
-    
-    // 1. Aligner la couleur du picker tactique sur le picker d'origine avant ouverture
-    if (selecteurCouleurOrigine) {
-        selecteurCouleurTactique.value = selecteurCouleurOrigine.value;
-    }
-    
-    // 2. Déclencher l'ouverture native approuvée par Safari iOS
-    if (typeof selecteurCouleurTactique.showPicker === "function") {
-        selecteurCouleurTactique.showPicker();
-    } else {
-        selecteurCouleurTactique.click();
-    }
-}
-
-// 3. Écouter les modifications sur l'input dédié et les renvoyer au système principal
-if (selecteurCouleurTactique && selecteurCouleurOrigine) {
-    const synchroniserCouleurEnRetour = (e) => {
-        // Transférer la valeur choisie vers l'input principal
-        selecteurCouleurOrigine.value = e.target.value;
-        
-        // Déclencher l'événement 'input' de l'input principal pour forcer 
-        // l'application de la couleur sur la table, le canvas et les outlines
-        selecteurCouleurOrigine.dispatchEvent(new Event('input'));
-    };
-
-    selecteurCouleurTactique.addEventListener('input', synchroniserCouleurEnRetour);
-    selecteurCouleurTactique.addEventListener('change', (e) => {
-        selecteurCouleurOrigine.value = e.target.value;
-        selecteurCouleurOrigine.dispatchEvent(new Event('change'));
-    });
-}
-
-if (boutonCouleurTactique) {
-    // Un seul écouteur universel d'action pure (Safari valide le geste utilisateur)
-    boutonCouleurTactique.addEventListener('click', ouvrirColorPicker);
-}
-
 
 
 
@@ -1186,6 +1140,13 @@ if (chkToggleBallsList && ballsSidebar) {
         }
     });
 }
+
+
+
+
+
+
+
 
 
 

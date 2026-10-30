@@ -420,6 +420,12 @@ function rafraichirListeLateraleBilles() {
                 ball.style.outlineOffset = '2px';
             }
             rafraichirListeLateraleBilles();
+            
+            // NOUVEAU : Force la palette de couleur à s'aligner sur la bille choisie depuis la liste
+            if (typeof rafraichirTexteBoutonsPalette === "function") {
+                rafraichirTexteBoutonsPalette();
+            }
+
         });
 
         itemRow.addEventListener('dblclick', (e) => {

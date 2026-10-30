@@ -153,23 +153,43 @@ boutonsOutils.forEach(btn => {
 });
 
 
-// Nouvelle fonction pour mettre à jour l'affichage dynamique avec libellé fixe
+// Fonction utilitaire pour convertir le format rgb(r, g, b) du DOM en hexadécimal #ffffff requis par l'input color
+function rgb2hex(rgb) {
+    if (!rgb) return null;
+    const match = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+    if (!match) return null;
+    return "#" + match.slice(1).map(x => parseInt(x).toString(16).padStart(2, '0')).join('');
+}
+
+
+// [MODIFICATION] Remplacer le début de la fonction rafraichirTexteBoutonsPalette() par ceci :
+
 function rafraichirTexteBoutonsPalette() {
     // --- 1. RÉCUPÉRATION DYNAMIQUE DE LA COULEUR ---
     const colorSelect = document.getElementById('marker-color');
+    
+    // NOUVEAU : Si une bille est sélectionnée, on convertit son style de couleur RGB en HEX pour mettre à jour la valeur de l'input
+    if (colorSelect && window.billeSelectionneeCourante) {
+        const rgbCouleur = window.billeSelectionneeCourante.style.backgroundColor;
+        const hexCouleur = rgb2hex(rgbCouleur);
+        if (hexCouleur) {
+            colorSelect.value = hexCouleur;
+        }
+    }
+
     let couleurSelectionnee = colorSelect ? colorSelect.value : '#ffffff';
     
     if (window.billeSelectionneeCourante) {
         couleurSelectionnee = window.billeSelectionneeCourante.style.backgroundColor;
     }
 
-       // --- 2. MISE À JOUR DU NOUVEAU BOUTON INDICATEUR ---
+    // --- 2. MISE À JOUR DU NOUVEAU BOUTON INDICATEUR UNIQUE ---
     const boutonCouleur = document.getElementById('indicateur-couleur-tactique');
     if (boutonCouleur) {
         const previewBox = boutonCouleur.querySelector('.color-preview-box');
         if (previewBox) {
-            // NOUVEAU : Animation fluide sur le changement de couleur de fond et d'ombre
-            previewBox.style.transition = "background-color 0.35s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.35s ease, transform 0.2s ease";
+            // Animation fluide sur le changement de couleur de fond et d'ombre
+            previewBox.style.transition = "background-color 0.35s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.35s ease";
             
             previewBox.style.backgroundColor = couleurSelectionnee;
             previewBox.style.boxShadow = `0 0 6px ${couleurSelectionnee}`;
@@ -1755,6 +1775,13 @@ function finTrace() {
         startPoint = null; 
     }
 }
+
+
+
+
+
+
+
 
 // === ATTACHEMENT DES ÉCOUTEURS DYNAMIQUES HYBRIDES ===
 canvas.addEventListener('mousedown', (e) => {
