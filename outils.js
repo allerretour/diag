@@ -714,7 +714,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			const url = URL.createObjectURL(blob);
 			const a = document.createElement('a');
 			a.href = url;
-			a.download = `${nomFichierSecurise}.json`;
+			a.download = `${nomFichierSecurise}.diag`;
 			document.body.appendChild(a);
 			a.click();
 			document.body.removeChild(a);
@@ -848,6 +848,13 @@ document.addEventListener("DOMContentLoaded", () => {
 		fileImportInput.addEventListener('change', (event) => {
 			const file = event.target.files[0];
 			if (!file) return;
+
+			// SÉCURITÉ : Vérification stricte de l'extension du fichier
+			if (!file.name.endsWith('.diag')) {
+				alert("Format refusé : Seuls les fichiers avec l'extension .diag sont acceptés.");
+				fileImportInput.value = ""; // Réinitialise l'input
+				return;
+			}
 
 			const reader = new FileReader();
 			reader.onload = (e) => {
@@ -1029,7 +1036,7 @@ document.addEventListener("DOMContentLoaded", () => {
 					}
 
 				} catch (error) {
-					alert("Erreur lors de la lecture du fichier JSON. Vérifiez sa structure.");
+					alert("Erreur lors de la lecture du fichier DIAG. Vérifiez sa structure.");
 				}
 
 				fileImportInput.value = "";
@@ -1399,7 +1406,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			}, () => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
 
 			// Création des deux sous-dossiers virtuels à la racine de l'archive
-			const dossierJson = zip.folder("Configuration JSON");
+			const dossierJson = zip.folder("Configuration DIAG");
 			const dossierTxt = zip.folder("Positionnement TXT");
 
 			// Le titre par défaut devient "Aleatoire progressif" si le champ input est vide
@@ -1622,7 +1629,7 @@ document.addEventListener("DOMContentLoaded", () => {
 				const indexFichier = String(nbBillesCouleurRequises).padStart(2, '0');
 				const nomFichierSecurise = configTitle.replace(/[/\\?%*:|"<>]/g, '-').substring(0, 60);
 
-				const nomFinalJson = `${nomFichierSecurise}_M${matchUniqueId}_manche_${indexFichier}.json`;
+				const nomFinalJson = `${nomFichierSecurise}_M${matchUniqueId}_manche_${indexFichier}.diag`;
 				const nomFinalTxt = `${nomFichierSecurise}_M${matchUniqueId}_manche_${indexFichier}.txt`;
 
 				// Ajout des fichiers générés dans les sous-dossiers ZIP correspondants
