@@ -1928,33 +1928,38 @@ function commencerDessin(e) {
 	x = posClampee.x;
 	y = posClampee.y;
 
-	// --- [NOUVEAU] : AIMANTATION AU CENTRE D'UNE BILLE PROCHE (Seuil : 5px) ---
+	// --- [NOUVEAU] : AIMANTATION AU CENTRE SI PROCHE DU BORD DE LA BILLE (Seuil : 5px) ---
 	const forceLigneDroite = (window.outilTraceActif === "line" || window.outilTraceActif === "arrow") || (window.outilTraceActif === "select" && (e.ctrlKey || e.metaKey || isCtrlPressed));
 	
 	if (forceLigneDroite) {
 		let billeProche = null;
-		let distanceMinBille = 20; // Tolérance de 5 pixels maximale
+		let distanceMinBord = 5; // Tolérance de 5 pixels par rapport au contour
 
 		activeBalls.forEach(ball => {
 			if (ball.style.display !== 'none') {
-				// Extraction du centre de la bille à partir de sa position CSS Left/Top + son rayon (12px)
+				// Centre exact de la bille (Position + Rayon de 12px)
 				const ballX = (parseFloat(ball.style.left) || 0) + 12;
 				const ballY = (parseFloat(ball.style.top) || 0) + 12;
 
-				const distanceCible = Math.sqrt(Math.pow(x - ballX, 2) + Math.pow(y - ballY, 2));
-				if (distanceCible < distanceMinBille) {
-					distanceMinBille = distanceCible;
+				// Distance absolue entre le clic et le centre de la bille
+				const distanceAuCentre = Math.sqrt(Math.pow(x - ballX, 2) + Math.pow(y - ballY, 2));
+				
+				// Distance par rapport au bord de la bille (valeur absolue pour gérer l'intérieur et l'extérieur)
+				const distanceAuBord = Math.abs(distanceAuCentre - 12);
+
+				if (distanceAuBord < distanceMinBord) {
+					distanceMinBord = distanceAuBord;
 					billeProche = { x: ballX, y: ballY };
 				}
 			}
 		});
 
-		// Si une bille est dans le rayon des 5px, on aimante au milieu de celle-ci
+		// Si le clic est à moins de 5px du bord d'une bille, on commence au centre de celle-ci
 		if (billeProche) {
 			x = billeProche.x;
 			y = billeProche.y;
 		} 
-		// SINON, on applique l'ancienne logique d'aimantation aux extrémités ou à la grille
+		// SINON, repli sur les anciennes logiques (extrémités de lignes ou snapping de grille)
 		else {
 			let pointExtremiteProche = null;
 			let distanceMinimale = 5; 
