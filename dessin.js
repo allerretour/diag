@@ -370,107 +370,116 @@ document.addEventListener("DOMContentLoaded", () => {
 	}
 
 	function dessinerPointContact(x, y, couleur, pctFige, coteFige) {
-		ctx.save();
+	ctx.save();
 
-		// --- FORCE LES LIGNES PLEINES POUR L'OUTIL CONTACT ---
-		ctx.setLineDash([]);
+	// --- FORCE LE LISSAGE ET LES LIGNES PLEINES POUR L'OUTIL CONTACT ---
+	ctx.setLineDash([]);
+	ctx.imageSmoothingEnabled = true;
+	ctx.imageSmoothingQuality = 'high';
 
-		const pct = (pctFige !== undefined) ? pctFige : window.pourcentageContactCourant;
-		const cote = (coteFige !== undefined) ? coteFige : window.coteContactCourant;
-		const couleurMarqueur = couleur || (colorSelect ? colorSelect.value : '#ffffff');
+	const pct = (pctFige !== undefined) ? pctFige : window.pourcentageContactCourant;
+	const cote = (coteFige !== undefined) ? coteFige : window.coteContactCourant;
+	const couleurMarqueur = couleur || (colorSelect ? colorSelect.value : '#ffffff');
 
-		// Dimensions réduites d'environ 15% pour libérer de l'espace visuel
-		const largeurCadre = 185;
-		const hauteurCadre = 140;
-		const cadreX = x - (largeurCadre / 2);
-		const cadreY = y - (hauteurCadre / 2);
-		const arrondiCoins = 12;
+	// Dimensions réduites d'environ 15% pour libérer de l'espace visuel
+	const largeurCadre = 185;
+	const hauteurCadre = 140;
+	
+	// Calage géométrique sur la grille de pixels pour un rendu de contour parfait
+	const adj = (ctx.lineWidth % 2 === 1) ? 0.5 : 0;
+	const cadreX = Math.floor(x - (largeurCadre / 2)) + adj;
+	const cadreY = Math.floor(y - (hauteurCadre / 2)) + adj;
+	const arrondiCoins = 12;
 
-		ctx.beginPath();
-		ctx.roundRect(cadreX, cadreY, largeurCadre, hauteurCadre, arrondiCoins);
-		ctx.fillStyle = "rgba(11, 15, 23, 0.94)";
-		ctx.fill();
-		ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
-		ctx.lineWidth = 1;
-		ctx.stroke();
+	ctx.beginPath();
+	ctx.roundRect(cadreX, cadreY, largeurCadre, hauteurCadre, arrondiCoins);
+	ctx.fillStyle = "rgba(11, 15, 23, 0.94)";
+	ctx.fill();
+	ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+	ctx.lineWidth = 1;
+	ctx.stroke();
 
-		// Billes proportionnellement réduites (22px au lieu de 26px)
-		const centreCadreX = x;
-		const centreCadreY = y - 8;
-		const rayonBille = 22;
-		const diametreBille = rayonBille * 2;
-		const decalageX = diametreBille * (1 - (pct / 100));
+	// Billes proportionnellement réduites (22px au lieu de 26px)
+	const centreCadreX = Math.floor(x) + adj;
+	const centreCadreY = Math.floor(y - 8) + adj;
+	const rayonBille = 22;
+	const diametreBille = rayonBille * 2;
+	const decalageX = diametreBille * (1 - (pct / 100));
 
-		// --- LIGNE D'AXE HORIZONTALE DE RÉFÉRENCE ---
-		ctx.beginPath();
-		ctx.moveTo(cadreX + 12, centreCadreY);
-		ctx.lineTo(cadreX + largeurCadre - 12, centreCadreY);
-		ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
-		ctx.lineWidth = 1;
-		ctx.stroke();
+	// --- LIGNE D'AXE HORIZONTALE DE RÉFÉRENCE ---
+	ctx.beginPath();
+	ctx.moveTo(cadreX + 12, centreCadreY);
+	ctx.lineTo(cadreX + largeurCadre - 12, centreCadreY);
+	ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+	ctx.lineWidth = 1;
+	ctx.stroke();
 
-		// --- 1. RENDU DE LA BILLE CIBLE ARRIÈRE ---
-		ctx.save();
-		const gradCible = ctx.createRadialGradient(
-			centreCadreX - 5, centreCadreY - 5, 2,
-			centreCadreX, centreCadreY, rayonBille
-		);
-		gradCible.addColorStop(0, "#ffffff");
-		gradCible.addColorStop(0.4, couleurMarqueur);
-		gradCible.addColorStop(1, couleurMarqueur);
+	// --- 1. RENDU DE LA BILLE CIBLE ARRIÈRE (Dégradé 3D lissé) ---
+	ctx.save();
+	const gradCible = ctx.createRadialGradient(
+		centreCadreX - (rayonBille * 0.22), centreCadreY - (rayonBille * 0.22), rayonBille * 0.08,
+		centreCadreX, centreCadreY, rayonBille
+	);
+	gradCible.addColorStop(0, "#ffffff");
+	gradCible.addColorStop(0.35, couleurMarqueur);
+	gradCible.addColorStop(0.85, couleurMarqueur);
+	gradCible.addColorStop(1, obtenirOmbre3DCouleur(couleurMarqueur)); // Utilise votre fonction d'ombre résine
 
-		ctx.beginPath();
-		ctx.arc(centreCadreX, centreCadreY, rayonBille, 0, 2 * Math.PI);
-		ctx.fillStyle = gradCible;
-		ctx.fill();
+	ctx.beginPath();
+	ctx.arc(centreCadreX, centreCadreY, rayonBille, 0, 2 * Math.PI);
+	ctx.fillStyle = gradCible;
+	ctx.fill();
 
-		ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
-		ctx.lineWidth = 1;
-		ctx.stroke();
-		ctx.restore();
+	ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+	ctx.lineWidth = 1;
+	ctx.stroke();
+	ctx.restore();
 
-		// --- 2. RENDU DE LA BILLE BLANCHE AVANT ---
-		const blancheX = centreCadreX - (decalageX * cote);
+	// --- 2. RENDU DE LA BILLE BLANCHE AVANT ---
+	const blancheX = Math.floor(centreCadreX - (decalageX * cote)) + adj;
 
-		ctx.save();
-		const gradBlanche = ctx.createRadialGradient(
-			blancheX - 5, centreCadreY - 5, 2,
-			blancheX, centreCadreY, rayonBille
-		);
-		gradBlanche.addColorStop(0, "#ffffff");
-		gradBlanche.addColorStop(0.4, "#f2f4f7");
-		gradBlanche.addColorStop(1, "#d1d5db");
+	ctx.save();
+	const gradBlanche = ctx.createRadialGradient(
+		blancheX - (rayonBille * 0.22), centreCadreY - (rayonBille * 0.22), rayonBille * 0.08,
+		blancheX, centreCadreY, rayonBille
+	);
+	gradBlanche.addColorStop(0, "#ffffff");
+	gradBlanche.addColorStop(0.3, "#f7f9fa");
+	gradBlanche.addColorStop(0.85, "#e1e5eb");
+	gradBlanche.addColorStop(1, "#b5bdc9");
 
-		ctx.beginPath();
-		ctx.arc(blancheX, centreCadreY, rayonBille, 0, 2 * Math.PI);
-		ctx.fillStyle = gradBlanche;
-		ctx.fill();
+	ctx.beginPath();
+	ctx.arc(blancheX, centreCadreY, rayonBille, 0, 2 * Math.PI);
+	ctx.fillStyle = gradBlanche;
+	ctx.fill();
 
-		ctx.strokeStyle = "rgba(11, 15, 23, 0.6)";
-		ctx.lineWidth = 1.5;
-		ctx.stroke();
-		ctx.restore();
+	// Contour sombre subtil pour découper la blanche sur la bille arrière
+	ctx.strokeStyle = "rgba(11, 15, 23, 0.45)";
+	ctx.lineWidth = 1.2;
+	ctx.stroke();
+	ctx.restore();
 
-		// --- 3. LABELS ET TEXTES EXPLICATIFS ÉCHELONNÉS ---
-		ctx.fillStyle = "rgba(150, 165, 185, 0.75)";
-		ctx.font = "600 10px system-ui, -apple-system, sans-serif";
-		ctx.textAlign = "center";
-		ctx.textBaseline = "top";
-		ctx.fillText("QUANTITÉ D'IMPACT", centreCadreX, cadreY + 10);
+	// --- 3. LABELS ET TEXTES EXPLICATIFS ÉCHELONNÉS ---
+	ctx.fillStyle = "rgba(150, 165, 185, 0.80)";
+	ctx.font = "600 10px system-ui, -apple-system, sans-serif";
+	ctx.textAlign = "center";
+	ctx.textBaseline = "top";
+	ctx.fillText("QUANTITÉ D'IMPACT", centreCadreX, cadreY + 10);
 
-		ctx.font = "bold 11px system-ui, -apple-system, sans-serif";
-		ctx.textBaseline = "bottom";
-		if (pct === 100) {
-			ctx.fillStyle = "#ffffff";
-			ctx.fillText("IMPACT PLEIN", centreCadreX, cadreY + hauteurCadre - 10);
-		} else {
-			ctx.fillStyle = "#ffffff";
-			const coteTexte = cote === 1 ? "GAUCHE" : "DROITE";
-			ctx.fillText(`${pct}% - ${coteTexte}`, centreCadreX, cadreY + hauteurCadre - 10);
-		}
-
-		ctx.restore();
+	ctx.font = "bold 11px system-ui, -apple-system, sans-serif";
+	ctx.textBaseline = "bottom";
+	if (pct === 100) {
+		ctx.fillStyle = "#ffffff";
+		ctx.fillText("IMPACT PLEIN", centreCadreX, cadreY + hauteurCadre - 10);
+	} else {
+		ctx.fillStyle = "#ffffff";
+		const coteTexte = cote === 1 ? "GAUCHE" : "DROITE";
+		ctx.fillText(`${pct}% - ${coteTexte}`, centreCadreX, cadreY + hauteurCadre - 10);
 	}
+
+	ctx.restore();
+}
+
 
 	function configurerStyleDessin(couleur, estPointille) {
 		if (couleur) {
@@ -492,182 +501,175 @@ document.addEventListener("DOMContentLoaded", () => {
 	}
 
 	function dessinerEffetsBilleBlanche(x, y, couleur, forceFige) {
-		ctx.save();
-		const marge = 18;
+	ctx.save();
+	
+	// === CONFIGURATION DU LISSAGE ET SÉCURITÉ ANTI-ALIASING ===
+	ctx.imageSmoothingEnabled = true;
+	ctx.imageSmoothingQuality = 'high';
+	ctx.setLineDash([]); // Lignes pleines et continues obligatoires ici
+
+	const marge = 18;
+	ctx.beginPath();
+	ctx.rect(marge, marge, ctx.canvas.width - (marge * 2), ctx.canvas.height - (marge * 2));
+
+	const forceActuelle = (forceFige !== undefined) ? forceFige : window.niveauForceCourant;
+	const jaugeActive = forceActuelle > 0;
+
+	// Échelle réduite pour correspondre au panneau d'impact (185px de large)
+	const largeurCadre = jaugeActive ? 185 : 135;
+	const hauteurCadre = 155;
+	const demiLargeur = largeurCadre / 2;
+	const rayonBille = 48; 
+
+	// Alignement sous-pixel pour éliminer le flou sur les tracés de cadres fins
+	const adj = (ctx.lineWidth % 2 === 1) ? 0.5 : 0;
+	const cadreX = Math.floor(x - demiLargeur) + adj;
+	const cadreY = Math.floor(y - rayonBille - 30) + adj;
+	const arrondiCoins = 12;
+
+	ctx.beginPath();
+	ctx.roundRect(cadreX, cadreY, largeurCadre, hauteurCadre, arrondiCoins);
+	ctx.fillStyle = "rgba(11, 15, 23, 0.94)";
+	ctx.fill();
+	ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+	ctx.lineWidth = 1;
+	ctx.stroke();
+
+	const shiftX = jaugeActive ? -18 : 0;
+	const billeX = Math.floor(x + shiftX) + adj;
+	const billeY = Math.floor(y) + adj;
+
+	// --- RENDU 3D ULTRA-LISSE DE LA BILLE BLANCHE (Dégradés adoucis) ---
+	ctx.save();
+	const degre3D = ctx.createRadialGradient(
+		billeX - (rayonBille * 0.28), billeY - (rayonBille * 0.28), rayonBille * 0.05,
+		billeX, billeY, rayonBille
+	);
+	degre3D.addColorStop(0, "#ffffff");
+	degre3D.addColorStop(0.25, "#fcfdfe");
+	degre3D.addColorStop(0.85, "#e4e9f0");
+	degre3D.addColorStop(1, "#b9c3d0");
+
+	ctx.beginPath();
+	ctx.arc(billeX, billeY, rayonBille, 0, 2 * Math.PI);
+	ctx.fillStyle = degre3D;
+	ctx.fill();
+	
+	// Contour fin de la bille pour détacher les bords proprement
+	ctx.strokeStyle = "rgba(16, 22, 34, 0.25)";
+	ctx.lineWidth = 1;
+	ctx.stroke();
+	ctx.restore();
+
+	// --- GRILLE DE REPÈRES FINES ET ADOUCIES (Réticule tactique) ---
+	ctx.strokeStyle = "rgba(110, 120, 140, 0.25)";
+	ctx.lineWidth = 1;
+	const cos45 = Math.cos(Math.PI / 4);
+	const decalageDiag = rayonBille * cos45;
+
+	ctx.beginPath();
+	// Axe vertical
+	ctx.moveTo(billeX, billeY - rayonBille);
+	ctx.lineTo(billeX, billeY + rayonBille);
+	// Axe horizontal
+	ctx.moveTo(billeX - rayonBille, billeY);
+	ctx.lineTo(billeX + rayonBille, billeY);
+	// Diagonale descendante
+	ctx.moveTo(billeX - decalageDiag, billeY - decalageDiag);
+	ctx.lineTo(billeX + decalageDiag, billeY + decalageDiag);
+	// Diagonale montante
+	ctx.moveTo(billeX - decalageDiag, billeY + decalageDiag);
+	ctx.lineTo(billeX + decalageDiag, billeY - decalageDiag);
+	ctx.stroke();
+
+	// --- POINTS D'EFFETS TACTIQUES (Petits boutons de visée contrastés) ---
+	const distanceCentre = 32;
+	const diagPoint = distanceCentre * cos45;
+	const pointsEffets = [
+		{ dx: 0, dy: 0, estCentre: true },
+		{ dx: 0, dy: -distanceCentre, estCentre: false },
+		{ dx: 0, dy: distanceCentre, estCentre: false },
+		{ dx: -distanceCentre, dy: 0, estCentre: false },
+		{ dx: distanceCentre, dy: 0, estCentre: false },
+		{ dx: -diagPoint, dy: -diagPoint, estCentre: false },
+		{ dx: diagPoint, dy: -diagPoint, estCentre: false },
+		{ dx: -diagPoint, dy: diagPoint, estCentre: false },
+		{ dx: diagPoint, dy: diagPoint, estCentre: false }
+	];
+
+	pointsEffets.forEach(pt => {
+		const ptX = billeX + pt.dx;
+		const ptY = billeY + pt.dy;
+		
 		ctx.beginPath();
-		ctx.rect(marge, marge, ctx.canvas.width - (marge * 2), ctx.canvas.height - (marge * 2));
-
-		const forceActuelle = (forceFige !== undefined) ? forceFige : window.niveauForceCourant;
-		const jaugeActive = forceActuelle > 0;
-
-		// Échelle réduite pour correspondre au panneau d'impact (185px de large)
-		const largeurCadre = jaugeActive ? 185 : 135;
-		const hauteurCadre = 155;
-		const demiLargeur = largeurCadre / 2;
-		const rayonBille = 48; // Réduit pour un rendu plus compact
-
-		const cadreX = x - demiLargeur;
-		const cadreY = y - rayonBille - 30;
-		const arrondiCoins = 12;
-
-		ctx.beginPath();
-		ctx.roundRect(cadreX, cadreY, largeurCadre, hauteurCadre, arrondiCoins);
-		ctx.fillStyle = "rgba(11, 15, 23, 0.94)";
+		ctx.arc(ptX, ptY, pt.estCentre ? 4.5 : 2.5, 0, 2 * Math.PI);
+		ctx.fillStyle = pt.estCentre ? "rgba(255, 255, 255, 0.95)" : "rgba(255, 255, 255, 0.55)";
 		ctx.fill();
-		ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+		
+		// Légère ombre portée sous le point d'impact pour le faire ressortir de la bille
+		ctx.strokeStyle = "rgba(15, 23, 42, 0.4)";
 		ctx.lineWidth = 1;
 		ctx.stroke();
+	});
 
-		const shiftX = jaugeActive ? -18 : 0;
-		const billeX = x + shiftX;
+	// --- LABELS ET TYPOGRAPHIE SYSTEM-UI ---
+	ctx.fillStyle = "rgba(150, 165, 185, 0.85)";
+	ctx.font = "600 10px system-ui, -apple-system, sans-serif";
+	ctx.textAlign = "center";
+	ctx.textBaseline = "bottom";
+	ctx.fillText("CONTACT", billeX, billeY - rayonBille - 10);
 
-		// Rendu 3D compact de la blanche
+	// --- JAUGE DE PUISSANCE COMPACTE ET NETTE ---
+	if (jaugeActive) {
+		const jaugeWidth = 10;
+		const jaugeHeight = rayonBille * 2;
+		const jaugeX = Math.floor(cadreX + largeurCadre - 35) + adj;
+		const jaugeY = Math.floor(billeY - rayonBille) + adj;
+
+		ctx.fillStyle = "rgba(150, 165, 185, 0.85)";
+		ctx.fillText("FORCE", jaugeX + (jaugeWidth / 2), jaugeY - 10);
+
+		const grad = ctx.createLinearGradient(jaugeX, jaugeY + jaugeHeight, jaugeX, jaugeY);
+		grad.addColorStop(0, "#2ecc71");
+		grad.addColorStop(0.4, "#f1c40f");
+		grad.addColorStop(0.7, "#e67e22");
+		grad.addColorStop(1, "#e74c3c");
+
 		ctx.save();
-		const degre3D = ctx.createRadialGradient(
-			billeX - (rayonBille * 0.25), y - (rayonBille * 0.25), rayonBille * 0.1,
-			billeX, y, rayonBille
-		);
-		degre3D.addColorStop(0, "#ffffff");
-		degre3D.addColorStop(0.2, "#f7f9fa");
-		degre3D.addColorStop(0.85, "#e1e5eb");
-		degre3D.addColorStop(1, "#b5bdc9");
-
 		ctx.beginPath();
-		ctx.arc(billeX, y, rayonBille, 0, 2 * Math.PI);
-		ctx.fillStyle = degre3D;
+		ctx.roundRect(jaugeX, jaugeY, jaugeWidth, jaugeHeight, 4);
+		ctx.fillStyle = grad;
 		ctx.fill();
 		ctx.restore();
 
-		// Grille de repères fine
-		ctx.strokeStyle = "rgba(110, 120, 140, 0.2)";
-		ctx.lineWidth = 1;
-		const cos45 = Math.cos(Math.PI / 4);
-		const decalageDiag = rayonBille * cos45;
+		const hauteurCibleY = Math.floor(jaugeY + jaugeHeight - ((forceActuelle / 4) * jaugeHeight)) + adj;
 
+		// Curseur flèche indicateur
+		ctx.fillStyle = "#ffffff";
 		ctx.beginPath();
-		ctx.moveTo(billeX, y - rayonBille);
-		ctx.lineTo(billeX, y + rayonBille);
-		ctx.moveTo(billeX - rayonBille, y);
-		ctx.lineTo(billeX + rayonBille, y);
-		ctx.moveTo(billeX - decalageDiag, y - decalageDiag);
-		ctx.lineTo(billeX + decalageDiag, y + decalageDiag);
-		ctx.moveTo(billeX - decalageDiag, y + decalageDiag);
-		ctx.lineTo(billeX + decalageDiag, y - decalageDiag);
+		ctx.moveTo(jaugeX - 3, hauteurCibleY);
+		ctx.lineTo(jaugeX - 8, hauteurCibleY - 3.5);
+		ctx.lineTo(jaugeX - 8, hauteurCibleY + 3.5);
+		ctx.closePath();
+		ctx.fill();
+
+		// Ligne de coupe sur la jauge
+		ctx.strokeStyle = "#ffffff";
+		ctx.lineWidth = 1;
+		ctx.beginPath();
+		ctx.moveTo(jaugeX, hauteurCibleY);
+		ctx.lineTo(jaugeX + jaugeWidth, hauteurCibleY);
 		ctx.stroke();
 
-		// Points d'effets tactiques
-		const distanceCentre = 32;
-		const diagPoint = distanceCentre * cos45;
-		const pointsEffets = [{
-				dx: 0,
-				dy: 0,
-				estCentre: true
-			},
-			{
-				dx: 0,
-				dy: -distanceCentre,
-				estCentre: false
-			},
-			{
-				dx: 0,
-				dy: distanceCentre,
-				estCentre: false
-			},
-			{
-				dx: -distanceCentre,
-				dy: 0,
-				estCentre: false
-			},
-			{
-				dx: distanceCentre,
-				dy: 0,
-				estCentre: false
-			},
-			{
-				dx: -diagPoint,
-				dy: -diagPoint,
-				estCentre: false
-			},
-			{
-				dx: diagPoint,
-				dy: -diagPoint,
-				estCentre: false
-			},
-			{
-				dx: -diagPoint,
-				dy: diagPoint,
-				estCentre: false
-			},
-			{
-				dx: diagPoint,
-				dy: diagPoint,
-				estCentre: false
-			}
-		];
-
-		pointsEffets.forEach(pt => {
-			ctx.beginPath();
-			ctx.arc(billeX + pt.dx, y + pt.dy, pt.estCentre ? 5 : 3, 0, 2 * Math.PI);
-			ctx.fillStyle = pt.estCentre ? "rgba(255, 255, 255, 0.9)" : "rgba(255, 255, 255, 0.4)";
-			ctx.fill();
-			ctx.strokeStyle = "rgba(15, 23, 42, 0.5)";
-			ctx.stroke();
-		});
-
-		ctx.fillStyle = "rgba(150, 165, 185, 0.75)";
-		ctx.font = "600 10px system-ui, -apple-system, sans-serif";
-		ctx.textAlign = "center";
-		ctx.textBaseline = "bottom";
-		ctx.fillText("CONTACT", billeX, y - rayonBille - 10);
-
-		// Jauge de puissance compacte
-		if (jaugeActive) {
-			const jaugeWidth = 10;
-			const jaugeHeight = rayonBille * 2;
-			const jaugeX = cadreX + largeurCadre - 35;
-			const jaugeY = y - rayonBille;
-
-			ctx.fillStyle = "rgba(150, 165, 185, 0.75)";
-			ctx.fillText("FORCE", jaugeX + (jaugeWidth / 2), jaugeY - 10);
-
-			const grad = ctx.createLinearGradient(jaugeX, jaugeY + jaugeHeight, jaugeX, jaugeY);
-			grad.addColorStop(0, "#2ecc71");
-			grad.addColorStop(0.4, "#f1c40f");
-			grad.addColorStop(0.7, "#e67e22");
-			grad.addColorStop(1, "#e74c3c");
-
-			ctx.save();
-			ctx.beginPath();
-			ctx.roundRect(jaugeX, jaugeY, jaugeWidth, jaugeHeight, 4);
-			ctx.fillStyle = grad;
-			ctx.fill();
-			ctx.restore();
-
-			const hauteurCibleY = jaugeY + jaugeHeight - ((forceActuelle / 4) * jaugeHeight);
-
-			ctx.fillStyle = "#ffffff";
-			ctx.beginPath();
-			ctx.moveTo(jaugeX - 3, hauteurCibleY);
-			ctx.lineTo(jaugeX - 8, hauteurCibleY - 3);
-			ctx.lineTo(jaugeX - 8, hauteurCibleY + 3);
-			ctx.closePath();
-			ctx.fill();
-
-			ctx.strokeStyle = "#ffffff";
-			ctx.lineWidth = 1.2;
-			ctx.beginPath();
-			ctx.moveTo(jaugeX, hauteurCibleY);
-			ctx.lineTo(jaugeX + jaugeWidth, hauteurCibleY);
-			ctx.stroke();
-
-			ctx.fillStyle = couleursForce[forceActuelle];
-			ctx.font = "bold 11px system-ui, -apple-system, sans-serif";
-			ctx.textBaseline = "top";
-			ctx.fillText(`${forceActuelle * 25}%`, jaugeX + (jaugeWidth / 2), jaugeY + jaugeHeight + 6);
-		}
-
-		ctx.restore();
+		// Valeur numérique de la puissance
+		ctx.fillStyle = couleursForce[forceActuelle];
+		ctx.font = "bold 11px system-ui, -apple-system, sans-serif";
+		ctx.textBaseline = "top";
+		ctx.fillText(`${forceActuelle * 25}%`, jaugeX + (jaugeWidth / 2), jaugeY + jaugeHeight + 6);
 	}
+
+	ctx.restore();
+}
 
 	function dessinerRepereXGras(x, y, couleur, texteFige) {
 		ctx.save();
@@ -808,8 +810,10 @@ document.addEventListener("DOMContentLoaded", () => {
 	function dessinerCible(x, y, couleur) {
 	ctx.save(); // Sauvegarde l'état global du canvas
 
-	// === FORCE LES LIGNES PLEINES POUR LA CIBLE ===
+	// === FORCE LE LISSAGE ET LES LIGNES PLEINES POUR LA CIBLE ===
 	ctx.setLineDash([]);
+	ctx.imageSmoothingEnabled = true;
+	ctx.imageSmoothingQuality = 'high';
 
 	// --- 1. DÉFINITION DES BANDES DE SÉCURITÉ ---
 	let bandeGauche = 18;
@@ -831,51 +835,57 @@ document.addEventListener("DOMContentLoaded", () => {
 	ctx.rect(zoneUtileX, zoneUtileY, zoneUtileLargeur, zoneUtileHauteur);
 	ctx.clip(); 
 
-	// --- 3. DESSIN DU FOND OPAQUE A 30% (Dimensions réduites de 10px) ---
+	// Ajustement de 0.5px pour éviter le flou de pixel-straddling sur les lignes fines
+	const adjX = (ctx.lineWidth % 2 === 1) ? 0.5 : 0;
+	const posX = x + adjX;
+	const posY = y + adjX;
+
+	// --- 3. DESSIN DU FOND ULTRA-DOUX A 20% (Plus élégant que 30%) ---
 	ctx.save();
 	ctx.fillStyle = couleur;
-	ctx.globalAlpha = 0.30;
+	ctx.globalAlpha = 0.20;
 
 	ctx.beginPath();
-	ctx.roundRect(x - 87.5, y - 87.5, 175, 175, 8);
+	ctx.roundRect(posX - 87.5, posY - 87.5, 175, 175, 8);
 	ctx.fill();
 	ctx.restore();
 
 	// --- 4. DESSIN DES CONTOURS DE LA CIBLE ---
 	ctx.strokeStyle = couleur;
-	ctx.lineWidth = 2;
+	ctx.lineWidth = 1.5; // Légèrement affiné pour un rendu plus net et soigné
+	ctx.lineCap = 'round';
 
-	// Carré extérieur avec coins arrondis (Dimensions réduites de 10px)
+	// Carré extérieur avec coins arrondis
 	ctx.beginPath();
-	ctx.roundRect(x - 87.5, y - 87.5, 175, 175, 8);
+	ctx.roundRect(posX - 87.5, posY - 87.5, 175, 175, 8);
 	ctx.stroke();
 
-	// Cercles de la cible (Rayon r1 réduit de 5px pour enlever 10px sur le diamètre)
+	// Cercles de la cible
 	let r1 = 87.5;
 	let r2 = r1 * (2 / 3);
 	let r3 = r1 * (1 / 3);
 
 	ctx.beginPath();
-	ctx.arc(x, y, r1, 0, 2 * Math.PI);
+	ctx.arc(posX, posY, r1, 0, 2 * Math.PI);
 	ctx.stroke();
 	ctx.beginPath();
-	ctx.arc(x, y, r2, 0, 2 * Math.PI);
+	ctx.arc(posX, posY, r2, 0, 2 * Math.PI);
 	ctx.stroke();
 	ctx.beginPath();
-	ctx.arc(x, y, r3, 0, 2 * Math.PI);
+	ctx.arc(posX, posY, r3, 0, 2 * Math.PI);
 	ctx.stroke();
 
 	// Lignes réticulaires se croisant au centre
 	ctx.beginPath();
-	ctx.moveTo(x - r1, y);
-	ctx.lineTo(x + r1, y);
-	ctx.moveTo(x, y - r1);
-	ctx.lineTo(x, y + r1);
+	ctx.moveTo(posX - r1, posY);
+	ctx.lineTo(posX + r1, posY);
+	ctx.moveTo(posX, posY - r1);
+	ctx.lineTo(posX, posY + r1);
 	ctx.stroke();
 
 	// --- 5. CONFIGURATION ET ROTATION DU CADRAN DES CHIFFRES ---
 	ctx.fillStyle = couleur;
-	ctx.font = "bold 12px sans-serif";
+	ctx.font = "bold 12px system-ui, -apple-system, sans-serif";
 	ctx.textAlign = "center";
 	ctx.textBaseline = "middle";
 
@@ -891,13 +901,14 @@ document.addEventListener("DOMContentLoaded", () => {
 	const cosAngle = Math.cos(angleRotation);
 	const sinAngle = Math.sin(angleRotation);
 
-	ctx.fillText("1", x + dist1 * cosAngle, y + dist1 * sinAngle);
-	ctx.fillText("2", x + dist2 * cosAngle, y + dist2 * sinAngle);
-	ctx.fillText("3", x + dist3 * cosAngle, y + dist3 * sinAngle);
-	ctx.fillText("5", x + dist5 * cosAngle, y + dist5 * sinAngle);
+	ctx.fillText("1", posX + dist1 * cosAngle, posY + dist1 * sinAngle);
+	ctx.fillText("2", posX + dist2 * cosAngle, posY + dist2 * sinAngle);
+	ctx.fillText("3", posX + dist3 * cosAngle, posY + dist3 * sinAngle);
+	ctx.fillText("5", posX + dist5 * cosAngle, posY + dist5 * sinAngle);
 
 	ctx.restore(); 
 }
+
 
 
 	function dessinerCarre(x, y, couleur) {
