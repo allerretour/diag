@@ -1928,45 +1928,64 @@ function commencerDessin(e) {
 	x = posClampee.x;
 	y = posClampee.y;
 
-	// --- [NOUVEAU] : AIMANTATION SUR L'EXTRÉMITÉ D'UN TRACÉ EXISTANT (Seuil : 5px) ---
+	// --- [NOUVEAU] : AIMANTATION AU CENTRE D'UNE BILLE PROCHE (Seuil : 5px) ---
 	const forceLigneDroite = (window.outilTraceActif === "line" || window.outilTraceActif === "arrow") || (window.outilTraceActif === "select" && (e.ctrlKey || e.metaKey || isCtrlPressed));
 	
 	if (forceLigneDroite) {
-		let pointExtremiteProche = null;
-		let distanceMinimale = 5; // Rayon maximal de capture en pixels (tolérance demandée : 5px)
+		let billeProche = null;
+		let distanceMinBille = 20; // Tolérance de 5 pixels maximale
 
-		window.dessinsSauvegardes.forEach(dessin => {
-			// On ne cible que les droites ou flèches possédant au moins un point de départ et d'arrivée
-			if (dessin.points && dessin.points.length >= 2 && (dessin.estDroite || dessin.avecFleche)) {
-				const ptDepart = dessin.points[0];
-				const ptArrivee = dessin.points[dessin.points.length - 1];
+		activeBalls.forEach(ball => {
+			if (ball.style.display !== 'none') {
+				// Extraction du centre de la bille à partir de sa position CSS Left/Top + son rayon (12px)
+				const ballX = (parseFloat(ball.style.left) || 0) + 12;
+				const ballY = (parseFloat(ball.style.top) || 0) + 12;
 
-				// Calcul de la distance avec le point de départ du tracé examiné
-				const distDepart = Math.sqrt(Math.pow(x - ptDepart.x, 2) + Math.pow(y - ptDepart.y, 2));
-				if (distDepart < distanceMinimale) {
-					distanceMinimale = distDepart;
-					pointExtremiteProche = ptDepart;
-				}
-
-				// Calcul de la distance avec le point d'arrivée du tracé examiné
-				const distArrivee = Math.sqrt(Math.pow(x - ptArrivee.x, 2) + Math.pow(y - ptArrivee.y, 2));
-				if (distArrivee < distanceMinimale) {
-					distanceMinimale = distArrivee;
-					pointExtremiteProche = ptArrivee;
+				const distanceCible = Math.sqrt(Math.pow(x - ballX, 2) + Math.pow(y - ballY, 2));
+				if (distanceCible < distanceMinBille) {
+					distanceMinBille = distanceCible;
+					billeProche = { x: ballX, y: ballY };
 				}
 			}
 		});
 
-		// Si une extrémité valide a été détectée dans le périmètre, on snap les coordonnées dessus
-		if (pointExtremiteProche) {
-			x = pointExtremiteProche.x;
-			y = pointExtremiteProche.y;
+		// Si une bille est dans le rayon des 5px, on aimante au milieu de celle-ci
+		if (billeProche) {
+			x = billeProche.x;
+			y = billeProche.y;
 		} 
-		// Sinon, repli sur l'aimantation classique de la grille si la fonction globale existe
-		else if (typeof calculerSnapGrille === "function") {
-			const pointAimante = calculerSnapGrille(x - 12, y - 12, null, true);
-			x = pointAimante.x + 12;
-			y = pointAimante.y + 12;
+		// SINON, on applique l'ancienne logique d'aimantation aux extrémités ou à la grille
+		else {
+			let pointExtremiteProche = null;
+			let distanceMinimale = 5; 
+
+			window.dessinsSauvegardes.forEach(dessin => {
+				if (dessin.points && dessin.points.length >= 2 && (dessin.estDroite || dessin.avecFleche)) {
+					const ptDepart = dessin.points[0];
+					const ptArrivee = dessin.points[dessin.points.length - 1];
+
+					const distDepart = Math.sqrt(Math.pow(x - ptDepart.x, 2) + Math.pow(y - ptDepart.y, 2));
+					if (distDepart < distanceMinimale) {
+						distanceMinimale = distDepart;
+						pointExtremiteProche = ptDepart;
+					}
+
+					const distArrivee = Math.sqrt(Math.pow(x - ptArrivee.x, 2) + Math.pow(y - ptArrivee.y, 2));
+					if (distArrivee < distanceMinimale) {
+						distanceMinimale = distArrivee;
+						pointExtremiteProche = ptArrivee;
+					}
+				}
+			});
+
+			if (pointExtremiteProche) {
+				x = pointExtremiteProche.x;
+				y = pointExtremiteProche.y;
+			} else if (typeof calculerSnapGrille === "function") {
+				const pointAimante = calculerSnapGrille(x - 12, y - 12, null, true);
+				x = pointAimante.x + 12;
+				y = pointAimante.y + 12;
+			}
 		}
 	}
 
