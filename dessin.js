@@ -131,6 +131,15 @@ function gererLogiquePalette(btn, e) {
 		window.niveauForceCourant = 0;
 	}
 
+        // --- TOUT PREMIER CLIC : INITIALISATION DE L'OUTIL ---
+	// ... (vos lignes existantes pointContact, repereX, effetBlanche) ...
+
+	if (toolSelected === 'zoneTactique') {
+        // Permet d'indiquer à l'utilisateur l'état global actuel (ex: édition active)
+ 	   btn.innerText = "🎲 Zone : Active";
+	}
+
+
 	const canvas = document.getElementById('drawing-canvas');
 	if (canvas) {
 		if (window.outilTraceActif !== "select") {
@@ -258,6 +267,13 @@ function rafraichirTexteBoutonsPalette() {
 			btnEffet.innerText = `🔮 Effet : ${pourcentageForce}%`;
 		}
 	}
+
+        const btnZone = document.querySelector('.tool-btn[data-tool="zoneTactique"]');
+	if (btnZone && window.outilTraceActif !== 'zoneTactique') {
+    		btnZone.innerText = "🎲 Zone";
+	}
+
+
 }
 
 // Fonction universelle pour cycler dans un tableau d'options
@@ -1615,50 +1631,110 @@ document.addEventListener("DOMContentLoaded", () => {
 		if (isDrawing) finTrace();
 	});
 
-	// === GESTION INTERACTION DESSIN IPAD ET PC ===
 	function declencherDebutTrace(e) {
-		if (window.outilTraceActif !== "select") {
-			if (e.cancelable) e.preventDefault();
+	if (window.outilTraceActif !== "select") {
+		if (e.cancelable) e.preventDefault();
+	}
+
+	const coords = obtenirCoordonneesEvenement(e, table);
+	const localX = coords.x;
+	const localY = coords.y;
+
+	// === 1. MODE GOMME / ERASE ===
+	if (window.outilTraceActif === "erase") {
+		const elementSupprime = window.detecterEtEffacerDessin(localX, localY);
+		if (elementSupprime) {
+			const btnSelect = document.querySelector('.tool-btn[data-tool="select"]');
+			if (btnSelect) btnSelect.click();
 		}
+		return;
+	}
 
-		const coords = obtenirCoordonneesEvenement(e, table);
-		const localX = coords.x;
-		const localY = coords.y;
+	// === 2. NOUVEAU : LOGIQUE TACTILE POUR L'OUTIL ZONE ===
+	if (window.outilTraceActif === "zoneTactique") {
+		// Repères géométriques réels du tapis de jeu
+		const gridLeft = 19;
+		const gridTop = 18;
+		const gridWidth = 754;
+		const gridHeight = 364;
+		const cols = 4;
+		const rows = 2;
 
-		// Mode Gomme
-		if (window.outilTraceActif === "erase") {
-			const elementSupprime = window.detecterEtEffacerDessin(localX, localY);
-			if (elementSupprime) {
-				const btnSelect = document.querySelector('.tool-btn[data-tool="select"]');
-				if (btnSelect) btnSelect.click();
-			}
-			return;
-		}
+		// Sécurité : On s'assure que le clic a bien lieu dans l'espace utile du tapis
+		if (localX >= gridLeft && localX <= (gridLeft + gridWidth) && localY >= gridTop && localY <= (gridTop + gridHeight)) {
+			
+			const pasX = gridWidth / cols;
+			const pasY = gridHeight / rows;
 
-		// Armement de la position de départ pour les formes tactiques (Palette ou Clavier)
-		const outilTactiqueActif = (window.outilTraceActif !== "select") ? window.outilTraceActif : outilActif;
-		if (['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact'].includes(outilTactiqueActif)) {
-			isDrawing = true;
+			// Déduction automatique des index de cases (0 à 3 horizontales, 0 à 1 verticales)
+			const c = Math.floor((localX - gridLeft) / pasX);
+			const r = Math.floor((localY - gridTop) / pasY);
 
-			// CORRECTION CRITIQUE : Armement immédiat des coordonnées globales pour l'iPad
-			mouseX = localX;
-			mouseY = localY;
+			// Conversion en ID unique de zone (1 à 8) basé sur votre formule de grille originale
+			const zoneId = (r * cols) + c + 1;
 
-			// CORRECTION CONFORT : Force le premier rendu instantané sous le doigt
-			if (!animationFrameId) {
-				animationFrameId = requestAnimationFrame(() => {
-					window.redessinerToutesLesLignes();
-					animationFrameId = null;
+			// Recherche si la zone cliquée possède déjà un calque enregistré
+			const indexZoneExistante = window.dessinsSauvegardes.findIndex(dessin => dessin.estZoneGrille && dessin.zoneId === zoneId);
+
+			if (indexZoneExistante !== -1) {
+				const zoneActive = window.dessinsSauvegardes[indexZoneExistante];
+				if (!zoneActive.mode || zoneActive.mode === 'standard') {
+					// État 2 : Bascule vers Zone d'Arrivée (ZA) hachurée
+					zoneActive.mode = 'alternatif';
+				} else if (zoneActive.mode === 'alternatif') {
+					// État 3 : Bascule vers la zone colorée pure sans aucune inscription
+					zoneActive.mode = 'sans-inscription';
+				} else {
+					// État 4 : Suppression définitive au clic suivant
+					window.dessinsSauvegardes.splice(indexZoneExistante, 1);
+				}
+			} else {
+				// État 1 : Premier clic, création de la Zone de Départ (ZD)
+				const colorSelect = document.getElementById('marker-color');
+				const couleurActive = colorSelect ? colorSelect.value : '#ffffff';
+				window.dessinsSauvegardes.push({
+					couleur: couleurActive,
+					estZoneGrille: true,
+					zoneId: zoneId,
+					mode: 'standard',
+					points: []
 				});
 			}
-			return;
-		}
 
-		// Dessin Libre
-		if (window.outilTraceActif !== "select") {
-			commencerDessin(e);
+			// Force le rafraîchissement immédiat du canvas et de l'interface
+			window.redessinerToutesLesLignes();
+			if (typeof rafraichirListeLateraleBilles === "function") {
+				rafraichirListeLateraleBilles();
+			}
 		}
+		return; // On stoppe le script pour cet outil afin d'éviter tout conflit avec le dessin libre
 	}
+
+	// === 3. MODE FORMES TACTIQUES (Aperçus fantômes : Cible, Carré, Effet, Contact, Repère X) ===
+	const outilTactiqueActif = (window.outilTraceActif !== "select") ? window.outilTraceActif : outilActif;
+	if (['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact'].includes(outilTactiqueActif)) {
+		isDrawing = true;
+
+		// Armement immédiat des coordonnées globales lues par l'iPad lors du glissement
+		mouseX = localX;
+		mouseY = localY;
+
+		// Force le premier rendu instantané directement sous le doigt/stylet
+		if (!animationFrameId) {
+			animationFrameId = requestAnimationFrame(() => {
+				window.redessinerToutesLesLignes();
+				animationFrameId = null;
+			});
+		}
+		return;
+	}
+
+	// === 4. DESSIN LIBRE ET TRACÉS (Crayon, Ligne, Flèche) ===
+	if (window.outilTraceActif !== "select") {
+		commencerDessin(e);
+	}
+}
+
 
 	function declencherMouvementTrace(e) {
 		// Extrait les coordonnées exactes sous le doigt ou le stylet de l'iPad
