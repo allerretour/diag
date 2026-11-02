@@ -1726,9 +1726,10 @@ document.addEventListener("DOMContentLoaded", () => {
 	if (['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact'].includes(outilTactiqueActif)) {
 		isDrawing = true;
 
-		// Armement immédiat des coordonnées globales lues par l'iPad lors du glissement
-		mouseX = localX;
-		mouseY = localY;
+		// APPLICATION DU BRIDAGE DÈS LE PREMIER CLIC DE DÉPÔT
+		const posClampee = clampPositionDessin(localX, localY);
+		mouseX = posClampee.x;
+		mouseY = posClampee.y;
 
 		// Force le premier rendu instantané directement sous le doigt/stylet
 		if (!animationFrameId) {
@@ -1747,67 +1748,84 @@ document.addEventListener("DOMContentLoaded", () => {
 }
 
 
+
+function clampPositionDessin(x, y) {
+    // Permet au tracé de déborder légèrement sur le cadre en bois (ex: de 0 à la taille complète de la table)
+    let minX = 0 + 16,
+        maxX = 792 -15,
+        minY = 0 + 16,
+        maxY = 400 -16;
+
+    if (x < minX) x = minX;
+    if (x > maxX) x = maxX;
+    if (y < minY) y = minY;
+    if (y > maxY) y = maxY;
+
+    return { x, y };
+}
+
+
+
 	function declencherMouvementTrace(e) {
-		// Extrait les coordonnées exactes sous le doigt ou le stylet de l'iPad
-		const coords = obtenirCoordonneesEvenement(e, table);
-		const x = coords.x;
-		const y = coords.y;
+    // Extrait les coordonnées exactes sous le doigt ou le stylet
+    const coords = obtenirCoordonneesEvenement(e, table);
+    let x = coords.x;
+    let y = coords.y;
 
-		// === EN DIRECT SUR IPAD - RAFRAÎCHIT L'APERÇU FANTÔME AU GLISSEMENT ===
-		const listeFormesTactiques = ['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact'];
-		if (listeFormesTactiques.includes(window.outilTraceActif) || outilActif) {
-			if (e.cancelable) e.preventDefault(); // Empêche la page iPad de trembler ou défiler
+    // === EN DIRECT SUR IPAD - RAFRAÎCHIT L'APERÇU FANTÔME AU GLISSEMENT ===
+    const listeFormesTactiques = ['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact'];
+    if (listeFormesTactiques.includes(window.outilTraceActif) || outilActif) {
+        if (e.cancelable) e.preventDefault();
 
-			// Met à jour les positions globales lues par window.redessinerToutesLesLignes()
-			mouseX = x;
-			mouseY = y;
+        // On applique le bridage spécial dessin pour les aperçus d'outils tactiques
+        const posClampee = clampPositionDessin(x, y);
+        mouseX = posClampee.x;
+        mouseY = posClampee.y;
 
-			// Planifie un rendu synchronisé avec le taux de rafraîchissement de l'écran de l'iPad
-			if (!animationFrameId) {
-				animationFrameId = requestAnimationFrame(() => {
-					window.redessinerToutesLesLignes();
-					animationFrameId = null;
-				});
-			}
-			return; // Évite de tracer une ligne au crayon en même temps
-		}
+        if (!animationFrameId) {
+            animationFrameId = requestAnimationFrame(() => {
+                window.redessinerToutesLesLignes();
+                animationFrameId = null;
+            });
+        }
+        return;
+    }
 
-		// === LOGIQUE DE TRACÉ DE LIGNES CLASSIQUE EXISTANTE ===
-		if (!isDrawing || !currentLine) return;
-		if (e.cancelable) e.preventDefault();
+    // === LOGIQUE DE TRACÉ DE LIGNES CLASSIQUE MODIFIÉE ===
+    if (!isDrawing || !currentLine) return;
+    if (e.cancelable) e.preventDefault();
 
-		if (currentLine.estDroite) {
-			let targetX = x;
-			let targetY = y;
-			if (typeof calculerSnapGrille === "function") {
-				// Le 4e paramètre passé à true supprime la marge sur la bande
-				const pointAimante = calculerSnapGrille(x - 12, y - 12, null, true);
-				targetX = pointAimante.x + 12;
-				targetY = pointAimante.y + 12;
-			}
+    // Application stricte de la nouvelle limite sur le tracé actif
+    const posClampee = clampPositionDessin(x, y);
+    x = posClampee.x;
+    y = posClampee.y;
 
-			window.redessinerToutesLesLignes();
-			configurerStyleDessin(currentLine.couleur, currentLine.estPointille);
-			ctx.beginPath();
-			ctx.moveTo(startPoint.x, startPoint.y);
-			ctx.lineTo(targetX, targetY);
-			ctx.stroke();
-			if (currentLine.avecFleche) {
-				dessinerPointeFleche(startPoint.x, startPoint.y, targetX, targetY, currentLine.couleur);
-			}
-			currentLine.points = [startPoint, {
-				x: targetX,
-				y: targetY
-			}];
-		} else {
-			ctx.lineTo(x, y);
-			ctx.stroke();
-			currentLine.points.push({
-				x,
-				y
-			});
-		}
-	}
+    if (currentLine.estDroite) {
+        let targetX = x;
+        let targetY = y;
+        if (typeof calculerSnapGrille === "function") {
+            const pointAimante = calculerSnapGrille(x - 12, y - 12, null, true);
+            targetX = pointAimante.x + 12;
+            targetY = pointAimante.y + 12;
+        }
+
+        window.redessinerToutesLesLignes();
+        configurerStyleDessin(currentLine.couleur, currentLine.estPointille);
+        ctx.beginPath();
+        ctx.moveTo(startPoint.x, startPoint.y);
+        ctx.lineTo(targetX, targetY);
+        ctx.stroke();
+        if (currentLine.avecFleche) {
+            dessinerPointeFleche(startPoint.x, startPoint.y, targetX, targetY, currentLine.couleur);
+        }
+        currentLine.points = [startPoint, { x: targetX, y: targetY }];
+    } else {
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        currentLine.points.push({ x, y });
+    }
+}
+
 
 	function declencherFinTrace(e) {
 		// === VALIDATION DU DÉPÔT AU RELÂCHEMENT DU DOIGT SUR IPAD ===
@@ -1876,74 +1894,79 @@ document.addEventListener("DOMContentLoaded", () => {
 		}
 	}
 
-	function commencerDessin(e) {
-		// CORRECTION ESSENTIELLE : Nettoie l'aperçu clavier pour éviter la superposition parasite de formes
-		outilActif = null;
-		isDrawing = true;
+function commencerDessin(e) {
+	// CORRECTION ESSENTIELLE : Nettoie l'aperçu clavier pour éviter la superposition parasite de formes
+	outilActif = null;
+	isDrawing = true;
 
-		const coords = obtenirCoordonneesEvenement(e, table);
-		let x = coords.x;
-		let y = coords.y;
+	const coords = obtenirCoordonneesEvenement(e, table);
+	let x = coords.x;
+	let y = coords.y;
 
-		// --- NOUVEAU : AIMANTATION DU POINT DE DÉPART DE LA LIGNE SANS PADDING ---
-		const forceLigneDroite = (window.outilTraceActif === "line" || window.outilTraceActif === "arrow") || (window.outilTraceActif === "select" && (e.ctrlKey || e.metaKey || isCtrlPressed));
-		if (forceLigneDroite && typeof calculerSnapGrille === "function") {
-			// AJOUT DU 4E PARAMÈTRE (true) : Désactive la restriction des bandes pour les lignes
-			const pointAimante = calculerSnapGrille(x - 12, y - 12, null, true);
-			x = pointAimante.x + 12;
-			y = pointAimante.y + 12;
+	// APPLICATION DU BRIDAGE SUR LE POINT DE DÉPART INITIAL
+	const posClampee = clampPositionDessin(x, y);
+	x = posClampee.x;
+	y = posClampee.y;
+
+	// --- NOUVEAU : AIMANTATION DU POINT DE DÉPART DE LA LIGNE SANS PADDING ---
+	const forceLigneDroite = (window.outilTraceActif === "line" || window.outilTraceActif === "arrow") || (window.outilTraceActif === "select" && (e.ctrlKey || e.metaKey || isCtrlPressed));
+	if (forceLigneDroite && typeof calculerSnapGrille === "function") {
+		// AJOUT DU 4E PARAMÈTRE (true) : Désactive la restriction des bandes pour les lignes
+		const pointAimante = calculerSnapGrille(x - 12, y - 12, null, true);
+		x = pointAimante.x + 12;
+		y = pointAimante.y + 12;
+	}
+
+	canvas.style.pointerEvents = 'none';
+	const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX;
+	const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : e.clientY;
+	const elementSousCurseur = document.elementFromPoint(clientX, clientY);
+	canvas.style.pointerEvents = 'auto';
+
+	let billeSousCurseur = elementSousCurseur ? elementSousCurseur.closest('.ball') : null;
+	let couleurActive = colorSelect ? colorSelect.value : '#ffffff';
+
+	if (billeSousCurseur) {
+		if (window.billeSelectionneeCourante && window.billeSelectionneeCourante !== billeSousCurseur) {
+			window.billeSelectionneeCourante.style.outline = 'none';
 		}
-
-		canvas.style.pointerEvents = 'none';
-		const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX;
-		const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : e.clientY;
-		const elementSousCurseur = document.elementFromPoint(clientX, clientY);
-		canvas.style.pointerEvents = 'auto';
-
-		let billeSousCurseur = elementSousCurseur ? elementSousCurseur.closest('.ball') : null;
-		let couleurActive = colorSelect ? colorSelect.value : '#ffffff';
-
-		if (billeSousCurseur) {
-			if (window.billeSelectionneeCourante && window.billeSelectionneeCourante !== billeSousCurseur) {
-				window.billeSelectionneeCourante.style.outline = 'none';
-			}
-			window.billeSelectionneeCourante = billeSousCurseur;
-			billeSousCurseur.style.outline = '2px solid #ffffff';
-			billeSousCurseur.style.outlineOffset = '2px';
-			couleurActive = billeSousCurseur.style.backgroundColor;
-		} else {
-			if (window.billeSelectionneeCourante) {
-				couleurActive = window.billeSelectionneeCourante.style.backgroundColor;
-			}
+		window.billeSelectionneeCourante = billeSousCurseur;
+		billeSousCurseur.style.outline = '2px solid #ffffff';
+		billeSousCurseur.style.outlineOffset = '2px';
+		couleurActive = billeSousCurseur.style.backgroundColor;
+	} else {
+		if (window.billeSelectionneeCourante) {
+			couleurActive = window.billeSelectionneeCourante.style.backgroundColor;
 		}
+	}
 
-		const modeDashed = dashedCheck ? dashedCheck.checked : false;
-		configurerStyleDessin(couleurActive, modeDashed);
-		ctx.beginPath();
-		ctx.moveTo(x, y);
-		startPoint = {
+	const modeDashed = dashedCheck ? dashedCheck.checked : false;
+	configurerStyleDessin(couleurActive, modeDashed);
+	ctx.beginPath();
+	ctx.moveTo(x, y);
+	startPoint = {
+		x,
+		y
+	};
+
+	let forceFleche = false;
+	if (window.outilTraceActif !== "select") {
+		forceFleche = (window.outilTraceActif === "arrow");
+	} else {
+		forceFleche = forceLigneDroite && (e.shiftKey || isShiftPressed);
+	}
+
+	currentLine = {
+		couleur: couleurActive,
+		estDroite: forceLigneDroite,
+		avecFleche: forceFleche,
+		estPointille: modeDashed,
+		points: [{
 			x,
 			y
-		};
-
-		let forceFleche = false;
-		if (window.outilTraceActif !== "select") {
-			forceFleche = (window.outilTraceActif === "arrow");
-		} else {
-			forceFleche = forceLigneDroite && (e.shiftKey || isShiftPressed);
-		}
-
-		currentLine = {
-			couleur: couleurActive,
-			estDroite: forceLigneDroite,
-			avecFleche: forceFleche,
-			estPointille: modeDashed,
-			points: [{
-				x,
-				y
-			}]
-		};
-	}
+		}]
+	};
+}
 
 	function finTrace() {
 		if (isDrawing && currentLine) {
