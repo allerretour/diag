@@ -1908,13 +1908,46 @@ function commencerDessin(e) {
 	x = posClampee.x;
 	y = posClampee.y;
 
-	// --- NOUVEAU : AIMANTATION DU POINT DE DÉPART DE LA LIGNE SANS PADDING ---
+	// --- [NOUVEAU] : AIMANTATION SUR L'EXTRÉMITÉ D'UN TRACÉ EXISTANT (Seuil : 5px) ---
 	const forceLigneDroite = (window.outilTraceActif === "line" || window.outilTraceActif === "arrow") || (window.outilTraceActif === "select" && (e.ctrlKey || e.metaKey || isCtrlPressed));
-	if (forceLigneDroite && typeof calculerSnapGrille === "function") {
-		// AJOUT DU 4E PARAMÈTRE (true) : Désactive la restriction des bandes pour les lignes
-		const pointAimante = calculerSnapGrille(x - 12, y - 12, null, true);
-		x = pointAimante.x + 12;
-		y = pointAimante.y + 12;
+	
+	if (forceLigneDroite) {
+		let pointExtremiteProche = null;
+		let distanceMinimale = 5; // Rayon maximal de capture en pixels (tolérance demandée : 5px)
+
+		window.dessinsSauvegardes.forEach(dessin => {
+			// On ne cible que les droites ou flèches possédant au moins un point de départ et d'arrivée
+			if (dessin.points && dessin.points.length >= 2 && (dessin.estDroite || dessin.avecFleche)) {
+				const ptDepart = dessin.points[0];
+				const ptArrivee = dessin.points[dessin.points.length - 1];
+
+				// Calcul de la distance avec le point de départ du tracé examiné
+				const distDepart = Math.sqrt(Math.pow(x - ptDepart.x, 2) + Math.pow(y - ptDepart.y, 2));
+				if (distDepart < distanceMinimale) {
+					distanceMinimale = distDepart;
+					pointExtremiteProche = ptDepart;
+				}
+
+				// Calcul de la distance avec le point d'arrivée du tracé examiné
+				const distArrivee = Math.sqrt(Math.pow(x - ptArrivee.x, 2) + Math.pow(y - ptArrivee.y, 2));
+				if (distArrivee < distanceMinimale) {
+					distanceMinimale = distArrivee;
+					pointExtremiteProche = ptArrivee;
+				}
+			}
+		});
+
+		// Si une extrémité valide a été détectée dans le périmètre, on snap les coordonnées dessus
+		if (pointExtremiteProche) {
+			x = pointExtremiteProche.x;
+			y = pointExtremiteProche.y;
+		} 
+		// Sinon, repli sur l'aimantation classique de la grille si la fonction globale existe
+		else if (typeof calculerSnapGrille === "function") {
+			const pointAimante = calculerSnapGrille(x - 12, y - 12, null, true);
+			x = pointAimante.x + 12;
+			y = pointAimante.y + 12;
+		}
 	}
 
 	canvas.style.pointerEvents = 'none';
