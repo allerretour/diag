@@ -392,6 +392,35 @@ function rafraichirTitreSurTapis() {
 	tableTitleOverlay.innerText = texteTitre;
 
 	if (chkShowTitle && chkShowTitle.checked && texteTitre !== "") {
+		tableTitleOverlay.style.position = 'absolute';
+		
+		// --- ALIGNEMENT À GAUCHE : Aligné sur le début utile du tapis (19px) ---
+		tableTitleOverlay.style.left = '19px';
+		tableTitleOverlay.style.top = '-12px'; 
+		tableTitleOverlay.style.transform = 'none'; // Supprime le décalage de centrage antérieur
+		
+		// Largeur élastique en fonction du texte
+		tableTitleOverlay.style.width = 'max-content';
+		tableTitleOverlay.style.whiteSpace = 'nowrap';
+		
+		// Style du badge
+		tableTitleOverlay.style.backgroundColor = 'rgba(26, 26, 26, 0.75)';
+		tableTitleOverlay.style.padding = '2px 10px';
+		tableTitleOverlay.style.borderRadius = '4px';
+		tableTitleOverlay.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+		tableTitleOverlay.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.4)';
+		tableTitleOverlay.style.margin = '0';
+		
+		// Typographie
+		tableTitleOverlay.style.zIndex = '6'; 
+		tableTitleOverlay.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+		tableTitleOverlay.style.fontWeight = 'bold';
+		tableTitleOverlay.style.fontSize = '11px';
+		tableTitleOverlay.style.textTransform = 'uppercase';
+		tableTitleOverlay.style.letterSpacing = '0.5px';
+		tableTitleOverlay.style.color = 'rgba(255, 255, 255, 0.95)';
+		tableTitleOverlay.style.textShadow = 'none';
+		
 		tableTitleOverlay.style.display = 'block';
 	} else {
 		tableTitleOverlay.style.display = 'none';
