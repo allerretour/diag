@@ -1086,8 +1086,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
 		const couleurBlanche = "#ffffff";
 
-		if (mode === 'alternatif') {
+				if (mode === 'alternatif') {
 			// === CAS ZONE ARRIVÉE (ZA) : REMPLISSAGE HACHURES ÉPAISSES & LÉGÈRES ===
+			ctx.save();
+			const patternCanvas = document.createElement('canvas');
+			const pCtx = patternCanvas.getContext('2d');
+
+			patternCanvas.width = 16;
+			patternCanvas.height = 16;
+
+			pCtx.strokeStyle = couleurBlanche;
+			pCtx.lineWidth = 4;
+			pCtx.beginPath();
+			pCtx.moveTo(0, 16);
+			pCtx.lineTo(16, 0);
+			pCtx.stroke();
+
+			const pattern = ctx.createPattern(patternCanvas, 'repeat');
+			ctx.fillStyle = pattern;
+			ctx.globalAlpha = 0.18;
+			ctx.fill();
+			ctx.restore();
+		} else if (mode === 'sans-inscription-hachure') {
+			// === NOUVEAU : CAS ZA SANS ANNOTATION (HACHURES SEULES) ===
 			ctx.save();
 			const patternCanvas = document.createElement('canvas');
 			const pCtx = patternCanvas.getContext('2d');
@@ -1119,8 +1140,8 @@ document.addEventListener("DOMContentLoaded", () => {
 			ctx.fill();
 		}
 
-		// --- LE BLOC CI-DESSOUS S'EXÉCUTE UNIQUEMENT SI LE MODE N'EST PAS 'sans-inscription' ---
-		if (mode !== 'sans-inscription') {
+		// --- MODIFIÉ : LE BLOC CI-DESSOUS S'EXÉCUTE UNIQUEMENT SI LE MODE N'EST PAS ANONYME ---
+		if (mode !== 'sans-inscription' && mode !== 'sans-inscription-hachure') {
 			ctx.fillStyle = couleurBlanche;
 			ctx.font = "bold 20px sans-serif";
 			const marge = 18;
@@ -1148,6 +1169,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			ctx.fillText(zoneIndex, positionChiffreX, positionChiffreY);
 			ctx.restore();
 		}
+
 
 		ctx.restore();
 	}
@@ -1599,14 +1621,13 @@ document.addEventListener("DOMContentLoaded", () => {
 			if (indexZoneExistante !== -1) {
 				const zoneActive = window.dessinsSauvegardes[indexZoneExistante];
 				if (!zoneActive.mode || zoneActive.mode === 'standard') {
-					// État 2 : Bascule vers Zone d'Arrivée (ZA) hachurée
-					zoneActive.mode = 'alternatif';
+					zoneActive.mode = 'alternatif'; // État 2 : ZA hachurée
 				} else if (zoneActive.mode === 'alternatif') {
-					// État 3 (Nouveau) : Bascule vers la zone colorée pure sans texte ni chiffre
-					zoneActive.mode = 'sans-inscription';
+					zoneActive.mode = 'sans-inscription-hachure'; // NOUVEAU État 3 : ZA hachures sans texte
+				} else if (zoneActive.mode === 'sans-inscription-hachure') {
+					zoneActive.mode = 'sans-inscription'; // État 4 : Zone unie sans texte
 				} else {
-					// État 4 : Suppression définitive au clic suivant
-					window.dessinsSauvegardes.splice(indexZoneExistante, 1);
+					window.dessinsSauvegardes.splice(indexZoneExistante, 1); // État 5 : Suppression
 				}
 			} else {
 				// État 1 : Premier clic, création de la Zone de Départ (ZD)
@@ -1690,14 +1711,13 @@ document.addEventListener("DOMContentLoaded", () => {
 			if (indexZoneExistante !== -1) {
 				const zoneActive = window.dessinsSauvegardes[indexZoneExistante];
 				if (!zoneActive.mode || zoneActive.mode === 'standard') {
-					// État 2 : Bascule vers Zone d'Arrivée (ZA) hachurée
-					zoneActive.mode = 'alternatif';
+					zoneActive.mode = 'alternatif'; // État 2 : ZA hachurée
 				} else if (zoneActive.mode === 'alternatif') {
-					// État 3 : Bascule vers la zone colorée pure sans aucune inscription
-					zoneActive.mode = 'sans-inscription';
+					zoneActive.mode = 'sans-inscription-hachure'; // NOUVEAU État 3 : ZA hachures sans texte
+				} else if (zoneActive.mode === 'sans-inscription-hachure') {
+					zoneActive.mode = 'sans-inscription'; // État 4 : Zone unie sans texte
 				} else {
-					// État 4 : Suppression définitive au clic suivant
-					window.dessinsSauvegardes.splice(indexZoneExistante, 1);
+					window.dessinsSauvegardes.splice(indexZoneExistante, 1); // État 5 : Suppression
 				}
 			} else {
 				// État 1 : Premier clic, création de la Zone de Départ (ZD)
