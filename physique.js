@@ -489,10 +489,13 @@ function rafraichirListeLateraleBilles() {
 			itemRow.style.borderLeft = "3px solid #e74c3c"; // Ligne rouge sur l'élément de la liste
 		}
 
-		// --- LOGIQUE TACTILE HYBRIDE POUR IPAD (CORRIGÉ SÉLECTION) ---
+		// --- LOGIQUE TACTILE HYBRIDE POUR IPAD (CORRIGÉ SÉLECTION & DOUBLE TAP) ---
 		let timerAppuiLong = null;
 		let appuiLongDeclenche = false;
 		
+		// NOUVEAU : Variables pour simuler et détecter le double-tap sur iPad
+		let dernierTempsTap = 0;
+
 		const alternerVerrouillage = (e) => {
 			e.stopPropagation();
 			e.preventDefault();
@@ -509,6 +512,20 @@ function rafraichirListeLateraleBilles() {
 					ball.style.outline = 'none';
 					window.billeSelectionneeCourante = null;
 				}
+			}
+			rafraichirListeLateraleBilles();
+		};
+
+		// Centralisation de l'action pour enlever/masquer une bille (PC et iPad)
+		const executerMasquageBille = () => {
+			if (window.billesVerrouillees.has(ballId)) return; // Bloque le masquage si verrouillée
+			
+			ball.style.display = 'none';
+			if (window.billeSelectionneeCourante === ball) {
+				ball.style.outline = 'none';
+				window.billeSelectionneeCourante = null;
+				const displayEl = document.getElementById('ball-position-display');
+				if (displayEl) displayEl.innerText = "Position de la bille : Aucune sélectionnée";
 			}
 			rafraichirListeLateraleBilles();
 		};
@@ -541,7 +558,7 @@ function rafraichirListeLateraleBilles() {
 		// 1. Clic droit pour PC
 		itemRow.addEventListener('contextmenu', alternerVerrouillage);
 
-		// 2. Événements tactiles iPad
+		// 2. Événements tactiles iPad (Sélection, Appui Long, et Double-Tap)
 		itemRow.addEventListener('touchstart', (e) => {
 			appuiLongDeclenche = false;
 			
@@ -558,15 +575,27 @@ function rafraichirListeLateraleBilles() {
 				timerAppuiLong = null;
 			}
 			
-			// Si le doigt s'est levé rapidement avant 600ms, c'est un choix de bille !
+			// Si le doigt s'est levé avant l'appui long (tap classique court)
 			if (!appuiLongDeclenche) {
 				e.preventDefault();
 				e.stopPropagation();
-				executerSelectionBille();
+				
+				const tempsActuel = new Date().getTime();
+				const intervalleTaps = tempsActuel - dernierTempsTap;
+				
+				// NOUVEAU : Détection du double-tap sur iPad (seuil de 300 millisecondes)
+				if (intervalleTaps < 300 && intervalleTaps > 0) {
+					executerMasquageBille(); // Double-tap = Enlever la bille
+				} else {
+					// Tap unique = Sélectionner ou faire réapparaître la bille
+					executerSelectionBille();
+				}
+				
+				dernierTempsTap = tempsActuel;
 			}
 		});
 
-		// 3. Clic standard souris pour PC
+		// 3. Événements classiques souris pour PC (Clic simple et Double-clic)
 		itemRow.addEventListener('click', (e) => {
 			e.stopPropagation();
 			executerSelectionBille();
@@ -574,16 +603,7 @@ function rafraichirListeLateraleBilles() {
 
 		itemRow.addEventListener('dblclick', (e) => {
 			e.stopPropagation();
-			if (window.billesVerrouillees.has(ballId)) return; // Bloque la suppression si verrouillée
-			
-			ball.style.display = 'none';
-			if (window.billeSelectionneeCourante === ball) {
-				ball.style.outline = 'none';
-				window.billeSelectionneeCourante = null;
-				const displayEl = document.getElementById('ball-position-display');
-				if (displayEl) displayEl.innerText = "Position de la bille : Aucune sélectionnée";
-			}
-			rafraichirListeLateraleBilles();
+			executerMasquageBille();
 		});
 
 		// --- CONSTRUCTION GÉOMÉTRIQUE DE LA LIGNE ---
@@ -614,11 +634,8 @@ function rafraichirListeLateraleBilles() {
 			coordsText.innerHTML = `X = ${coords.x}, Y = ${coords.y}`;
 		}
 
-		// --- INJECTION DES ÉLÉMENTS DE GAUCHE À DROITE ---
-		
 		
 
-		// ÉTAPE 2 : La bille et les coordonnées suivent
 		itemRow.appendChild(miniBall);
 		itemRow.appendChild(coordsText);
 		
@@ -642,6 +659,7 @@ function rafraichirListeLateraleBilles() {
 	sidebarList.innerHTML = ""; 
 	sidebarList.appendChild(fragment); 
 }
+
 
 
 function obtenirCoordonneesGrille(x, y, element) {
