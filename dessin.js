@@ -1,5 +1,13 @@
 // Variable globale pour stocker les lignes et les cibles tracées
 window.dessinsSauvegardes = [];
+
+// Variable globale pour suivre les billes verrouillées (contient les IDs des billes)
+window.billesVerrouillees = new Set();
+
+
+// Variable globale pour mémoriser l'outil précédent valide lors des retours automatiques
+window.dernierOutilValide = "select"; 
+
 // Variable globale pour suivre le nombre de pointes du repère X (ex: alterne entre 4, 6)
 window.nombreBranchesRepereX = 6; // Garde la mémoire des branches
 window.repereXEstUnCercle = false; // Permet de savoir si on bascule en mode cercle
@@ -41,6 +49,10 @@ function gererLogiquePalette(btn, e) {
 
 	// SÉCURITÉ : Si c'est le bouton couleur, on stoppe la logique d'outil de tracé
 	if (btn.id === 'indicateur-couleur-tactique') return;
+	
+	// NOUVEAU : Si c'est le bouton annuler ou effacer, on ne change pas l'outil actif de la palette
+	if (btn.id === 'btn-undo-lines' || btn.id === 'btn-clear-lines') return;
+	
 	if (e.cancelable) e.preventDefault();
 
 	const toolSelected = btn.getAttribute('data-tool');
@@ -112,10 +124,16 @@ function gererLogiquePalette(btn, e) {
 
 	}
 
-	// --- TOUT PREMIER CLIC : INITIALISATION DE L'OUTIL ---
+		// --- TOUT PREMIER CLIC : INITIALISATION DE L'OUTIL ---
+	// Sauvegarde l'outil comme précédent s'il ne s'agit pas de l'outil de sélection par défaut
+	if (window.outilTraceActif !== "select") {
+		window.dernierOutilValide = window.outilTraceActif;
+	}
+
 	boutonsOutils.forEach(b => b.classList.remove('active'));
 	btn.classList.add('active');
 	window.outilTraceActif = toolSelected;
+
 
 	// Application stricte des configurations de base sans rotation
 	if (toolSelected === 'pointContact') {
@@ -1379,42 +1397,83 @@ document.addEventListener("DOMContentLoaded", () => {
 		colorSelectElement.addEventListener('change', mettreAJourCouleurPalette);
 	}
 
-	// === CORRECTIF HYBRIDE IOS POUR EFFACER ET ANNULER ===
 	if (clearBtn) {
 		// Événement pour l'iPad / iPhone
 		clearBtn.addEventListener('touchstart', (e) => {
 			if (e.cancelable) e.preventDefault();
+			e.stopPropagation(); // Sécurité tactile active
+
 			ctx.clearRect(0, 0, canvas.width, canvas.height);
 			window.dessinsSauvegardes = [];
 			if (typeof window.redessinerToutesLesLignes === "function") window.redessinerToutesLesLignes();
+
+			clearBtn.blur();
+			const btnSelect = document.querySelector('.tool-btn[data-tool="select"]');
+			if (btnSelect) btnSelect.click();
 		}, {
 			passive: false
 		});
 
 		// Événement pour le PC / Mac
 		clearBtn.addEventListener('click', (e) => {
-			if (e.pointerType === 'touch' || (e.clientX === 0 && e.clientY === 0)) return; // Évite le double déclenchement
+			if (e.pointerType === 'touch' || (e.clientX === 0 && e.clientY === 0)) return; 
+			e.stopPropagation();
+
 			ctx.clearRect(0, 0, canvas.width, canvas.height);
 			window.dessinsSauvegardes = [];
 			if (typeof window.redessinerToutesLesLignes === "function") window.redessinerToutesLesLignes();
+
+			clearBtn.blur();
+			const btnSelect = document.querySelector('.tool-btn[data-tool="select"]');
+			if (btnSelect) btnSelect.click();
 		});
 	}
 
-	if (undoBtn) {
-		// Événement pour l'iPad / iPhone
+
+			if (undoBtn) {
+		// Événement pour l'iPad / iPhone (Tactile)
 		undoBtn.addEventListener('touchstart', (e) => {
 			if (e.cancelable) e.preventDefault();
+			e.stopPropagation(); // Bloque le tracé parasite sous le bouton
+
+			// 1. On mémorise l'outil qui était actif JUSTE AVANT le clic
+			const outilAcocher = window.outilTraceActif;
+
+			// 2. On effectue l'annulation
 			annulerDernierTrace();
+
+			// 3. On force l'interface à remettre le focus sur l'outil précédent
+			if (outilAcocher) {
+				const btnPrecedent = document.querySelector(`.tool-btn[data-tool="${outilAcocher}"]`);
+				if (btnPrecedent) {
+					btnPrecedent.click();
+				}
+			}
+			undoBtn.blur();
 		}, {
 			passive: false
 		});
 
-		// Événement pour le PC / Mac
+		// Événement pour le PC / Mac (Souris)
 		undoBtn.addEventListener('click', (e) => {
-			if (e.pointerType === 'touch' || (e.clientX === 0 && e.clientY === 0)) return; // Évite le double déclenchement
+			if (e.pointerType === 'touch' || (e.clientX === 0 && e.clientY === 0)) return; 
+			e.stopPropagation();
+
+			const outilAcocher = window.outilTraceActif;
+
 			annulerDernierTrace();
+
+			if (outilAcocher) {
+				const btnPrecedent = document.querySelector(`.tool-btn[data-tool="${outilAcocher}"]`);
+				if (btnPrecedent) {
+					btnPrecedent.click();
+				}
+			}
+			undoBtn.blur();
 		});
 	}
+
+
 
 	// === GESTION AUTONOME DE LA CASE À COCHER "DESSINS/TRACÉS" ===
 	if (toggleDrawingsCheck) {
@@ -1484,6 +1543,13 @@ document.addEventListener("DOMContentLoaded", () => {
 			if (!window.billeSelectionneeCourante || window.billeSelectionneeCourante.style.display === 'none') {
 				return;
 			}
+			
+			// --- NOUVEAU : SÉCURITÉ POUR EMPÊCHER LE MOUVEMENT CLAVIER SI LA BILLE EST VERROUILLÉE ---
+			const ballId = window.billeSelectionneeCourante.getAttribute('data-id');
+			if (window.billesVerrouillees && window.billesVerrouillees.has(ballId)) {
+				return; // Bloque instantanément le déplacement au clavier
+			}
+			
 			e.preventDefault();
 
 			let currentX = parseFloat(window.billeSelectionneeCourante.style.left) || 0;
@@ -1893,13 +1959,20 @@ function clampPositionDessin(x, y) {
 				window.dessinsSauvegardes.push(nouvelElement);
 			}
 
-			// Nettoyage des états
+						// Nettoyage des états
 			isDrawing = false;
 			outilActif = null;
 
-			// Auto-retour au mode sélection
-			const btnSelect = document.querySelector('.tool-btn[data-tool="select"]');
-			if (btnSelect) btnSelect.click();
+			// Retour au dernier outil de tracé utilisé à la place du bouton neutre 'select'
+			const boutonDernierOutil = document.querySelector(`.tool-btn[data-tool="${window.dernierOutilValide}"]`);
+			if (boutonDernierOutil) {
+				boutonDernierOutil.click();
+			} else {
+				// Repli de sécurité si l'outil mémorisé n'est pas trouvé
+				const btnSelect = document.querySelector('.tool-btn[data-tool="select"]');
+				if (btnSelect) btnSelect.click();
+			}
+
 
 			if (typeof window.redessinerToutesLesLignes === "function") window.redessinerToutesLesLignes();
 			return;

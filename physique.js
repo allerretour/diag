@@ -116,6 +116,12 @@ function initialiserBilles() {
 		makeDraggable(ballEl);
 
 		ballEl.addEventListener('dblclick', function() {
+			// --- NOUVEAU : SÉCURITÉ DE DOUBLE-CLIC SUR TAPIS ---
+			const ballId = this.getAttribute('data-id');
+			if (window.billesVerrouillees && window.billesVerrouillees.has(ballId)) {
+				return; // Ignore l'action et laisse la bille visible si elle est verrouillée
+			}
+					
 			this.style.display = 'none';
 			const displayEl = document.getElementById('ball-position-display');
 			if (displayEl) {
@@ -295,6 +301,12 @@ function makeDraggable(element) {
 	function dragStart(e) {
 		if (element.style.display === 'none') return;
 		
+		// --- NOUVEAU : SÉCURITÉ DE VERROUILLAGE DE POSITION ---
+		const ballId = element.getAttribute('data-id');
+		if (window.billesVerrouillees.has(ballId)) {
+			return; // Bloque instantanément le glissement si la bille est verrouillée
+		}
+		
 		// --- SÉCURITÉ ANTICORRUPTION : BLOQUE LE GLISSEMENT DES BILLES SI UN OUTIL EST ACTIF ---
 		if (window.outilTraceActif !== "select") {
 			return; // Bloque instantanément le drag-and-drop si on est en mode dessin (crayon, ligne, flèche, gomme...)
@@ -443,7 +455,6 @@ function rafraichirListeLateraleBilles() {
 	const sidebarList = document.getElementById('visible-balls-list');
 	if (!sidebarList) return;
 
-	// --- OPTIMISATION : Utilisation d'un fragment d'architecture invisible ---
 	const fragment = document.createDocumentFragment();
 
 	activeBalls.forEach(ball => {
@@ -452,10 +463,12 @@ function rafraichirListeLateraleBilles() {
 		const estRayee = ball.classList.contains('striped');
 		const couleurBille = ball.style.backgroundColor;
 		const estMasquee = ball.style.display === 'none';
+		const estVerrouillee = window.billesVerrouillees.has(ballId);
 
 		const itemRow = document.createElement('div');
 		itemRow.classList.add('sidebar-ball-item');
 		itemRow.style.cursor = 'pointer';
+		itemRow.style.position = 'relative'; // Requis pour positionner le cadenas à droite
 
 		if (window.billeSelectionneeCourante === ball && !estMasquee) {
 			itemRow.classList.add('active-highlight');
@@ -464,32 +477,83 @@ function rafraichirListeLateraleBilles() {
 		if (estMasquee) {
 			itemRow.classList.add('is-hidden-ball');
 		}
+		
+		// Indicateur visuel UNIQUEMENT sur la ligne de la liste latérale
+		if (estVerrouillee) {
+			itemRow.style.opacity = "0.85";
+			itemRow.style.borderLeft = "3px solid #e74c3c"; // Ligne rouge sur l'élément de la liste
+		}
 
+		let timerAppuiLong;
+		
+		const alternerVerrouillage = (e) => {
+			e.stopPropagation();
+			e.preventDefault();
+			
+			if (estMasquee) return;
+
+			if (window.billesVerrouillees.has(ballId)) {
+				window.billesVerrouillees.delete(ballId);
+			} else {
+				window.billesVerrouillees.add(ballId);
+				
+				// Si la bille verrouillée était active, on efface proprement son contour blanc de sélection
+				if (window.billeSelectionneeCourante === ball) {
+					ball.style.outline = 'none';
+					window.billeSelectionneeCourante = null;
+				}
+			}
+			rafraichirListeLateraleBilles();
+		};
+
+		// Clic droit pour PC
+		itemRow.addEventListener('contextmenu', alternerVerrouillage);
+
+		// Touch long (600ms) pour iPad
+		itemRow.addEventListener('touchstart', (e) => {
+			timerAppuiLong = setTimeout(() => {
+				alternerVerrouillage(e);
+				timerAppuiLong = null;
+			}, 600);
+		}, { passive: true });
+
+		itemRow.addEventListener('touchend', () => {
+			if (timerAppuiLong) {
+				clearTimeout(timerAppuiLong);
+			}
+		});
+
+		// Clic standard
 		itemRow.addEventListener('click', (e) => {
 			e.stopPropagation();
+			
 			if (ball.style.display === 'none') {
 				ball.style.display = 'flex';
 				if (window.billeSelectionneeCourante) window.billeSelectionneeCourante.style.outline = 'none';
 				window.billeSelectionneeCourante = ball;
-				ball.style.outline = '2px solid #ffffff';
-				ball.style.outlineOffset = '2px';
+				if (!estVerrouillee) {
+					ball.style.outline = '2px solid #ffffff';
+					ball.style.outlineOffset = '2px';
+				}
 			} else {
 				if (window.billeSelectionneeCourante) window.billeSelectionneeCourante.style.outline = 'none';
 				window.billeSelectionneeCourante = ball;
-				ball.style.outline = '2px solid #ffffff';
-				ball.style.outlineOffset = '2px';
+				if (!estVerrouillee) {
+					ball.style.outline = '2px solid #ffffff';
+					ball.style.outlineOffset = '2px';
+				}
 			}
 			rafraichirListeLateraleBilles();
 
-			// NOUVEAU : Force la palette de couleur à s'aligner sur la bille choisie depuis la liste
 			if (typeof rafraichirTexteBoutonsPalette === "function") {
 				rafraichirTexteBoutonsPalette();
 			}
-
 		});
 
 		itemRow.addEventListener('dblclick', (e) => {
 			e.stopPropagation();
+			if (window.billesVerrouillees.has(ballId)) return; // Bloque la suppression si verrouillée
+			
 			ball.style.display = 'none';
 			if (window.billeSelectionneeCourante === ball) {
 				ball.style.outline = 'none';
@@ -530,14 +594,27 @@ function rafraichirListeLateraleBilles() {
 		itemRow.appendChild(miniBall);
 		itemRow.appendChild(coordsText);
 
-		// On attache au fragment en mémoire plutôt qu'au DOM direct
+		// Ajout du cadenas uniquement dans la liste latérale
+		if (estVerrouillee) {
+			const lockIcon = document.createElement('span');
+			lockIcon.innerText = "🔒";
+			lockIcon.style.cssText = `
+				position: absolute;
+				right: 1px;
+				top: 20%;
+				transform: translateY(-50%);
+				font-size: 12px;
+			`;
+			itemRow.appendChild(lockIcon);
+		}
+
 		fragment.appendChild(itemRow);
 	});
 
-	// --- EXPÉDITION UNIQUE AU DOM ---
-	sidebarList.innerHTML = ""; // Vider l'ancien contenu
-	sidebarList.appendChild(fragment); // Injecter l'arbre complet d'un coup
+	sidebarList.innerHTML = ""; 
+	sidebarList.appendChild(fragment); 
 }
+
 
 function obtenirCoordonneesGrille(x, y, element) {
 	// Repères géométriques identiques à la grille et au magnétisme

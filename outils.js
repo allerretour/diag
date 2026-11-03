@@ -660,15 +660,19 @@ document.addEventListener("DOMContentLoaded", () => {
 	// EXPORTATION : Sauvegarde positions, sélecteur, titre, description, tracés et options d'affichage
 	if (exportBtn) {
 		exportBtn.addEventListener('click', () => {
-			const listBilles = [];
+						const listBilles = [];
 			activeBalls.forEach(ball => {
+				const ballId = ball.getAttribute('data-id');
 				listBilles.push({
-					id: ball.getAttribute('data-id'),
+					id: ballId,
 					x: ball.style.left,
 					y: ball.style.top,
-					visible: ball.style.display !== 'none'
+					visible: ball.style.display !== 'none',
+					// NOUVEAU : Enregistre si l'ID de cette bille est dans le Set des billes verrouillées
+					verrouillee: window.billesVerrouillees ? window.billesVerrouillees.has(ballId) : false
 				});
 			});
+
 
 			// Récupération des valeurs textuelles nettoyées
 			const configTitle = titleInput ? titleInput.value.trim() : "configuration_billard";
@@ -887,20 +891,32 @@ const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
 						throw new Error("Format JSON non reconnu");
 					}
 
-					// 1. Ajuster la valeur affichée dans le menu déroulant
+								// 1. Ajuster la valeur affichée dans le menu déroulant
 					if (ballsCountSelect) {
 						ballsCountSelect.value = nbVisibles;
 					}
 
-					// 2. Restaurer la position ET la visibilité de chaque bille
+					// RÉSOLUTION DU BUG : Réinitialise le Set global des billes verrouillées lors d'un nouvel import
+					if (!window.billesVerrouillees) window.billesVerrouillees = new Set();
+					window.billesVerrouillees.clear();
+
+					// 2. Restaurer la position, la visibilité ET le verrouillage de chaque bille
 					activeBalls.forEach(ball => {
 						const ballId = ball.getAttribute('data-id');
-						const savedBall = listeBilles.find(b => b.id === ballId);
+						
+						// CORRECTION ICI : On cherche directement dans l'objet lu "donneesImportees.billes" au lieu de "listBilles"
+						const savedBall = (donneesImportees.billes && Array.isArray(donneesImportees.billes)) 
+							? donneesImportees.billes.find(b => b.id === ballId) 
+							: null;
+
+						// On remet la bille à neuf (supprime l'outline de sélection au cas où)
+						ball.style.outline = 'none';
 
 						if (savedBall) {
 							ball.style.left = savedBall.x;
 							ball.style.top = savedBall.y;
 
+							// Gestion de la visibilité
 							if (savedBall.hasOwnProperty('visible')) {
 								ball.style.display = savedBall.visible ? 'flex' : 'none';
 							} else {
@@ -910,6 +926,11 @@ const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
 								} else {
 									ball.style.display = idNum <= parseInt(nbVisibles, 10) ? 'flex' : 'none';
 								}
+							}
+
+							// Restaure l'état de verrouillage dans le Set global
+							if (savedBall.verrouillee) {
+								window.billesVerrouillees.add(ballId);
 							}
 						} else {
 							const idNum = parseInt(ballId, 10);
@@ -921,9 +942,11 @@ const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
 						}
 					});
 
+					// On force le rafraîchissement complet de la liste pour faire réapparaître les cadenas
 					if (typeof rafraichirListeLateraleBilles === "function") {
 						rafraichirListeLateraleBilles();
 					}
+
 
 					// 3. Mettre à jour les champs de texte éditables
 					if (titleInput) titleInput.value = titreImported;
