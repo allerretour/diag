@@ -1329,8 +1329,8 @@
 	<div class="header-container" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
 		<h1 style="margin: 0; font-size: 1.8rem;">Concepteur de diagramme</h1>
 
-		<!-- Zone des boutons d'outils isolée en POSITION FIXE en haut à droite (3 boutons inclus) -->
-		<div class="top-tools-actions" style="position: fixed; top: 15px; right: 15px; z-index: 9999; display: flex; gap: 12px; align-items: center; background-color: rgba(0, 0, 0, 0.5); padding: 5px 12px; border-radius: 20px; backdrop-filter: blur(4px); border: 1px solid rgba(255, 255, 255, 0.1);">
+		<!-- Zone des boutons d'outils isolée en POSITION FIXE en haut à droite (Boutons alignés verticalement) -->
+		<div class="top-tools-actions" style="position: fixed; top: 15px; right: 15px; z-index: 9999; display: flex; flex-direction: column; gap: 12px; align-items: center; background-color: rgba(0, 0, 0, 0.5); padding: 12px 6px; border-radius: 20px; backdrop-filter: blur(4px); border: 1px solid rgba(255, 255, 255, 0.1);">
 
 			<!-- Bouton engrenage Options -->
 			<button id="btn-ouvrir-options" class="btn-top-tool" title="Ouvrir les Options" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #ffffff; padding: 5px; line-height: 1; transition: transform 0.2s;">
@@ -1348,10 +1348,13 @@
 				🙈
 			</button>
 
-			<button id="btn-toggle-balls-sidebar" class="btn-top-tool" title="Masquer la liste des billes" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #ffffff; padding: 5px; line-height: 1; transition: transform 0.2s;">🎱</button>
-
+			<!-- Bouton pour la barre latérale des billes -->
+			<button id="btn-toggle-balls-sidebar" class="btn-top-tool" title="Masquer la liste des billes" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #ffffff; padding: 5px; line-height: 1; transition: transform 0.2s;">
+				🎱
+			</button>
 
 		</div>
+
 	</div>
 
 
