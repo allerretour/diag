@@ -469,6 +469,11 @@ function rafraichirListeLateraleBilles() {
 		itemRow.classList.add('sidebar-ball-item');
 		itemRow.style.cursor = 'pointer';
 		itemRow.style.position = 'relative'; // Requis pour positionner le cadenas à droite
+		
+		// --- NOUVEAU : BLOQUE LA SÉLECTION DE TEXTE NATIF SUR IPAD ---
+		itemRow.style.webkitUserSelect = "none";  // Pour Safari iOS
+		itemRow.style.userSelect = "none";        // Standard
+		itemRow.style.webkitTouchCallout = "none"; // Empêche le menu contextuel natif iOS
 
 		if (window.billeSelectionneeCourante === ball && !estMasquee) {
 			itemRow.classList.add('active-highlight');
