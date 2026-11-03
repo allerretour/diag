@@ -514,13 +514,17 @@ function rafraichirListeLateraleBilles() {
 		// Clic droit pour PC
 		itemRow.addEventListener('contextmenu', alternerVerrouillage);
 
-		// Touch long (600ms) pour iPad
+				// Touch long (600ms) pour iPad mis à jour
 		itemRow.addEventListener('touchstart', (e) => {
+			// Empêche iOS de démarrer sa propre logique de sélection de texte
+			if (e.cancelable) e.preventDefault(); 
+			
 			timerAppuiLong = setTimeout(() => {
 				alternerVerrouillage(e);
 				timerAppuiLong = null;
 			}, 600);
-		}, { passive: true });
+		}, { passive: false }); // Changé à passive: false pour autoriser le preventDefault
+
 
 		itemRow.addEventListener('touchend', () => {
 			if (timerAppuiLong) {
