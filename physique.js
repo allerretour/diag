@@ -457,6 +457,14 @@ function rafraichirListeLateraleBilles() {
 
 	const fragment = document.createDocumentFragment();
 
+	// Initialisation de la mémoire globale des taps si elle n'existe pas
+	if (!window.historiqueTapsBilles) {
+		window.historiqueTapsBilles = {};
+	}
+	if (!window.timersSelectionBilles) {
+		window.timersSelectionBilles = {};
+	}
+
 	activeBalls.forEach(ball => {
 		const ballId = ball.getAttribute('data-id');
 		const numEl = ball.querySelector('.ball-num');
@@ -471,9 +479,9 @@ function rafraichirListeLateraleBilles() {
 		itemRow.style.position = 'relative';
 		
 		// --- BLOQUE LA SÉLECTION DE TEXTE NATIF SUR IPAD ---
-		itemRow.style.webkitUserSelect = "none";  // Pour Safari iOS
-		itemRow.style.userSelect = "none";        // Standard
-		itemRow.style.webkitTouchCallout = "none"; // Empêche le menu contextuel natif iOS
+		itemRow.style.webkitUserSelect = "none";  
+		itemRow.style.userSelect = "none";        
+		itemRow.style.webkitTouchCallout = "none"; 
 
 		if (window.billeSelectionneeCourante === ball && !estMasquee) {
 			itemRow.classList.add('active-highlight');
@@ -483,31 +491,27 @@ function rafraichirListeLateraleBilles() {
 			itemRow.classList.add('is-hidden-ball');
 		}
 		
-		// Indicateur visuel UNIQUEMENT sur la ligne de la liste latérale
 		if (estVerrouillee) {
 			itemRow.style.opacity = "0.85";
-			itemRow.style.borderLeft = "3px solid #e74c3c"; // Ligne rouge sur l'élément de la liste
+			itemRow.style.borderLeft = "3px solid #e74c3c"; 
 		}
 
-		// --- LOGIQUE TACTILE HYBRIDE POUR IPAD (CORRIGÉ SÉLECTION & DOUBLE TAP) ---
+		// --- LOGIQUE TACTILE AVANCÉE POUR IPAD ---
 		let timerAppuiLong = null;
 		let appuiLongDeclenche = false;
-		
-		// NOUVEAU : Variables pour simuler et détecter le double-tap sur iPad
-		let dernierTempsTap = 0;
 
 		const alternerVerrouillage = (e) => {
+			if (timerAppuiLong) { clearTimeout(timerAppuiLong); timerAppuiLong = null; }
+			if (window.timersSelectionBilles[ballId]) { clearTimeout(window.timersSelectionBilles[ballId]); delete window.timersSelectionBilles[ballId]; }
+			
 			e.stopPropagation();
 			e.preventDefault();
-			
 			if (estMasquee) return;
 
 			if (window.billesVerrouillees.has(ballId)) {
 				window.billesVerrouillees.delete(ballId);
 			} else {
 				window.billesVerrouillees.add(ballId);
-				
-				// Si la bille verrouillée était active, on efface proprement son contour blanc de sélection
 				if (window.billeSelectionneeCourante === ball) {
 					ball.style.outline = 'none';
 					window.billeSelectionneeCourante = null;
@@ -516,9 +520,8 @@ function rafraichirListeLateraleBilles() {
 			rafraichirListeLateraleBilles();
 		};
 
-		// Centralisation de l'action pour enlever/masquer une bille (PC et iPad)
 		const executerMasquageBille = () => {
-			if (window.billesVerrouillees.has(ballId)) return; // Bloque le masquage si verrouillée
+			if (window.billesVerrouillees.has(ballId)) return; 
 			
 			ball.style.display = 'none';
 			if (window.billeSelectionneeCourante === ball) {
@@ -530,7 +533,6 @@ function rafraichirListeLateraleBilles() {
 			rafraichirListeLateraleBilles();
 		};
 
-		// Centralisation de l'action de sélection pour PC et iPad
 		const executerSelectionBille = () => {
 			if (ball.style.display === 'none') {
 				ball.style.display = 'flex';
@@ -555,47 +557,56 @@ function rafraichirListeLateraleBilles() {
 			}
 		};
 
-		// 1. Clic droit pour PC
+		// 1. PC : Clic droit
 		itemRow.addEventListener('contextmenu', alternerVerrouillage);
 
-		// 2. Événements tactiles iPad (Sélection, Appui Long, et Double-Tap)
+		// 2. iPad : Touchstart
 		itemRow.addEventListener('touchstart', (e) => {
 			appuiLongDeclenche = false;
-			
 			timerAppuiLong = setTimeout(() => {
 				alternerVerrouillage(e);
-				appuiLongDeclenche = true; // Empêche de déclencher la sélection au relâché
+				appuiLongDeclenche = true;
 				timerAppuiLong = null;
 			}, 600);
 		}, { passive: true });
 
+		// iPad : Touchend hybride avec désamorçage de conflit
 		itemRow.addEventListener('touchend', (e) => {
 			if (timerAppuiLong) {
 				clearTimeout(timerAppuiLong);
 				timerAppuiLong = null;
 			}
 			
-			// Si le doigt s'est levé avant l'appui long (tap classique court)
 			if (!appuiLongDeclenche) {
 				e.preventDefault();
 				e.stopPropagation();
 				
 				const tempsActuel = new Date().getTime();
-				const intervalleTaps = tempsActuel - dernierTempsTap;
+				const dernierTap = window.historiqueTapsBilles[ballId] || 0;
+				const intervalle = tempsActuel - dernierTap;
 				
-				// NOUVEAU : Détection du double-tap sur iPad (seuil de 300 millisecondes)
-				if (intervalleTaps < 300 && intervalleTaps > 0) {
-					executerMasquageBille(); // Double-tap = Enlever la bille
+				window.historiqueTapsBilles[ballId] = tempsActuel;
+
+				if (intervalle > 40 && intervalle < 300) {
+					// DOUBLE TAP CONFIRMÉ : On annule immédiatement le timer de sélection simple en cours
+					if (window.timersSelectionBilles[ballId]) {
+						clearTimeout(window.timersSelectionBilles[ballId]);
+						delete window.timersSelectionBilles[ballId];
+					}
+					executerMasquageBille();
 				} else {
-					// Tap unique = Sélectionner ou faire réapparaître la bille
-					executerSelectionBille();
+					// PREMIER TAP OU TAP SIMPLE : On attend 200ms pour voir si un deuxième tap arrive
+					if (window.timersSelectionBilles[ballId]) clearTimeout(window.timersSelectionBilles[ballId]);
+					
+					window.timersSelectionBilles[ballId] = setTimeout(() => {
+						executerSelectionBille();
+						delete window.timersSelectionBilles[ballId];
+					}, 200);
 				}
-				
-				dernierTempsTap = tempsActuel;
 			}
 		});
 
-		// 3. Événements classiques souris pour PC (Clic simple et Double-clic)
+		// 3. PC : Événements Souris classiques
 		itemRow.addEventListener('click', (e) => {
 			e.stopPropagation();
 			executerSelectionBille();
@@ -606,7 +617,7 @@ function rafraichirListeLateraleBilles() {
 			executerMasquageBille();
 		});
 
-		// --- CONSTRUCTION GÉOMÉTRIQUE DE LA LIGNE ---
+		// --- RENDU GRAPHIQUE ---
 		const miniBall = document.createElement('div');
 		miniBall.classList.add('ball');
 		miniBall.style.backgroundColor = couleurBille;
@@ -659,6 +670,7 @@ function rafraichirListeLateraleBilles() {
 	sidebarList.innerHTML = ""; 
 	sidebarList.appendChild(fragment); 
 }
+
 
 
 
