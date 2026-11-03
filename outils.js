@@ -708,9 +708,11 @@ document.addEventListener("DOMContentLoaded", () => {
 			// Nettoyage du titre pour le nom du fichier
 			const nomFichierSecurise = configTitle.replace(/[/\\?%*:|"<>]/g, '-').substring(0, 100) || "configuration_billard";
 
-			const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
-				type: "application/json"
-			});
+			// Remplacez application/json par application/octet-stream
+const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
+    type: "application/octet-stream"
+});
+
 			const url = URL.createObjectURL(blob);
 			const a = document.createElement('a');
 			a.href = url;
