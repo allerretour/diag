@@ -468,9 +468,9 @@ function rafraichirListeLateraleBilles() {
 		const itemRow = document.createElement('div');
 		itemRow.classList.add('sidebar-ball-item');
 		itemRow.style.cursor = 'pointer';
-		itemRow.style.position = 'relative'; // Requis pour positionner le cadenas à droite
+		itemRow.style.position = 'relative';
 		
-		// --- NOUVEAU : BLOQUE LA SÉLECTION DE TEXTE NATIF SUR IPAD ---
+		// --- BLOQUE LA SÉLECTION DE TEXTE NATIF SUR IPAD ---
 		itemRow.style.webkitUserSelect = "none";  // Pour Safari iOS
 		itemRow.style.userSelect = "none";        // Standard
 		itemRow.style.webkitTouchCallout = "none"; // Empêche le menu contextuel natif iOS
@@ -489,7 +489,9 @@ function rafraichirListeLateraleBilles() {
 			itemRow.style.borderLeft = "3px solid #e74c3c"; // Ligne rouge sur l'élément de la liste
 		}
 
-		let timerAppuiLong;
+		// --- LOGIQUE TACTILE HYBRIDE POUR IPAD (CORRIGÉ SÉLECTION) ---
+		let timerAppuiLong = null;
+		let appuiLongDeclenche = false;
 		
 		const alternerVerrouillage = (e) => {
 			e.stopPropagation();
@@ -511,31 +513,8 @@ function rafraichirListeLateraleBilles() {
 			rafraichirListeLateraleBilles();
 		};
 
-		// Clic droit pour PC
-		itemRow.addEventListener('contextmenu', alternerVerrouillage);
-
-				// Touch long (600ms) pour iPad mis à jour
-		itemRow.addEventListener('touchstart', (e) => {
-			// Empêche iOS de démarrer sa propre logique de sélection de texte
-			if (e.cancelable) e.preventDefault(); 
-			
-			timerAppuiLong = setTimeout(() => {
-				alternerVerrouillage(e);
-				timerAppuiLong = null;
-			}, 600);
-		}, { passive: false }); // Changé à passive: false pour autoriser le preventDefault
-
-
-		itemRow.addEventListener('touchend', () => {
-			if (timerAppuiLong) {
-				clearTimeout(timerAppuiLong);
-			}
-		});
-
-		// Clic standard
-		itemRow.addEventListener('click', (e) => {
-			e.stopPropagation();
-			
+		// Centralisation de l'action de sélection pour PC et iPad
+		const executerSelectionBille = () => {
 			if (ball.style.display === 'none') {
 				ball.style.display = 'flex';
 				if (window.billeSelectionneeCourante) window.billeSelectionneeCourante.style.outline = 'none';
@@ -557,6 +536,40 @@ function rafraichirListeLateraleBilles() {
 			if (typeof rafraichirTexteBoutonsPalette === "function") {
 				rafraichirTexteBoutonsPalette();
 			}
+		};
+
+		// 1. Clic droit pour PC
+		itemRow.addEventListener('contextmenu', alternerVerrouillage);
+
+		// 2. Événements tactiles iPad
+		itemRow.addEventListener('touchstart', (e) => {
+			appuiLongDeclenche = false;
+			
+			timerAppuiLong = setTimeout(() => {
+				alternerVerrouillage(e);
+				appuiLongDeclenche = true; // Empêche de déclencher la sélection au relâché
+				timerAppuiLong = null;
+			}, 600);
+		}, { passive: true });
+
+		itemRow.addEventListener('touchend', (e) => {
+			if (timerAppuiLong) {
+				clearTimeout(timerAppuiLong);
+				timerAppuiLong = null;
+			}
+			
+			// Si le doigt s'est levé rapidement avant 600ms, c'est un choix de bille !
+			if (!appuiLongDeclenche) {
+				e.preventDefault();
+				e.stopPropagation();
+				executerSelectionBille();
+			}
+		});
+
+		// 3. Clic standard souris pour PC
+		itemRow.addEventListener('click', (e) => {
+			e.stopPropagation();
+			executerSelectionBille();
 		});
 
 		itemRow.addEventListener('dblclick', (e) => {
@@ -573,6 +586,7 @@ function rafraichirListeLateraleBilles() {
 			rafraichirListeLateraleBilles();
 		});
 
+		// --- CONSTRUCTION GÉOMÉTRIQUE DE LA LIGNE ---
 		const miniBall = document.createElement('div');
 		miniBall.classList.add('ball');
 		miniBall.style.backgroundColor = couleurBille;
@@ -600,9 +614,14 @@ function rafraichirListeLateraleBilles() {
 			coordsText.innerHTML = `X = ${coords.x}, Y = ${coords.y}`;
 		}
 
+		// --- INJECTION DES ÉLÉMENTS DE GAUCHE À DROITE ---
+		
+		
+
+		// ÉTAPE 2 : La bille et les coordonnées suivent
 		itemRow.appendChild(miniBall);
 		itemRow.appendChild(coordsText);
-
+		
 		// Ajout du cadenas uniquement dans la liste latérale
 		if (estVerrouillee) {
 			const lockIcon = document.createElement('span');
