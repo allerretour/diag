@@ -294,6 +294,11 @@ function makeDraggable(element) {
 
 	function dragStart(e) {
 		if (element.style.display === 'none') return;
+		
+		// --- SÉCURITÉ ANTICORRUPTION : BLOQUE LE GLISSEMENT DES BILLES SI UN OUTIL EST ACTIF ---
+		if (window.outilTraceActif !== "select") {
+			return; // Bloque instantanément le drag-and-drop si on est en mode dessin (crayon, ligne, flèche, gomme...)
+		}
 
 		const xOffset = parseInt(element.style.left) || 0;
 		const yOffset = parseInt(element.style.top) || 0;

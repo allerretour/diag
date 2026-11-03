@@ -1933,7 +1933,7 @@ function commencerDessin(e) {
 	
 	if (forceLigneDroite) {
 		let billeProche = null;
-		let distanceMinBord = 5; // Tolérance de 5 pixels par rapport au contour
+		let distanceMinBord = 8; // Tolérance de 5 pixels par rapport au contour
 
 		activeBalls.forEach(ball => {
 			if (ball.style.display !== 'none') {
@@ -1962,7 +1962,7 @@ function commencerDessin(e) {
 		// SINON, repli sur les anciennes logiques (extrémités de lignes ou snapping de grille)
 		else {
 			let pointExtremiteProche = null;
-			let distanceMinimale = 5; 
+			let distanceMinimale = 8; 
 
 			window.dessinsSauvegardes.forEach(dessin => {
 				if (dessin.points && dessin.points.length >= 2 && (dessin.estDroite || dessin.avecFleche)) {
