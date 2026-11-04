@@ -1,5 +1,3 @@
-// Variable globale pour stocker la chaîne Base64 du logo
-window.logoBase64Courant = null;
 
 const inputLogoFile = document.getElementById('input-logo-file');
 const tableLogoOverlay = document.getElementById('table-logo-overlay');

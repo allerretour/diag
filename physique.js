@@ -1,18 +1,7 @@
-const ballColors = {
-	1: '#f1c40f', // Jaune
-	2: '#2980b9', // Bleu
-	3: '#e74c3c', // Rouge
-	4: '#8e44ad', // Violet
-	5: '#e67e22', // Orange
-	6: '#27ae60', // Vert
-	7: '#a0522d', // Marron (Sienna / Marron officiel)
-	8: '#000000' // Noir
-};
 
 const table = document.getElementById('pool-table');
 const ballDiameter = 24;
 const activeBalls = [];
-window.billeSelectionneeCourante = null;
 
 // Éléments UI pour le magnétisme et la grille
 const chkMagnetism = document.getElementById('chk-magnetism');
@@ -457,13 +446,7 @@ function rafraichirListeLateraleBilles() {
 
 	const fragment = document.createDocumentFragment();
 
-	// Initialisation de la mémoire globale des taps si elle n'existe pas
-	if (!window.historiqueTapsBilles) {
-		window.historiqueTapsBilles = {};
-	}
-	if (!window.timersSelectionBilles) {
-		window.timersSelectionBilles = {};
-	}
+	
 
 	activeBalls.forEach(ball => {
 		const ballId = ball.getAttribute('data-id');

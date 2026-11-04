@@ -1,46 +1,6 @@
-// Variable globale pour stocker les lignes et les cibles tracées
-window.dessinsSauvegardes = [];
-
-// Variable globale pour suivre les billes verrouillées (contient les IDs des billes)
-window.billesVerrouillees = new Set();
 
 
-// Variable globale pour mémoriser l'outil précédent valide lors des retours automatiques
-window.dernierOutilValide = "select"; 
 
-// Variable globale pour suivre le nombre de pointes du repère X (ex: alterne entre 4, 6)
-window.nombreBranchesRepereX = 6; // Garde la mémoire des branches
-window.repereXEstUnCercle = false; // Permet de savoir si on bascule en mode cercle
-
-// NOUVEAU : Liste ordonnée pour le cycle de la touche 9
-window.repereXTexte = null;
-const cycleCaracteres = ["A", "B", "C", "D", "E", "F", "🎯", "🔵", "1", "2", "3", "4", "5", "6"];
-
-// Variable globale pour suivre la dimension actuelle du carré (3 tailles en pixels)
-window.tailleCarreCourante = 95;
-// Variable globale pour suivre le quadrant d'affichage des chiffres (0: Bas-Droite, 1: Bas-Gauche, 2: Haut-Gauche, 3: Haut-Droite)
-window.quadrantCibleCourant = 0;
-
-// Variable globale pour suivre la force du coup (0: désactivé, 1: 25%, 2: 50%, 3: 75%, 4: 100%)
-window.niveauForceCourant = 0;
-const labelsForce = {
-	1: "DOUX",
-	2: "MOYEN",
-	3: "FORT",
-	4: "MAX"
-};
-const couleursForce = {
-	1: "#2ecc71",
-	2: "#f1c40f",
-	3: "#e67e22",
-	4: "#e74c3c"
-}; // Vert, Jaune, Orange, Rouge
-
-window.pourcentageContactCourant = 100;
-window.coteContactCourant = 1; // 1 = Frappe par la gauche, -1 = Frappe par la droite
-
-// Variable globale pour suivre l'outil sélectionné dans la palette
-window.outilTraceActif = "select";
 
 // Écouteur mis à jour pour piloter l'intégralité de la palette (P, T, Z, 0, 9)
 const boutonsOutils = document.querySelectorAll('.tool-btn');
