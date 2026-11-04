@@ -331,12 +331,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
-	const btnToggleLockAll = document.getElementById('btn-toggle-lock-all');
+const btnToggleLockAll = document.getElementById('btn-toggle-lock-all');
 
 if (btnToggleLockAll) {
-    btnToggleLockAll.addEventListener('click', (e) => {
-        if (e.cancelable) e.preventDefault();
-
+    // Fonction interne centralisant la logique pour éviter la duplication de code
+    function executerToggleLock() {
         if (!window.billesVerrouillees) {
             window.billesVerrouillees = new Set();
         }
@@ -366,8 +365,7 @@ if (btnToggleLockAll) {
         // 2. FORCE LE RETOUR SUR SÉLECTION AVEC LE VISUEL ET LA LOGIQUE DE LA PALETTE
         const btnSelect = document.querySelector('.tool-btn[data-tool="select"]');
         if (btnSelect && typeof gererLogiquePalette === "function") {
-            // On passe un faux événement pour éviter les erreurs de type e.preventDefault()
-            const fauxEvent = { preventDefault: () => {}, cancelable: true };
+            const fauxEvent = { preventDefault: () => {}, cancelable: false };
             gererLogiquePalette(btnSelect, fauxEvent);
         }
 
@@ -375,6 +373,27 @@ if (btnToggleLockAll) {
         if (typeof rafraichirListeLateraleBilles === "function") {
             rafraichirListeLateraleBilles();
         }
+    }
+
+    // ÉVÉNEMENT TACTILE : Spécifique pour l'iPad / iPhone
+    btnToggleLockAll.addEventListener('touchstart', (e) => {
+        if (e.cancelable) e.preventDefault();
+        e.stopPropagation(); // Bloque toute interférence avec le canvas sous-jacent
+        
+        executerToggleLock();
+        btnToggleLockAll.blur();
+    }, {
+        passive: false
+    });
+
+    // ÉVÉNEMENT SOURIS : Pour les ordinateurs de bureau (PC / Mac)
+    btnToggleLockAll.addEventListener('click', (e) => {
+        // Sécurité : évite le double déclenchement si le navigateur émule un clic après le touch
+        if (e.pointerType === 'touch' || (e.clientX === 0 && e.clientY === 0)) return; 
+        e.stopPropagation();
+
+        executerToggleLock();
+        btnToggleLockAll.blur();
     });
 }
 
