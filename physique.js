@@ -452,34 +452,53 @@ function rafraichirListeLateraleBilles() {
 
 	const fragment = document.createDocumentFragment();
 
+	// --- [NOUVEAU] RÉCUPÉRATION DU NOMBRE MAXIMUM DE BILLES AUTORISÉES PAR LE JEU ---
+	const ballsCountSelect = document.getElementById('select-balls-count');
+	let maxBallsAllowed = 15; // Valeur par défaut
+	if (ballsCountSelect) {
+		const value = ballsCountSelect.value;
+		maxBallsAllowed = (value === "14.1") ? 15 : parseInt(value, 10);
+	}
+
 	activeBalls.forEach(ball => {
-		const ballId = ball.getAttribute('data-id');
+		const ballId = parseInt(ball.getAttribute('data-id'), 10);
 		const numEl = ball.querySelector('.ball-num');
 		const estRayee = ball.classList.contains('striped');
 		const couleurBille = ball.style.backgroundColor;
-		const estMasquee = ball.style.display === 'none';
-		const estVerrouillee = window.billesVerrouillees.has(ballId);
+		
+		// --- [NOUVEAU] CLASSIFICATION STRICTE DES DEUX ÉTATS DE VISIBILITÉ ---
+		// 1. Est-ce que la bille appartient au mode de jeu sélectionné ?
+		const appartientAuJeuChoisi = (ballId === 0 || ballId <= maxBallsAllowed);
+		
+		// 2. Si elle appartient au jeu, a-t-elle été masquée manuellement par l'utilisateur ?
+		const estEnleveeManuellement = appartientAuJeuChoisi && ball.style.display === 'none';
+
+		// SÉCURITÉ : Si la bille n'appartient pas du tout au jeu choisi, on l'ignore (Hiding total)
+		if (!appartientAuJeuChoisi) {
+			return; 
+		}
 
 		const itemRow = document.createElement('div');
 		itemRow.classList.add('sidebar-ball-item');
 		
-		// --- LE CURSEUR REVIENT À DEFAUT EN MODE VUE POUR REFLÉTER LE LOCK INDISPONIBLE ---
 		itemRow.style.cursor = window.isViewMode ? 'default' : 'pointer';
 		itemRow.style.position = 'relative';
 		
-		// --- BLOQUE LA SÉLECTION DE TEXTE NATIF SUR IPAD ---
 		itemRow.style.webkitUserSelect = "none";  
 		itemRow.style.userSelect = "none";        
 		itemRow.style.webkitTouchCallout = "none"; 
 
-		if (window.billeSelectionneeCourante === ball && !estMasquee) {
+		// Highlight actif uniquement si la bille n'est pas enlevée
+		if (window.billeSelectionneeCourante === ball && !estEnleveeManuellement) {
 			itemRow.classList.add('active-highlight');
 		}
 
-		if (estMasquee) {
+		// Conserve la classe pour appliquer le style grisé du CSS existant
+		if (estEnleveeManuellement) {
 			itemRow.classList.add('is-hidden-ball');
 		}
 		
+		const estVerrouillee = window.billesVerrouillees.has(String(ballId));
 		if (estVerrouillee) {
 			itemRow.style.opacity = "0.85";
 			itemRow.style.borderLeft = "3px solid #e74c3c"; 
@@ -496,13 +515,12 @@ function rafraichirListeLateraleBilles() {
 			e.stopPropagation();
 			e.preventDefault();
 			
-			// BRIDAGE VISUALISATEUR
-			if (window.isViewMode || estMasquee) return;
+			if (window.isViewMode || estEnleveeManuellement) return;
 
-			if (window.billesVerrouillees.has(ballId)) {
-				window.billesVerrouillees.delete(ballId);
+			if (window.billesVerrouillees.has(String(ballId))) {
+				window.billesVerrouillees.delete(String(ballId));
 			} else {
-				window.billesVerrouillees.add(ballId);
+				window.billesVerrouillees.add(String(ballId));
 				if (window.billeSelectionneeCourante === ball) {
 					ball.style.outline = 'none';
 					window.billeSelectionneeCourante = null;
@@ -512,8 +530,7 @@ function rafraichirListeLateraleBilles() {
 		};
 
 		const executerMasquageBille = () => {
-			// BRIDAGE VISUALISATEUR
-			if (window.isViewMode || window.billesVerrouillees.has(ballId)) return; 
+			if (window.isViewMode || window.billesVerrouillees.has(String(ballId))) return; 
 			
 			ball.style.display = 'none';
 			if (window.billeSelectionneeCourante === ball) {
@@ -526,7 +543,6 @@ function rafraichirListeLateraleBilles() {
 		};
 
 		const executerSelectionBille = () => {
-			// BRIDAGE VISUALISATEUR
 			if (window.isViewMode) return;
 
 			if (ball.style.display === 'none') {
@@ -565,7 +581,6 @@ function rafraichirListeLateraleBilles() {
 			}, 600);
 		}, { passive: true });
 
-		// iPad : Touchend hybride avec désamorçage de conflit
 		itemRow.addEventListener('touchend', (e) => {
 			if (timerAppuiLong) {
 				clearTimeout(timerAppuiLong);
@@ -583,14 +598,12 @@ function rafraichirListeLateraleBilles() {
 				window.historiqueTapsBilles[ballId] = tempsActuel;
 
 				if (intervalle > 40 && intervalle < 300) {
-					// DOUBLE TAP CONFIRMÉ
 					if (window.timersSelectionBilles[ballId]) {
 						clearTimeout(window.timersSelectionBilles[ballId]);
 						delete window.timersSelectionBilles[ballId];
 					}
 					executerMasquageBille();
 				} else {
-					// PREMIER TAP OU TAP SIMPLE
 					if (window.timersSelectionBilles[ballId]) clearTimeout(window.timersSelectionBilles[ballId]);
 					
 					window.timersSelectionBilles[ballId] = setTimeout(() => {
@@ -620,7 +633,7 @@ function rafraichirListeLateraleBilles() {
 
 		if (estRayee) miniBall.classList.add('striped');
 
-		if (ballId !== '0' && numEl) {
+		if (ballId !== 0 && numEl) {
 			const miniNum = document.createElement('div');
 			miniNum.classList.add('ball-num');
 			miniNum.innerText = numEl.innerText;
@@ -634,7 +647,8 @@ function rafraichirListeLateraleBilles() {
 		const coordsText = document.createElement('div');
 		coordsText.classList.add('sidebar-ball-coords');
 
-		if (estMasquee) {
+		// Affichage différencié selon le statut d'enlèvement manuel
+		if (estEnleveeManuellement) {
 			coordsText.innerHTML = `<span style="font-style: italic; opacity: 0.6;">(enlevée)</span>`;
 		} else {
 			coordsText.innerHTML = `X = ${coords.x}, Y = ${coords.y}`;
@@ -643,7 +657,6 @@ function rafraichirListeLateraleBilles() {
 		itemRow.appendChild(miniBall);
 		itemRow.appendChild(coordsText);
 		
-		// Ajout du cadenas uniquement dans la liste latérale
 		if (estVerrouillee) {
 			const lockIcon = document.createElement('span');
 			lockIcon.innerText = "🔒";
@@ -671,7 +684,6 @@ function rafraichirListeLateraleBilles() {
 			btnToggleLockAll.innerText = "🔓 Tout Bloquer";
 		}
 		
-		// MASQUER LE BOUTON SI ON EST EN MODE DE VUE SIMPLE
 		if (window.isViewMode) {
 			btnToggleLockAll.style.display = 'none';
 		}
@@ -680,7 +692,6 @@ function rafraichirListeLateraleBilles() {
 	sidebarList.innerHTML = ""; 
 	sidebarList.appendChild(fragment); 
 }
-
 
 
 
