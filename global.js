@@ -9,7 +9,7 @@ const urlParams = new URLSearchParams(window.location.search);
 // Par défaut (pas d'argument) = view mode actif (true). 
 // On passe à l'éditeur (false) uniquement si mode=edit ou edit=true est détecté.
 
-// window.isViewMode = !(urlParams.get('mode') === 'edit' || urlParams.get('edit') === 'true');
+// window.isViewMode = !(urlParams.get('mode') === 'xxxx' || urlParams.get('edit') === 'xxxx');
 
 window.isViewMode = (urlParams.get('mode') === 'view' || urlParams.get('view') === 'true');
 
