@@ -667,6 +667,20 @@ function rafraichirListeLateraleBilles() {
 		fragment.appendChild(itemRow);
 	});
 
+	const btnToggleLockAll = document.getElementById('btn-toggle-lock-all');
+if (btnToggleLockAll && window.billesVerrouillees) {
+    const billesVisibles = activeBalls.filter(ball => ball.style.display !== 'none');
+    const aAuMoinsUneBilleBloquee = billesVisibles.some(ball => window.billesVerrouillees.has(ball.getAttribute('data-id')));
+
+    if (aAuMoinsUneBilleBloquee) {
+        btnToggleLockAll.innerText = "🔒 Tout Débloquer";
+    } else {
+        btnToggleLockAll.innerText = "🔓 Tout Bloquer";
+    }
+}
+
+
+
 	sidebarList.innerHTML = ""; 
 	sidebarList.appendChild(fragment); 
 }

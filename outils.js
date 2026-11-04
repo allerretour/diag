@@ -55,6 +55,15 @@ if (inputLogoFile && tableLogoOverlay) {
 	});
 }
 
+
+
+
+
+
+
+
+
+
 // NOUVEAU : ÉCOUTEUR pour restaurer le logo original
 if (btnResetLogo && tableLogoOverlay) {
 	btnResetLogo.addEventListener('click', () => {
@@ -321,6 +330,59 @@ document.addEventListener("DOMContentLoaded", () => {
 			}
 		});
 	});
+
+
+
+	const btnToggleLockAll = document.getElementById('btn-toggle-lock-all');
+
+if (btnToggleLockAll) {
+    btnToggleLockAll.addEventListener('click', (e) => {
+        if (e.cancelable) e.preventDefault();
+
+        if (!window.billesVerrouillees) {
+            window.billesVerrouillees = new Set();
+        }
+
+        const billesVisibles = activeBalls.filter(ball => ball.style.display !== 'none');
+        const billesVisiblesVerrouillees = billesVisibles.filter(ball => 
+            window.billesVerrouillees.has(ball.getAttribute('data-id'))
+        );
+
+        // 1. Logique de verrouillage / déverrouillage
+        if (billesVisiblesVerrouillees.length > 0) {
+            window.billesVerrouillees.clear();
+            btnToggleLockAll.innerText = "🔓 Tout Bloquer";
+        } else {
+            billesVisibles.forEach(ball => {
+                const ballId = ball.getAttribute('data-id');
+                window.billesVerrouillees.add(ballId);
+                
+                if (window.billeSelectionneeCourante === ball) {
+                    ball.style.outline = 'none';
+                    window.billeSelectionneeCourante = null;
+                }
+            });
+            btnToggleLockAll.innerText = "🔒 Tout Débloquer";
+        }
+
+        // 2. FORCE LE RETOUR SUR SÉLECTION AVEC LE VISUEL ET LA LOGIQUE DE LA PALETTE
+        const btnSelect = document.querySelector('.tool-btn[data-tool="select"]');
+        if (btnSelect && typeof gererLogiquePalette === "function") {
+            // On passe un faux événement pour éviter les erreurs de type e.preventDefault()
+            const fauxEvent = { preventDefault: () => {}, cancelable: true };
+            gererLogiquePalette(btnSelect, fauxEvent);
+        }
+
+        // 3. Rafraîchissement des éléments de l'interface
+        if (typeof rafraichirListeLateraleBilles === "function") {
+            rafraichirListeLateraleBilles();
+        }
+    });
+}
+
+
+
+
 
 	// Écouteur d'événement intelligent sur le changement du dropdown
 	if (ballsCountSelect) {
