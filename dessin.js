@@ -1,7 +1,3 @@
-
-
-
-
 // Écouteur mis à jour pour piloter l'intégralité de la palette (P, T, Z, 0, 9)
 const boutonsOutils = document.querySelectorAll('.tool-btn');
 
