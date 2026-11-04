@@ -8,7 +8,11 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 	<title>Concepteur de diagramme</title>
+
+	<link rel="stylesheet" href="print.css" media="print">
+
 	<style>
+
 		/* ====================================================================
    DÉFINITION DES VARIABLES DE COULEUR (Faciles à changer)
    ==================================================================== */
@@ -70,145 +74,7 @@
 			pointer-events: none;
 		}
 
-		@media print {
-
-			/* 1. Configuration de la page d'impression sans marges parasites */
-			@page {
-				size: auto;
-				margin: 0;
-			}
-
-			/* 2. Forcer le fond de la page entière en blanc pur et fixer les limites */
-			html,
-			body {
-				background: #ffffff !important;
-				background-color: #ffffff !important;
-				background-image: none !important;
-				width: 100%;
-				height: 100%;
-				margin: 0;
-				padding: 0;
-				overflow: hidden;
-			}
-
-			/* 3. Masquer l'intégralité de l'interface utilisateur et le titre applicatif */
-			body * {
-				visibility: hidden;
-			}
-
-			#main-app-title {
-				display: none !important;
-			}
-
-			/* 4. Réactiver la table, la zone de notes, la liste des billes et tout leur contenu */
-			#table-frame,
-			#table-frame *,
-			#tactical-notes-area,
-			#tactical-notes-area *,
-			#balls-sidebar,
-			#balls-sidebar * {
-				visibility: visible;
-			}
-
-			/* Masquer spécifiquement les boutons et éléments de contrôle sur le papier */
-			#btn-toggle-notes,
-			#btn-toggle-balls-sidebar,
-			#chk-toggle-balls-list {
-				display: none !important;
-			}
-
-			#balls-sidebar h3 {
-				display: none !important;
-			}
-
-			/* 5. ÉLÉMENT 1 (HAUT) : Positionnement de la zone de notes tactiques tout en haut */
-			#tactical-notes-area {
-				display: block !important;
-				position: absolute !important;
-				left: 50% !important;
-				top: 6% !important;
-				/* Calé au sommet de la page */
-				transform: translateX(-50%) !important;
-				width: 860px !important;
-				background-color: #0b0f17 !important;
-				border: 1px solid rgba(0, 0, 0, 0.15) !important;
-				box-shadow: none !important;
-				margin: 0 !important;
-				print-color-adjust: exact;
-				-webkit-print-color-adjust: exact;
-			}
-
-			/* 6. ÉLÉMENT 2 (MILIEU) : Positionnement de la table de billard indexé sous la zone tactique */
-			#table-frame {
-				position: absolute !important;
-				left: 50% !important;
-				/* Aligné dynamiquement sous la zone tactique (ajustez le décalage en px au besoin) */
-				top: 700px !important;
-				transform: translate(-50%, -50%) !important;
-				margin: 0 !important;
-				print-color-adjust: exact;
-				-webkit-print-color-adjust: exact;
-			}
-
-			/* 7. ÉLÉMENT 3 (BAS) : Positionnement de la liste des billes avec le décalage d'un pouce sous la table */
-			#balls-sidebar {
-				display: block !important;
-				position: absolute !important;
-				left: 50% !important;
-
-				top: 1000px !important;
-				transform: translateX(-50%) !important;
-				width: 860px !important;
-				margin: 0 !important;
-				padding: 0 !important;
-				background: none !important;
-				border: none !important;
-			}
-
-			/* Masquer les lignes des billes "(enlevées)" dans la liste latérale */
-			.sidebar-ball-item.is-hidden-ball {
-				display: none !important;
-			}
-
-			/* Configuration du conteneur de la liste de vos billes */
-			#visible-balls-list {
-				display: grid !important;
-				grid-template-columns: repeat(4, 1fr) !important;
-				gap: 12px 18px !important;
-				width: 100% !important;
-			}
-
-			/* Ajustement des lignes de billes pour l'impression papier */
-			.sidebar-ball-item {
-				background-color: rgba(11, 15, 23, 0.05) !important;
-				border: 1px solid rgba(0, 0, 0, 0.1) !important;
-				border-radius: 6px !important;
-				padding: 6px 10px !important;
-				display: flex !important;
-				align-items: center !important;
-				justify-content: flex-start !important;
-			}
-
-			.sidebar-ball-coords {
-				color: #333333 !important;
-				font-weight: 600 !important;
-				font-size: 12px !important;
-			}
-
-			/* Ajustements graphiques pour vos notes */
-			.tactical-panel-full h3 {
-				color: #ffffff !important;
-			}
-
-			.tactical-panel-full .panel-content-full {
-				background-color: #ffffff !important;
-				color: #000000 !important;
-				border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
-				print-color-adjust: exact;
-				-webkit-print-color-adjust: exact;
-			}
-		}
-
+		
 		#table-frame {
 			position: relative;
 			width: 860px;
