@@ -1196,30 +1196,39 @@
 		<h1 style="margin: 0; font-size: 1.8rem;">Concepteur de diagramme</h1>
 
 		<!-- Zone des boutons d'outils isolée en POSITION FIXE en haut à droite (Boutons alignés verticalement) -->
-		<div class="top-tools-actions" style="position: fixed; top: 15px; right: 15px; z-index: 9999; display: flex; flex-direction: column; gap: 12px; align-items: center; background-color: rgba(0, 0, 0, 0.5); padding: 12px 6px; border-radius: 20px; backdrop-filter: blur(4px); border: 1px solid rgba(255, 255, 255, 0.1);">
+<div class="top-tools-actions" style="position: fixed; top: 15px; right: 15px; z-index: 9999; display: flex; flex-direction: column; gap: 12px; align-items: center; background-color: rgba(0, 0, 0, 0.5); padding: 12px 6px; border-radius: 20px; backdrop-filter: blur(4px); border: 1px solid rgba(255, 255, 255, 0.1);">
 
-			<!-- Bouton engrenage Options -->
-			<button id="btn-ouvrir-options" class="btn-top-tool" title="Ouvrir les Options" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #ffffff; padding: 5px; line-height: 1; transition: transform 0.2s;">
-				⚙️
-			</button>
+	<!-- Bouton engrenage Options -->
+	<button id="btn-ouvrir-options" class="btn-top-tool" title="Ouvrir les Options" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #ffffff; padding: 5px; line-height: 1; transition: transform 0.2s;">
+		⚙️
+	</button>
 
-			<!-- Bouton Guide (point d'interrogation) -->
-			<button id="btn-ouvrir-guide" class="btn-top-tool" title="Guide des Raccourcis" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #ffffff; padding: 5px; line-height: 1; transition: transform 0.2s;">
-				❓
-			</button>
+	
 
-			<!-- NOUVEAU : 3ème bouton pour afficher/cacher la boîte d'outils tactiques -->
-			<!-- Bouton mis à jour dans la zone .top-tools-actions -->
-			<button id="btn-toggle-palette" class="btn-top-tool" title="Afficher les outils" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #ffffff; padding: 5px; line-height: 1; transition: transform 0.2s;">
-				🙈
-			</button>
+	<!-- BOUTON IMPORTER (Intégré dans le flux vertical) -->
+	<button id="btn-import-trigger" class="btn-top-tool" title="Importer une configuration (.diag)" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #ffffff; padding: 5px; line-height: 1; transition: transform 0.2s;">
+		📂
+	</button>
+	<!-- Input masqué lié au bouton d'importation -->
+	<input type="file" id="file-import" accept=".diag" style="display: none;">
 
-			<!-- Bouton pour la barre latérale des billes -->
-			<button id="btn-toggle-balls-sidebar" class="btn-top-tool" title="Masquer la liste des billes" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #ffffff; padding: 5px; line-height: 1; transition: transform 0.2s;">
-				🎱
-			</button>
+	<!-- 3ème bouton pour afficher/cacher la boîte d'outils tactiques -->
+	<button id="btn-toggle-palette" class="btn-top-tool" title="Afficher les outils" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #ffffff; padding: 5px; line-height: 1; transition: transform 0.2s;">
+		🙈
+	</button>
 
-		</div>
+	<!-- Bouton pour la barre latérale des billes -->
+	<button id="btn-toggle-balls-sidebar" class="btn-top-tool" title="Masquer la liste des billes" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #ffffff; padding: 5px; line-height: 1; transition: transform 0.2s;">
+		🎱
+	</button>
+
+	<!-- Bouton Guide (point d'interrogation) -->
+	<button id="btn-ouvrir-guide" class="btn-top-tool" title="Guide des Raccourcis" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; 		color: #ffffff; padding: 5px; line-height: 1; transition: transform 0.2s;">
+		❓
+	</button>
+
+</div>
+
 
 	</div>
 
@@ -1497,11 +1506,8 @@
 					<span>💾</span> Exp.
 				</button>
 
-				<button id="btn-import-trigger" class="btn btn-secondary btn-xs py-1 px-2 font-size-xs" title="Importer un JSON">
-					<span>📂</span> Imp.
-				</button>
-				<input type="file" id="file-import" accept=".diag" style="display: none;">
-
+				
+			
 				<button id="btn-export-text" class="btn btn-primary btn-xs py-1 px-2 font-size-xs" title="Exporter les positions en texte">
 					<span>📄</span> Pos.
 				</button>
