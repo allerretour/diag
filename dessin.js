@@ -1444,6 +1444,13 @@ document.addEventListener("DOMContentLoaded", () => {
 			return;
 		}
 
+
+		// NOUVEAU : Bloquer les touches d'édition si on est en mode vue
+    		// On autorise uniquement 'H' (Masquer/Afficher les tracés) et 'Escape'
+    		if (window.isViewMode && e.key.toLowerCase() !== 'h' && e.key !== 'Escape') {
+        		return; 
+    		}
+
 		// 1. Gestion de l'annulation
 		if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
 			e.preventDefault();

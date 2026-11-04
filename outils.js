@@ -236,6 +236,10 @@ document.addEventListener("DOMContentLoaded", () => {
 	// Initialise les éléments visuels de la table
 	initialiserBilles();
 
+        // Applique le bridage de lecture seule par défaut
+        appliquerRestrictionsModeVue();
+
+
 	const exportBtn = document.getElementById('btn-export');
 	const importTriggerBtn = document.getElementById('btn-import-trigger');
 	const fileImportInput = document.getElementById('file-import');

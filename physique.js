@@ -289,6 +289,12 @@ function makeDraggable(element) {
 
 	function dragStart(e) {
 		if (element.style.display === 'none') return;
+
+                // NOUVEAU : Sécurité mode visualisateur
+    		if (window.isViewMode) {
+        		return; // Bloque instantanément toute tentative de déplacement
+   		 }
+
 		
 		// --- NOUVEAU : SÉCURITÉ DE VERROUILLAGE DE POSITION ---
 		const ballId = element.getAttribute('data-id');
@@ -446,8 +452,6 @@ function rafraichirListeLateraleBilles() {
 
 	const fragment = document.createDocumentFragment();
 
-	
-
 	activeBalls.forEach(ball => {
 		const ballId = ball.getAttribute('data-id');
 		const numEl = ball.querySelector('.ball-num');
@@ -458,7 +462,9 @@ function rafraichirListeLateraleBilles() {
 
 		const itemRow = document.createElement('div');
 		itemRow.classList.add('sidebar-ball-item');
-		itemRow.style.cursor = 'pointer';
+		
+		// --- LE CURSEUR REVIENT À DEFAUT EN MODE VUE POUR REFLÉTER LE LOCK INDISPONIBLE ---
+		itemRow.style.cursor = window.isViewMode ? 'default' : 'pointer';
 		itemRow.style.position = 'relative';
 		
 		// --- BLOQUE LA SÉLECTION DE TEXTE NATIF SUR IPAD ---
@@ -489,7 +495,9 @@ function rafraichirListeLateraleBilles() {
 			
 			e.stopPropagation();
 			e.preventDefault();
-			if (estMasquee) return;
+			
+			// BRIDAGE VISUALISATEUR
+			if (window.isViewMode || estMasquee) return;
 
 			if (window.billesVerrouillees.has(ballId)) {
 				window.billesVerrouillees.delete(ballId);
@@ -504,7 +512,8 @@ function rafraichirListeLateraleBilles() {
 		};
 
 		const executerMasquageBille = () => {
-			if (window.billesVerrouillees.has(ballId)) return; 
+			// BRIDAGE VISUALISATEUR
+			if (window.isViewMode || window.billesVerrouillees.has(ballId)) return; 
 			
 			ball.style.display = 'none';
 			if (window.billeSelectionneeCourante === ball) {
@@ -517,6 +526,9 @@ function rafraichirListeLateraleBilles() {
 		};
 
 		const executerSelectionBille = () => {
+			// BRIDAGE VISUALISATEUR
+			if (window.isViewMode) return;
+
 			if (ball.style.display === 'none') {
 				ball.style.display = 'flex';
 				if (window.billeSelectionneeCourante) window.billeSelectionneeCourante.style.outline = 'none';
@@ -571,14 +583,14 @@ function rafraichirListeLateraleBilles() {
 				window.historiqueTapsBilles[ballId] = tempsActuel;
 
 				if (intervalle > 40 && intervalle < 300) {
-					// DOUBLE TAP CONFIRMÉ : On annule immédiatement le timer de sélection simple en cours
+					// DOUBLE TAP CONFIRMÉ
 					if (window.timersSelectionBilles[ballId]) {
 						clearTimeout(window.timersSelectionBilles[ballId]);
 						delete window.timersSelectionBilles[ballId];
 					}
 					executerMasquageBille();
 				} else {
-					// PREMIER TAP OU TAP SIMPLE : On attend 200ms pour voir si un deuxième tap arrive
+					// PREMIER TAP OU TAP SIMPLE
 					if (window.timersSelectionBilles[ballId]) clearTimeout(window.timersSelectionBilles[ballId]);
 					
 					window.timersSelectionBilles[ballId] = setTimeout(() => {
@@ -628,8 +640,6 @@ function rafraichirListeLateraleBilles() {
 			coordsText.innerHTML = `X = ${coords.x}, Y = ${coords.y}`;
 		}
 
-		
-
 		itemRow.appendChild(miniBall);
 		itemRow.appendChild(coordsText);
 		
@@ -651,18 +661,21 @@ function rafraichirListeLateraleBilles() {
 	});
 
 	const btnToggleLockAll = document.getElementById('btn-toggle-lock-all');
-if (btnToggleLockAll && window.billesVerrouillees) {
-    const billesVisibles = activeBalls.filter(ball => ball.style.display !== 'none');
-    const aAuMoinsUneBilleBloquee = billesVisibles.some(ball => window.billesVerrouillees.has(ball.getAttribute('data-id')));
+	if (btnToggleLockAll && window.billesVerrouillees) {
+		const billesVisibles = activeBalls.filter(ball => ball.style.display !== 'none');
+		const aAuMoinsUneBilleBloquee = billesVisibles.some(ball => window.billesVerrouillees.has(ball.getAttribute('data-id')));
 
-    if (aAuMoinsUneBilleBloquee) {
-        btnToggleLockAll.innerText = "🔒 Tout Débloquer";
-    } else {
-        btnToggleLockAll.innerText = "🔓 Tout Bloquer";
-    }
-}
-
-
+		if (aAuMoinsUneBilleBloquee) {
+			btnToggleLockAll.innerText = "🔒 Tout Débloquer";
+		} else {
+			btnToggleLockAll.innerText = "🔓 Tout Bloquer";
+		}
+		
+		// MASQUER LE BOUTON SI ON EST EN MODE DE VUE SIMPLE
+		if (window.isViewMode) {
+			btnToggleLockAll.style.display = 'none';
+		}
+	}
 
 	sidebarList.innerHTML = ""; 
 	sidebarList.appendChild(fragment); 
@@ -834,3 +847,52 @@ window.detecterEtEffacerDessin = function(clicX, clicY) {
 	}
 	return false;
 };
+
+
+
+function appliquerRestrictionsModeVue() {
+    if (!window.isViewMode) {
+        console.log("✏️ Mode Édition Actif.");
+        return;
+    }
+
+    console.log("👁️ Mode Visualisateur Actif (Par défaut) : Verrouillage des commandes.");
+
+    // 1. Liste exhaustive de vos composants d'édition à masquer
+    const elementsAMasquer = [
+        'drawing-tools-palette',
+        'btn-toggle-palette',
+        'modal-options',
+        'btn-ouvrir-options',
+        'btn-ouvrir-guide',
+        'btn-export',
+        'btn-export-text',
+        'btn-export-serie-aleatoire'
+        
+    ];
+
+    elementsAMasquer.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+
+    // Masquer les boutons de contrôles de la palette et boutons d'actions
+    document.querySelectorAll('.tool-btn, .config-actions, #input-title, #input-desc, #btn-toggle-notes, #btn-reset-logo, #input-logo-file').forEach(el => {
+        el.style.display = 'none';
+    });
+
+    // 2. Garantir que la zone de notes textuelle reste visible pour lire les instructions tactiques
+    const notesPanel = document.getElementById('tactical-notes-area');
+    if (notesPanel) {
+        notesPanel.style.display = 'block';
+        const btnShowNotes = document.getElementById('btn-show-notes');
+        if (btnShowNotes) btnShowNotes.style.display = 'none';
+    }
+
+    // 3. Verrouiller le canvas pour interdire le dessin libre au pointeur
+    const canvas = document.getElementById('drawing-canvas');
+    if (canvas) {
+        canvas.style.pointerEvents = 'none';
+    }
+}
+
