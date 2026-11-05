@@ -64,7 +64,9 @@
 		left: 50% !important;
 		top: 40px !important; /* Position fixe sécurisée par rapport au haut */
 		transform: translateX(-50%) !important;
-		width: 1520px !important; /* Élargi pour harmoniser avec le format 1920px */
+		width: 1520px !important;
+		max-width: 1520px !important;
+		min-width: 1520px !important;
 		background-color: #0b0f17 !important;
 		border: 1px solid rgba(0, 0, 0, 0.15) !important;
 		box-shadow: none !important;
@@ -85,6 +87,15 @@
 				print-color-adjust: exact;
 				-webkit-print-color-adjust: exact;
 			}
+
+
+           /* --- OPTIMISATION DU RENDU DU CANVAS À L'AGRANDISSEMENT --- */
+	#drawing-canvas {
+		image-rendering: -webkit-optimize-contrast !important; /* Pour Chrome / Safari / Edge */
+		image-rendering: crisp-edges !important;               /* Pour Firefox */
+		image-rendering: pixelated !important;
+	}
+
 
 			/* 7. ÉLÉMENT 3 (MILIEU DROITE) : La liste décalée pour s'adapter à la nouvelle taille de la table */
 			#balls-sidebar {
