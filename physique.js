@@ -380,22 +380,35 @@ function makeDraggable(element) {
 		}
 	}
 
-	function dragEnd() {
-	if (isDragging) {
-		const finalPos = resolveCollisions(element);
-		isDragging = false;
+		function dragEnd() {
+		if (isDragging) {
+			const finalPos = resolveCollisions(element);
+			isDragging = false;
 
-		// 1. SUPPRESSION IMMÉDIATE DU BADGE AU RELÂCHEMENT
-		const badge = document.getElementById('ball-drag-live-badge');
-		if (badge) {
-			badge.remove();
+			// === APPLICATION DU FADEOUT SUR LE BADGE FLOUTANT (SOURIS / TACTILE) ===
+			const badge = document.getElementById('ball-drag-live-badge');
+			if (badge) {
+				// Utilise la même logique de délai (400ms) et de fondu (300ms)
+				setTimeout(() => {
+					// On vérifie que l'utilisateur n'a pas repris un drag entre-temps
+					if (!isDragging && document.getElementById('ball-drag-live-badge') === badge) {
+						badge.style.transition = "opacity 0.3s ease";
+						badge.style.opacity = "0";
+
+						setTimeout(() => {
+							if (badge.style.opacity === "0") {
+								badge.remove();
+							}
+						}, 300);
+					}
+				}, 400);
+			}
+
+			// 2. MISE À JOUR SILENCIEUSE DES COORDONNÉES INTERNES
+			rafraichirListeLateraleBilles();
 		}
-
-		// 2. MISE À JOUR SILENCIEUSE DES COORDONNÉES INTERNES
-		// On rafraîchit la liste latérale sans recréer le badge flottant
-		rafraichirListeLateraleBilles();
 	}
-}
+
 
 
 

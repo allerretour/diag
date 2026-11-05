@@ -1551,16 +1551,23 @@ document.addEventListener('keydown', (e) => {
 				break;
 		}
 
-		const positionClampee = clampPosition(currentX, currentY);
+				const positionClampee = clampPosition(currentX, currentY);
 		window.billeSelectionneeCourante.style.left = `${positionClampee.x}px`;
 		window.billeSelectionneeCourante.style.top = `${positionClampee.y}px`;
 
 		if (typeof resolveCollisions === "function") {
-			resolveCollisions(window.billeSelectionneeCourante);
+			// On récupère les coordonnées finales réelles après résolution des collisions et magnétisme
+			const coordFinales = resolveCollisions(window.billeSelectionneeCourante);
+			
+			// NOUVEAU : On affiche et met à jour le badge flottant en direct
+			if (typeof mettreAJourAffichagePosition === "function") {
+				mettreAJourAffichagePosition(window.billeSelectionneeCourante, coordFinales.x, coordFinales.y);
+			}
 		}
 		if (typeof rafraichirListeLateraleBilles === "function") {
 			rafraichirListeLateraleBilles();
 		}
+
 	}
     
     // ... reste de votre logique keydown (touche h, z, 9, 0, etc.)
@@ -1686,6 +1693,9 @@ document.addEventListener('keydown', (e) => {
 
 	});
 
+		// À déclarer un peu plus haut dans votre code avec vos variables d'état (ex: let isDrawing = false;)
+	let timerMasquageBadgeClavier = null;
+
 	document.addEventListener('keyup', (e) => {
 		if (e.key === 'Shift') {
 			isShiftPressed = false;
@@ -1695,7 +1705,31 @@ document.addEventListener('keydown', (e) => {
 		if (e.key === 'Control') {
 			isCtrlPressed = false;
 		}
+		
+		// MODIFIÉ : Lance un fondu (fadeout) fluide après un léger délai au relâchement des flèches
+		if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+			if (timerMasquageBadgeClavier) clearTimeout(timerMasquageBadgeClavier);
+			
+			timerMasquageBadgeClavier = setTimeout(() => {
+				const badge = document.getElementById('ball-drag-live-badge');
+				if (badge) {
+					// 1. Déclenche la transition CSS d'opacité (300ms)
+					badge.style.transition = "opacity 0.3s ease";
+					badge.style.opacity = "0";
+					
+					// 2. Supprime physiquement l'élément du DOM à la fin du fondu
+					setTimeout(() => {
+						// Sécurité : s'assure que l'utilisateur n'a pas réappuyé entre-temps
+						if (badge.style.opacity === "0") {
+							badge.remove();
+						}
+					}, 300);
+				}
+				timerMasquageBadgeClavier = null;
+			}, 400); // Délai de 400ms avant d'amorcer le fondu
+		}
 	});
+
 
 	window.addEventListener('blur', () => {
 		isShiftPressed = false;
