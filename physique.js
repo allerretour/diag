@@ -105,19 +105,25 @@ function initialiserBilles() {
 		makeDraggable(ballEl);
 
 		ballEl.addEventListener('dblclick', function() {
-			// --- NOUVEAU : SÉCURITÉ DE DOUBLE-CLIC SUR TAPIS ---
-			const ballId = this.getAttribute('data-id');
-			if (window.billesVerrouillees && window.billesVerrouillees.has(ballId)) {
-				return; // Ignore l'action et laisse la bille visible si elle est verrouillée
-			}
-					
-			this.style.display = 'none';
-			const displayEl = document.getElementById('ball-position-display');
-			if (displayEl) {
-				displayEl.innerText = "Position de la bille : Aucune sélectionnée";
-			}
-			rafraichirListeLateraleBilles();
-		});
+    // [CORRECTIF SÉCURITÉ] : Bloque instantanément la suppression si le mode visualisateur (lecture seule) est actif
+    if (window.isViewMode) {
+        return;
+    }
+
+    // --- SÉCURITÉ DE DOUBLE-CLIC SUR TAPIS ---
+    const ballId = this.getAttribute('data-id');
+    if (window.billesVerrouillees && window.billesVerrouillees.has(ballId)) {
+        return; // Ignore l'action et laisse la bille visible si elle est verrouillée
+    }
+            
+    this.style.display = 'none';
+    const displayEl = document.getElementById('ball-position-display');
+    if (displayEl) {
+        displayEl.innerText = "Position de la bille : Aucune sélectionnée";
+    }
+    rafraichirListeLateraleBilles();
+	});
+
 	});
 }
 
