@@ -160,27 +160,40 @@ const tacticalNotesArea = document.getElementById('tactical-notes-area');
 const drawingToolsPalette = document.getElementById('drawing-tools-palette');
 
 function ajusterLargeurPanneaux() {
-	if (!tacticalNotesArea && !drawingToolsPalette) return;
+	if (!tacticalNotesArea || !drawingToolsPalette) return;
 
 	// Détermine si la barre latérale est actuellement masquée
 	const estMasque = ballsSidebarContainer && ballsSidebarContainer.style.display === 'none';
 
-	// Si affichée : Largeur de la table + Panneau Billes. Si masquée : Largeur de la table seule.
-	// Ajustez les valeurs en pixels (ex: 800px et 1220px) pour correspondre pile à vos conteneurs CSS externes
+	// Si affichée : Largeur de 1200px. Si masquée : Largeur de 860px.
 	const largeurCible = estMasque ? "860px" : "1200px";
 
 	if (tacticalNotesArea) {
 		tacticalNotesArea.style.transition = "width 0.3s ease";
-		tacticalNotesArea.style.width = largeurCible;
-		tacticalNotesArea.style.maxWidth = largeurCible;
+		tacticalNotesArea.style.setProperty("width", largeurCible, "important");
+		tacticalNotesArea.style.setProperty("max-width", largeurCible, "important");
 	}
 
-	if (drawingToolsPalette) {
-		drawingToolsPalette.style.transition = "width 0.3s ease";
-		drawingToolsPalette.style.width = largeurCible;
-		drawingToolsPalette.style.maxWidth = largeurCible;
+	// 1. Ajustement structurel de la palette globale
+	drawingToolsPalette.style.transition = "width 0.3s ease";
+	drawingToolsPalette.style.setProperty("width", largeurCible, "important");
+	drawingToolsPalette.style.setProperty("max-width", largeurCible, "important");
+
+	// 2. CORRECTION CRITIQUE : Ciblage du conteneur de grille interne (.tools-grid-container)
+	const gridContainer = drawingToolsPalette.querySelector('.tools-grid-container');
+	if (gridContainer) {
+		gridContainer.style.transition = "grid-template-columns 0.3s ease";
+		
+		if (estMasque) {
+			// Passage à 7 colonnes lorsque l'espace de l'écran est libéré
+			gridContainer.style.setProperty("grid-template-columns", "repeat(6, 1fr)", "important");
+		} else {
+			// Retour aux 6 colonnes par défaut lorsque le panneau des billes prend de la place
+			gridContainer.style.setProperty("grid-template-columns", "repeat(8, 1fr)", "important");
+		}
 	}
 }
+
 
 if (btnToggleBalls && ballsSidebarContainer) {
 	btnToggleBalls.addEventListener('click', () => {
@@ -1171,6 +1184,10 @@ const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
 					if (typeof window.redessinerToutesLesLignes === "function") {
 						window.redessinerToutesLesLignes();
 					}
+					
+					// --- AJOUT DE SÉCURITÉ POUR L'IMPORTATION ---
+					// Adapte la largeur des panneaux suite aux préférences du fichier .diag importé
+					ajusterLargeurPanneaux();
 
 					// alert(`Configuration "${titreImported}" restaurée avec succès !`);
 
@@ -1838,5 +1855,7 @@ const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
 	appliquerCouleurTapis("vert");
 
 	rafraichirListeLateraleBilles();
+	
+	ajusterLargeurPanneaux();
 
 });
