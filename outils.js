@@ -1431,40 +1431,56 @@ const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
 				});
 			}
 
-			// ====================================================================
-			// NOUVEAU : ALIGNEMENT AUTOMATIQUE DE LA BILLE BLANCHE AU CENTRE DE LA ZD
+						// ====================================================================
+			// ALIGNEMENT AUTOMATIQUE DE LA BILLE BLANCHE AU CENTRE DE LA ZD
 			// ====================================================================
 			const cueBall = activeBalls.find(b => b.getAttribute('data-id') === '0');
 			if (cueBall) {
-				// Configuration de la grille à gros blocs (4 colonnes, 2 rangées)
 				const zoneCols = 4;
-				const zonePasX = 754 / zoneCols; // Largeur physique d'une zone (188.5px)
-				const zonePasY = 364 / 2; // Hauteur physique d'une zone (182px)
+				const zonePasX = 754 / zoneCols;
+				const zonePasY = 364 / 2;
 
-				// Convertir l'index mémorisé (1 à 8) en coordonnées de grille (0 à 3 et 0 à 1)
 				const idx = savedZdId - 1;
 				const r = Math.floor(idx / zoneCols);
 				const c = idx % zoneCols;
 
-				// Coordonnées physiques du coin haut-gauche de la zone sélectionnée (Marge haute incluse à 18px pour s'aligner sur la fonction de dessin)
 				const zoneX = 19 + (c * zonePasX);
 				const zoneY = 18 + (r * zonePasY);
 
-				// Calcul du milieu parfait de la zone en pixels
 				const centreZoneX = zoneX + (zonePasX / 2);
 				const centreZoneY = zoneY + (zonePasY / 2);
 
-				// Positionnement CSS (Top / Left) en retirant le rayon de la bille (12px) pour la centrer
-				const finalBlancheX = centreZoneX - 12;
-				const finalBlancheY = centreZoneY - 12;
+				cueBall.style.left = `${centreZoneX - 12}px`;
+				cueBall.style.top = `${centreZoneY - 12}px`;
+			}
 
-				cueBall.style.left = `${finalBlancheX}px`;
-				cueBall.style.top = `${finalBlancheY}px`;
+			// ====================================================================
+			// NOUVEAU : BOUCLE ANTI-COLLISION GLOBALE EN CASCADE
+			// ====================================================================
+			// On fait vibrer et se repousser les billes de manière itérative 
+			// pour qu'aucune ne reste superposée à une autre après le chaos du Random.
+			let collisionGlobaleDetectee = true;
+			let tentativeSecurite = 0;
 
-				// Forcer la détection de collision finale pour s'assurer qu'aucune autre bille ne lui a été assignée dessus
-				if (typeof resolveCollisions === "function") {
-					resolveCollisions(cueBall);
-				}
+			while (collisionGlobaleDetectee && tentativeSecurite < 15) {
+				collisionGlobaleDetectee = false;
+				
+				activeBalls.forEach(ball => {
+					// On ignore les billes masquées du mode de jeu actuel
+					if (ball.style.display !== 'none') {
+						// resolveCollisions renvoie la position finale modifiée s'il y a eu poussée
+						const ancienneX = ball.style.left;
+						const ancienneY = ball.style.top;
+						
+						resolveCollisions(ball);
+						
+						// Si la bille a bougé durant son traitement, on valide qu'un ajustement a eu lieu
+						if (ball.style.left !== ancienneX || ball.style.top !== ancienneY) {
+							collisionGlobaleDetectee = true;
+						}
+					}
+				});
+				tentativeSecurite++;
 			}
 
 			// 6. Forcer le rafraîchissement immédiat du canvas pour dessiner les nouvelles zones
@@ -1475,11 +1491,12 @@ const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
 			// 7. Mettre à jour l'affichage de texte de la bille active
 			const displayEl = document.getElementById('ball-position-display');
 			if (displayEl) {
-				displayEl.innerText = "Position : Aléatoire, Blanche centrée dans l'unique ZD";
+				displayEl.innerText = "Position : Aléatoire, Blanche centrée et collisions résolues !";
 			}
 			rafraichirListeLateraleBilles();
 		});
 	}
+
 
 	// --- GESTION DU MASQUAGE DE LA SECTION COMPLETE (TITRE + TABLEAU) ---
 	const chkToggleBallsList = document.getElementById('chk-toggle-balls-list');
@@ -1715,7 +1732,7 @@ const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
 				const donneesExport = {
 					titre: `${configTitle}_MATCH-${matchUniqueId}_manche_${String(nbBillesCouleurRequises).padStart(2, '0')}`,
 					description: configDesc,
-					nombreBillesVisibles: String(i),
+					nombreBillesVisibles: String(nbBillesCouleurRequises),
 					logoImageRaw: logoAExporter, // <--- AJOUT SÉCURISÉ ICI : Transmet la chaîne Base64
 					billes: listBillesExport,
 					lignesDessinees: zonesDessinees,

@@ -1227,13 +1227,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
 			// === GESTION DE LA FORME D'EFFETS BILLE BLANCHE SAUVEGARDÉE ===
 			if (dessin.estEffetBlanche) {
-				if (dessin.points && dessin.points.length > 0) {
-					const centre = dessin.points[0];
-					// On passe dessin.force qui a été figé au moment du clic
-					dessinerEffetsBilleBlanche(centre.x, centre.y, dessin.couleur, dessin.force);
-				}
-				return;
-			}
+    if (dessin.points && dessin.points.length > 0) {
+        const centre = dessin.points[0];
+        // Sécurité anti-mutation : on extrait strictement la force stockée dans le dessin
+        const forceDuDessin = dessin.hasOwnProperty('force') ? dessin.force : 0;
+        dessinerEffetsBilleBlanche(centre.x, centre.y, dessin.couleur, forceDuDessin);
+    }
+    return;
+}
 
 			if (dessin.estRepereX) {
 				if (dessin.points && dessin.points[0]) {
@@ -1438,29 +1439,34 @@ document.addEventListener("DOMContentLoaded", () => {
 		});
 	}
 
-	// --- LOGIQUE DE CLAVIER ET RACCOURCIS CORRIGÉE ---
+// --- LOGIQUE DE CLAVIER ET RACCOURCIS CORRIGÉE ---
 document.addEventListener('keydown', (e) => {
 	if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
 		return;
 	}
 
-	// [CORRECTIF SÉCURITÉ ULTRA-STRICTE] : Bloquer TOUTES les touches d'édition si on est en mode vue
-	// On isole ce blocage au tout début pour empêcher les flèches (et tout autre outil) de s'exécuter.
-	// On autorise uniquement 'H' (Masquer/Afficher les tracés) et 'Escape'.
-	if (window.isViewMode && e.key.toLowerCase() !== 'h' && e.key !== 'Escape') {
-		// Si l'utilisateur essaie d'utiliser les flèches ou des outils d'édition en mode vue, on annule l'événement
-		if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(e.key.toLowerCase())) {
-			e.preventDefault();
+	// [FIX SÉCURITÉ ULTRA-STRICTE] : Verrouillage total du mode lecture seule
+	if (window.isViewMode) {
+		const toucheMinuscule = e.key.toLowerCase();
+		
+		// On autorise UNIQUEMENT la touche 'H' (Masquer/Afficher les tracés)
+		if (toucheMinuscule !== 'h') {
+			// Bloque l'action native (ex: le défilement de page avec les flèches du clavier)
+			if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'escape'].includes(toucheMinuscule)) {
+				e.preventDefault();
+			}
+			return; // Fin de l'exécution immédiate pour toutes les autres touches (chiffres, T, Z, P, 0...)
 		}
-		return; 
 	}
 
-	// 1. Gestion de l'annulation
+	// 1. Gestion de l'annulation (S'exécute uniquement si isViewMode est faux grâce au return précédent)
 	if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
 		e.preventDefault();
 		annulerDernierTrace();
 		return;
 	}
+    
+    
 
 	if (e.key === 'Shift') {
 		isShiftPressed = true;

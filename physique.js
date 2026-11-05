@@ -381,15 +381,24 @@ function makeDraggable(element) {
 	}
 
 	function dragEnd() {
-		if (isDragging) {
-			const finalPos = resolveCollisions(element);
-			isDragging = false;
+	if (isDragging) {
+		const finalPos = resolveCollisions(element);
+		isDragging = false;
 
-			// ÉTAPE C : Ajustement final de l'affichage une fois les collisions résolues
-			mettreAJourAffichagePosition(element, finalPos.x, finalPos.y);
-			rafraichirListeLateraleBilles();
+		// 1. SUPPRESSION IMMÉDIATE DU BADGE AU RELÂCHEMENT
+		const badge = document.getElementById('ball-drag-live-badge');
+		if (badge) {
+			badge.remove();
 		}
+
+		// 2. MISE À JOUR SILENCIEUSE DES COORDONNÉES INTERNES
+		// On rafraîchit la liste latérale sans recréer le badge flottant
+		rafraichirListeLateraleBilles();
 	}
+}
+
+
+
 }
 
 // --- GESTION DE L'AFFICHAGE DU TITRE SUR LE TAPIS ---
@@ -759,19 +768,62 @@ function obtenirCoordonneesGrille(x, y, element) {
 }
 
 /**
- * Met à jour l'affichage UI avec le nom/numéro de la bille et ses coordonnées à 1 décimale.
- */
-/**
- * Met à jour l'affichage UI avec le visuel de la bille active et ses coordonnées.
+ * Met à jour l'affichage UI et positionne un badge flottant
+ * juste au-dessus de la bille en cours de déplacement.
  */
 function mettreAJourAffichagePosition(element, x, y) {
+	// 1. Mise à jour optionnelle de l'élément de texte classique sous le tapis
 	const displayEl = document.getElementById('ball-position-display');
-	if (!displayEl) return;
+	if (displayEl) {
+		displayEl.innerHTML = "";
+		displayEl.style.display = "none";
+	}
 
-	// Suppression complète du texte et masquage du bloc sous la table
-	displayEl.innerHTML = "";
-	displayEl.style.display = "none";
+	const table = document.getElementById('pool-table');
+	if (!table) return;
+
+	// 2. Récupération des coordonnées sur la grille 16x8
+	const coords = obtenirCoordonneesGrille(x, y, element);
+
+	// 3. Gestion du badge flottant unique dans le tapis de jeu
+	let badgeFlottant = document.getElementById('ball-drag-live-badge');
+	if (!badgeFlottant) {
+		badgeFlottant = document.createElement('div');
+		badgeFlottant.id = 'ball-drag-live-badge';
+		
+		// Styles graphiques avancés pour un rendu moderne, contrasté et lisible
+		badgeFlottant.style.cssText = `
+			position: absolute;
+			background-color: rgba(11, 15, 23, 0.92);
+			color: #ffffff;
+			font-family: system-ui, -apple-system, sans-serif;
+			font-weight: bold;
+			font-size: 11px;
+			padding: 3px 7px;
+			border-radius: 4px;
+			border: 1px solid rgba(255, 255, 255, 0.2);
+			box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
+			pointer-events: none; /* Évite les micro-saccades sous le curseur */
+			white-space: nowrap;
+			z-index: 1000; /* Passe au-dessus des autres billes et de la grille */
+			transform: translate(-50%, -100%); /* Centre le badge horizontalement */
+		`;
+		table.appendChild(badgeFlottant);
+	}
+
+	// 4. Calcul de la position physique du badge (Centré horizontalement, 12px au-dessus de la bille)
+	// element.offsetWidth correspond au diamètre (24px), le milieu est donc à x + 12px
+	const centreBilleX = x + (element.offsetWidth / 2);
+	const positionBadgeY = y - 12;
+
+	// 5. Injection de la position CSS et du texte rafraîchi
+	badgeFlottant.style.left = centreBilleX + 'px';
+	badgeFlottant.style.top = positionBadgeY + 'px';
+	badgeFlottant.innerText = `${coords.x} ; ${coords.y}`;
 }
+
+
+
 
 // --- OUTILS DE SÉLECTION / COLLISION ---
 
@@ -904,6 +956,13 @@ function appliquerRestrictionsModeVue() {
     const canvas = document.getElementById('drawing-canvas');
     if (canvas) {
         canvas.style.pointerEvents = 'none';
+    }
+	
+	// 4. Masquer le toggle HD 16x8 et son label parent (.control-item)
+    const chkHD = document.getElementById('chk-high-density-grid');
+    if (chkHD) {
+        const labelParent = chkHD.closest('.control-item');
+        if (labelParent) labelParent.style.display = 'none';
     }
 }
 

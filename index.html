@@ -1331,10 +1331,10 @@
 			<button type="button" class="tool-btn" data-tool="arrow" title="Flèche droite"><span class="btn-text">🏹 Flèche</span></button>
 			<button type="button" class="tool-btn tool-shape" data-tool="repereX" title="Repère visuel X (9)"><span class="btn-text">❌ Repère (9)</span></button>
 			<button type="button" class="tool-btn tool-shape" data-tool="pointContact" title="Point de contact (P)"><span class="btn-text">🎯 Contact (P)</span></button>
-			<button type="button" class="tool-btn tool-shape" data-tool="effetBlanche" title="Effets Bille Blanche (0)"><span class="btn-text">🔮 Effet (0)</span></button>
+			<button type="button" class="tool-btn tool-shape" data-tool="effetBlanche" title="Effets Bille Blanche (0)"><span class="btn-text">🔄️ Effet (0)</span></button>
 			<button type="button" class="tool-btn tool-shape" data-tool="cible" title="Cible de visée (T)"><span class="btn-text">🎯 Cible (T)</span></button>
 			<button type="button" class="tool-btn tool-shape" data-tool="carre" title="Carré de zone (Z)"><span class="btn-text">🔲 Carré (Z)</span></button>
-			<button class="tool-btn tool-shape" data-tool="zoneTactique" title="Filtres tactiques (Zones 1 à 8). Multi-clics pour passer de ZD (Départ) à ZA (Arrivée) puis Anonyme. (Raccourci : Touches 1 à 8)">🎲 Zone</button>
+			<button class="tool-btn tool-shape" data-tool="zoneTactique" title="Filtres tactiques (Zones 1 à 8). Multi-clics pour passer de ZD (Départ) à ZA (Arrivée) puis Anonyme. (Raccourci : Touches 1 à 8)">⏹️ Zone</button>
 
 			<!-- Bouton Unique fusionné (Colorpicker natif + Design personnalisé) -->
 			<button type="button" class="tool-btn tool-shape" id="indicateur-couleur-tactique" title="Changer la couleur du tracé (Colorpicker)" style="position: relative; overflow: hidden;">
@@ -1345,6 +1345,7 @@
 				<!-- L'input unique est étiré sur tout le bouton mais rendu invisible. Un clic sur le bouton cliquera obligatoirement sur l'input. -->
 				<input type="color" id="marker-color" value="#ffffff" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; margin: 0; padding: 0; border: none;">
 			</button>
+			<button id="btn-random-hd" class="tool-btn tool-shape" title="Générer un tapis Aléatoire HD">🎲 Aléatoire</button>
 			<button id="btn-toggle-lock-all" class="tool-btn" title="Verrouiller / Déverrouiller toutes les billes">🔓 Tout Bloquer</button>
 			<button type="button" class="tool-btn tool-shape" id="btn-undo-lines" title="Annuler le dernier tracé">
 				<span>↩️ Annuler</span>
@@ -1469,15 +1470,15 @@
 	<div class="table-controls">
 
 		<label class="control-item">
-			<input type="checkbox" id="chk-toggle-grid"> Grille
+			<input type="checkbox" id="chk-toggle-grid">📏 Grille
 		</label>
 
 		<label class="control-item">
-			<input type="checkbox" id="chk-high-density-grid"> HD 16x8
+			<input type="checkbox" id="chk-high-density-grid">🧮 HD 16x8
 		</label>
 
 		<label class="control-item">
-			<input type="checkbox" id="chk-toggle-drawings" checked> Dessins/tracés
+			<input type="checkbox" id="chk-toggle-drawings" checked>✒️ Dessins/tracés
 		</label>
 	</div>
 
@@ -1535,9 +1536,7 @@
 				<button id="btn-show-notes" title="Afficher la zone de notes tactiques" style="display: none;">👁️ Notes</button>
 
 
-				<button id="btn-random-hd" class="btn btn-xs text-white fw-bold py-1 px-2 font-size-xs" style="background-color: #e67e22; border: none;" title="Générer un tapis Aléatoire HD">
-					<span>🎲</span> Rand
-				</button>
+				
 
 				<button id="btn-export-serie-aleatoire" class="btn btn-xs text-white fw-bold py-1 px-2 font-size-xs" style="background-color: #d35400; border: none;" title="Générer une série progressive du nombre mentionné">
 					<span>🎲</span> progX
