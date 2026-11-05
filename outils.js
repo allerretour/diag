@@ -150,31 +150,66 @@ if (btnTogglePalette && paletteContainer) {
 	});
 }
 
-// --- GESTION DE LA BARRE LATÉRALE DES BILLES (AFFICHER/MASQUER) ---
+/// --- GESTION DE LA BARRE LATÉRALE DES BILLES (AFFICHER/MASQUER & REDIMENSIONNEMENT COPAINS) ---
 const btnToggleBalls = document.getElementById('btn-toggle-balls-sidebar');
 const ballsSidebarContainer = document.getElementById('balls-sidebar');
 const chkBallsListSync = document.getElementById('chk-toggle-balls-list');
 
+// Centralisation des éléments à redimensionner
+const tacticalNotesArea = document.getElementById('tactical-notes-area');
+const drawingToolsPalette = document.getElementById('drawing-tools-palette');
+
+function ajusterLargeurPanneaux() {
+	if (!tacticalNotesArea && !drawingToolsPalette) return;
+
+	// Détermine si la barre latérale est actuellement masquée
+	const estMasque = ballsSidebarContainer && ballsSidebarContainer.style.display === 'none';
+
+	// Si affichée : Largeur de la table + Panneau Billes. Si masquée : Largeur de la table seule.
+	// Ajustez les valeurs en pixels (ex: 800px et 1220px) pour correspondre pile à vos conteneurs CSS externes
+	const largeurCible = estMasque ? "860px" : "1200px";
+
+	if (tacticalNotesArea) {
+		tacticalNotesArea.style.transition = "width 0.3s ease";
+		tacticalNotesArea.style.width = largeurCible;
+		tacticalNotesArea.style.maxWidth = largeurCible;
+	}
+
+	if (drawingToolsPalette) {
+		drawingToolsPalette.style.transition = "width 0.3s ease";
+		drawingToolsPalette.style.width = largeurCible;
+		drawingToolsPalette.style.maxWidth = largeurCible;
+	}
+}
+
 if (btnToggleBalls && ballsSidebarContainer) {
 	btnToggleBalls.addEventListener('click', () => {
-		// Alterne la visibilité en vérifiant l'état actuel
 		const estMasque = ballsSidebarContainer.style.display === 'none';
 
 		if (estMasque) {
-			// On l'affiche (Flex/Grid par défaut)
 			ballsSidebarContainer.style.display = "";
-			btnToggleBalls.innerText = '🔮'; // Émoji quand la liste est ouverte (à adapter selon vos goûts)
+			btnToggleBalls.innerText = '🔮';
 			btnToggleBalls.title = "Masquer la liste des billes";
 			if (chkBallsListSync) chkBallsListSync.checked = true;
 		} else {
-			// On la masque
 			ballsSidebarContainer.style.display = 'none';
-			btnToggleBalls.innerText = '🎱'; // Émoji quand la liste est fermée
+			btnToggleBalls.innerText = '🎱';
 			btnToggleBalls.title = "Afficher la liste des billes";
 			if (chkBallsListSync) chkBallsListSync.checked = false;
 		}
+
+		// NOUVEAU : Ajustement de la largeur des panneaux juste après le changement d'état
+		ajusterLargeurPanneaux();
 	});
 }
+
+// NOUVEAU : On applique également la logique sur la case à cocher des options (Importation / Toggles)
+if (chkBallsListSync) {
+	chkBallsListSync.addEventListener('change', () => {
+		setTimeout(ajusterLargeurPanneaux, 50); // Léger délai pour laisser le script d'import se synchroniser
+	});
+}
+
 
 // --- CENTRALISATION DES ÉLÉMENTS DE LA ZONE DE NOTES ---
 const inputTitle = document.getElementById('input-title');
