@@ -1439,120 +1439,126 @@ document.addEventListener("DOMContentLoaded", () => {
 	}
 
 	// --- LOGIQUE DE CLAVIER ET RACCOURCIS CORRIGÉE ---
-	document.addEventListener('keydown', (e) => {
-		if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
-			return;
-		}
+document.addEventListener('keydown', (e) => {
+	if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+		return;
+	}
 
-
-		// NOUVEAU : Bloquer les touches d'édition si on est en mode vue
-    		// On autorise uniquement 'H' (Masquer/Afficher les tracés) et 'Escape'
-    		if (window.isViewMode && e.key.toLowerCase() !== 'h' && e.key !== 'Escape') {
-        		return; 
-    		}
-
-		// 1. Gestion de l'annulation
-		if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+	// [CORRECTIF SÉCURITÉ ULTRA-STRICTE] : Bloquer TOUTES les touches d'édition si on est en mode vue
+	// On isole ce blocage au tout début pour empêcher les flèches (et tout autre outil) de s'exécuter.
+	// On autorise uniquement 'H' (Masquer/Afficher les tracés) et 'Escape'.
+	if (window.isViewMode && e.key.toLowerCase() !== 'h' && e.key !== 'Escape') {
+		// Si l'utilisateur essaie d'utiliser les flèches ou des outils d'édition en mode vue, on annule l'événement
+		if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(e.key.toLowerCase())) {
 			e.preventDefault();
-			annulerDernierTrace();
-			return;
 		}
+		return; 
+	}
 
-		if (e.key === 'Shift') {
-			isShiftPressed = true;
-			canvas.style.pointerEvents = 'auto';
-		}
-		if (e.key === 'Control') {
-			isCtrlPressed = true;
-		}
+	// 1. Gestion de l'annulation
+	if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+		e.preventDefault();
+		annulerDernierTrace();
+		return;
+	}
 
-		if (e.key.toLowerCase() === 't') {
-			e.preventDefault();
-			if (outilActif === 'cible') {
-				window.quadrantCibleCourant = (window.quadrantCibleCourant + 1) % 4;
-			} else {
-				outilActif = 'cible';
-			}
-			if (outilActif) canvas.style.pointerEvents = 'auto';
-			window.redessinerToutesLesLignes();
-		}
+	if (e.key === 'Shift') {
+		isShiftPressed = true;
+		canvas.style.pointerEvents = 'auto';
+	}
+	if (e.key === 'Control') {
+		isCtrlPressed = true;
+	}
 
-		if (e.key.toLowerCase() === 'p') {
-			e.preventDefault();
-			if (outilActif !== 'pointContact') {
-				outilActif = 'pointContact';
+	if (e.key.toLowerCase() === 't') {
+		e.preventDefault();
+		if (outilActif === 'cible') {
+			window.quadrantCibleCourant = (window.quadrantCibleCourant + 1) % 4;
+		} else {
+			outilActif = 'cible';
+		}
+		if (outilActif) canvas.style.pointerEvents = 'auto';
+		window.redessinerToutesLesLignes();
+	}
+
+	if (e.key.toLowerCase() === 'p') {
+		e.preventDefault();
+		if (outilActif !== 'pointContact') {
+			outilActif = 'pointContact';
+			window.pourcentageContactCourant = 100;
+			window.coteContactCourant = 1;
+		} else {
+			window.pourcentageContactCourant -= 10;
+			if (window.pourcentageContactCourant < 0) {
+				window.coteContactCourant = window.coteContactCourant * -1;
 				window.pourcentageContactCourant = 100;
-				window.coteContactCourant = 1;
-			} else {
-				window.pourcentageContactCourant -= 10;
-				// Si on descend en dessous de 0, on change de côté et on recommence à 90%
-				if (window.pourcentageContactCourant < 0) {
-					window.coteContactCourant = window.coteContactCourant * -1; // Inverse GAUCHE <-> DROITE
-					window.pourcentageContactCourant = 100;
-				}
-			}
-			if (outilActif) canvas.style.pointerEvents = 'auto';
-			window.redessinerToutesLesLignes();
-		}
-
-		if (e.key === 'Shift' && outilActif === 'pointContact') {
-			e.preventDefault();
-			window.coteContactCourant = window.coteContactCourant * -1;
-			window.redessinerToutesLesLignes();
-		}
-
-		// DÉPLACEMENT MICRO-MÉTRIQUE DES BILLES AUX FLÈCHES DU CLAVIER
-		if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-			if (!window.billeSelectionneeCourante || window.billeSelectionneeCourante.style.display === 'none') {
-				return;
-			}
-			
-			// --- NOUVEAU : SÉCURITÉ POUR EMPÊCHER LE MOUVEMENT CLAVIER SI LA BILLE EST VERROUILLÉE ---
-			const ballId = window.billeSelectionneeCourante.getAttribute('data-id');
-			if (window.billesVerrouillees && window.billesVerrouillees.has(ballId)) {
-				return; // Bloque instantanément le déplacement au clavier
-			}
-			
-			e.preventDefault();
-
-			let currentX = parseFloat(window.billeSelectionneeCourante.style.left) || 0;
-			let currentY = parseFloat(window.billeSelectionneeCourante.style.top) || 0;
-
-			const gridWidth = 754;
-			const gridHeight = 364;
-			const pasX = gridWidth / 16;
-			const pasY = gridHeight / 8;
-
-			const multiplicateur = e.shiftKey ? 1.0 : 0.1;
-			const incrementX = pasX * multiplicateur;
-			const incrementY = pasY * multiplicateur;
-
-			switch (e.key) {
-				case 'ArrowLeft':
-					currentX -= incrementX;
-					break;
-				case 'ArrowRight':
-					currentX += incrementX;
-					break;
-				case 'ArrowUp':
-					currentY -= incrementY;
-					break;
-				case 'ArrowDown':
-					currentY += incrementY;
-					break;
-			}
-
-			const positionClampee = clampPosition(currentX, currentY);
-			window.billeSelectionneeCourante.style.left = `${positionClampee.x}px`;
-			window.billeSelectionneeCourante.style.top = `${positionClampee.y}px`;
-
-			if (typeof resolveCollisions === "function") {
-				resolveCollisions(window.billeSelectionneeCourante);
-			}
-			if (typeof rafraichirListeLateraleBilles === "function") {
-				rafraichirListeLateraleBilles();
 			}
 		}
+		if (outilActif) canvas.style.pointerEvents = 'auto';
+		window.redessinerToutesLesLignes();
+	}
+
+	if (e.key === 'Shift' && outilActif === 'pointContact') {
+		e.preventDefault();
+		window.coteContactCourant = window.coteContactCourant * -1;
+		window.redessinerToutesLesLignes();
+	}
+
+	// DÉPLACEMENT MICRO-MÉTRIQUE DES BILLES AUX FLÈCHES DU CLAVIER
+	if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+		if (!window.billeSelectionneeCourante || window.billeSelectionneeCourante.style.display === 'none') {
+			return;
+		}
+		
+		// Sécurité existante pour les billes verrouillées manuellement
+		const ballId = window.billeSelectionneeCourante.getAttribute('data-id');
+		if (window.billesVerrouillees && window.billesVerrouillees.has(ballId)) {
+			return;
+		}
+		
+		e.preventDefault();
+
+		let currentX = parseFloat(window.billeSelectionneeCourante.style.left) || 0;
+		let currentY = parseFloat(window.billeSelectionneeCourante.style.top) || 0;
+
+		const gridWidth = 754;
+		const gridHeight = 364;
+		const pasX = gridWidth / 16;
+		const pasY = gridHeight / 8;
+
+		const multiplicateur = e.shiftKey ? 1.0 : 0.1;
+		const incrementX = pasX * multiplicateur;
+		const incrementY = pasY * multiplicateur;
+
+		switch (e.key) {
+			case 'ArrowLeft':
+				currentX -= incrementX;
+				break;
+			case 'ArrowRight':
+				currentX += incrementX;
+				break;
+			case 'ArrowUp':
+				currentY -= incrementY;
+				break;
+			case 'ArrowDown':
+				currentY += incrementY;
+				break;
+		}
+
+		const positionClampee = clampPosition(currentX, currentY);
+		window.billeSelectionneeCourante.style.left = `${positionClampee.x}px`;
+		window.billeSelectionneeCourante.style.top = `${positionClampee.y}px`;
+
+		if (typeof resolveCollisions === "function") {
+			resolveCollisions(window.billeSelectionneeCourante);
+		}
+		if (typeof rafraichirListeLateraleBilles === "function") {
+			rafraichirListeLateraleBilles();
+		}
+	}
+    
+    // ... reste de votre logique keydown (touche h, z, 9, 0, etc.)
+
 
 		if (e.key.toLowerCase() === 'h') {
 			e.preventDefault();
@@ -2101,6 +2107,13 @@ function commencerDessin(e) {
 	});
 
 	table.addEventListener('mousedown', (e) => {
+		
+		// [CORRECTIF SÉCURITÉ CLICK DROIT] : Bloque le dessin libre au clic droit en mode lecture seule
+		if (window.isViewMode) {
+			if (e.button === 2) e.preventDefault();
+			return;
+		}
+		
 		if (window.outilTraceActif === "select" && e.button === 2) {
 			canvas.style.pointerEvents = 'auto';
 			commencerDessin(e);

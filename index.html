@@ -1187,6 +1187,25 @@
 			line-height: 1.6;
 			white-space: pre-wrap;
 		}
+		
+		.options-verticales-palette {
+	display: flex;
+	flex-direction: column;   /* Force l'empilement vertical */
+	justify-content: center;  /* Centre le bloc verticalement */
+	gap: 4px;                 /* Espace entre les deux cases */
+	padding: 0 4px;           /* Ajustement fin des marges internes */
+}
+
+/* Assure que chaque ligne s'aligne bien horizontalement en interne (case + texte) */
+.options-verticales-palette .control-item {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	cursor: pointer;
+	white-space: nowrap;      /* Évite que le mot saute à la ligne si la colonne est étroite */
+}
+
+		
 	</style>
 </head>
 
@@ -1296,26 +1315,26 @@
 			<!-- Ligne 1 -->
 			<button type="button" class="tool-btn active" data-tool="select" title="Sélection et déplacement des billes"><span class="btn-text">🖱️ Sélection</span></button>
 
-			<label class="control-item" for="chk-dashed-lines">
-				<input type="checkbox" id="chk-dashed-lines"> Pointillés
-			</label>
+			<!-- NOUVEAU CONTENEUR POUR L'ALIGNEMENT VERTICAL -->
+			<div class="options-verticales-palette">
+				<label class="control-item" for="chk-dashed-lines">
+					<input type="checkbox" id="chk-dashed-lines"> Pointillés
+				</label>
 
-			<label class="control-item">
-				<input type="checkbox" id="chk-magnetism"> Magnétisme
-			</label>
+				<label class="control-item">
+					<input type="checkbox" id="chk-magnetism"> Magnétisme
+				</label>
+			</div>
 
 			<button type="button" class="tool-btn" data-tool="pencil" title="Dessin libre"><span class="btn-text">✏️ Crayon</span></button>
 			<button type="button" class="tool-btn" data-tool="line" title="Ligne droite"><span class="btn-text">📏 Ligne</span></button>
 			<button type="button" class="tool-btn" data-tool="arrow" title="Flèche droite"><span class="btn-text">🏹 Flèche</span></button>
+			<button type="button" class="tool-btn tool-shape" data-tool="repereX" title="Repère visuel X (9)"><span class="btn-text">❌ Repère (9)</span></button>
 			<button type="button" class="tool-btn tool-shape" data-tool="pointContact" title="Point de contact (P)"><span class="btn-text">🎯 Contact (P)</span></button>
-
-			
+			<button type="button" class="tool-btn tool-shape" data-tool="effetBlanche" title="Effets Bille Blanche (0)"><span class="btn-text">🔮 Effet (0)</span></button>
 			<button type="button" class="tool-btn tool-shape" data-tool="cible" title="Cible de visée (T)"><span class="btn-text">🎯 Cible (T)</span></button>
 			<button type="button" class="tool-btn tool-shape" data-tool="carre" title="Carré de zone (Z)"><span class="btn-text">🔲 Carré (Z)</span></button>
-			<button type="button" class="tool-btn tool-shape" data-tool="effetBlanche" title="Effets Bille Blanche (0)"><span class="btn-text">🔮 Effet (0)</span></button>
-			<button type="button" class="tool-btn tool-shape" data-tool="repereX" title="Repère visuel X (9)"><span class="btn-text">❌ Repère (9)</span></button>
-			<button type="button" class="tool-btn tool-eraser" data-tool="erase" title="Effacer un élément (Gomme)"><span class="btn-text">🧼 Gomme</span></button>
-
+			<button class="tool-btn tool-shape" data-tool="zoneTactique" title="Filtres tactiques (Zones 1 à 8). Multi-clics pour passer de ZD (Départ) à ZA (Arrivée) puis Anonyme. (Raccourci : Touches 1 à 8)">🎲 Zone</button>
 
 			<!-- Bouton Unique fusionné (Colorpicker natif + Design personnalisé) -->
 			<button type="button" class="tool-btn tool-shape" id="indicateur-couleur-tactique" title="Changer la couleur du tracé (Colorpicker)" style="position: relative; overflow: hidden;">
@@ -1326,18 +1345,15 @@
 				<!-- L'input unique est étiré sur tout le bouton mais rendu invisible. Un clic sur le bouton cliquera obligatoirement sur l'input. -->
 				<input type="color" id="marker-color" value="#ffffff" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; margin: 0; padding: 0; border: none;">
 			</button>
-
+			<button id="btn-toggle-lock-all" class="tool-btn" title="Verrouiller / Déverrouiller toutes les billes">🔓 Tout Bloquer</button>
 			<button type="button" class="tool-btn tool-shape" id="btn-undo-lines" title="Annuler le dernier tracé">
 				<span>↩️ Annuler</span>
 			</button>
-
 			<button type="button" class="tool-btn tool-shape" id="btn-clear-lines" title="Tout effacer">
 				<span>🗑️ Effacer</span>
 			</button>
-
-                        <button class="tool-btn tool-shape" data-tool="zoneTactique" title="Filtres tactiques (Zones 1 à 8). Multi-clics pour passer de ZD (Départ) à ZA (Arrivée) puis Anonyme. (Raccourci : Touches 1 à 8)">🎲 Zone</button>
-
-			<button id="btn-toggle-lock-all" class="tool-btn" title="Verrouiller / Déverrouiller toutes les billes">🔓 Tout Bloquer</button>
+           
+			<button type="button" class="tool-btn tool-eraser" data-tool="erase" title="Effacer un élément (Gomme)"><span class="btn-text">🧼 Gomme</span></button>
 
 
 
