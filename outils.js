@@ -1317,10 +1317,11 @@ const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
 		}
 	}
 
-	const btnRandomHD = document.getElementById('btn-random-hd');
+		const btnRandomHD = document.getElementById('btn-random-hd');
 
 	if (btnRandomHD) {
-		btnRandomHD.addEventListener('click', () => {
+		// 1. ON ISOLE TOUTE LA LOGIQUE DANS UNE FONCTION UNIQUE
+		function executerGenerationAleatoire() {
 			// Dimensions géométriques de la table identiques au magnétisme
 			const gridLeft = 19;
 			const gridTop = 17;
@@ -1333,18 +1334,16 @@ const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
 			const pasX = gridWidth / cols;
 			const pasY = gridHeight / rows;
 
-			// 1. Générer la liste de toutes les intersections uniques disponibles sur la grille
+			// Générer la liste de toutes les intersections uniques disponibles sur la grille
 			const intersectionsDisponibles = [];
 			for (let c = 0; c <= cols; c++) {
 				for (let r = 0; r <= rows; r++) {
-					// Calcul de la position physique (x, y) en pixels pour le COIN haut-gauche d'une bille
 					const centreX = gridLeft + (c * pasX);
 					const centreY = gridTop + (r * pasY);
 
 					let localCentreX = c * pasX;
 					let localCentreY = r * pasY;
 
-					// Application de votre sécurité anti-chevauchement des bandes
 					if (c === 0) localCentreX = 12;
 					if (c === cols) localCentreX = gridWidth - 12;
 					if (r === 0) localCentreY = 12;
@@ -1353,45 +1352,33 @@ const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
 					const finalX = (gridLeft + localCentreX) - 12;
 					const finalY = (gridTop + localCentreY) - 12;
 
-					intersectionsDisponibles.push({
-						x: finalX,
-						y: finalY
-					});
+					intersectionsDisponibles.push({ x: finalX, y: finalY });
 				}
 			}
 
-			// 2. Mélanger la liste des intersections (Algorithme de Fisher-Yates)
+			// Mélanger la liste des intersections (Algorithme de Fisher-Yates)
 			for (let i = intersectionsDisponibles.length - 1; i > 0; i--) {
 				const j = Math.floor(Math.random() * (i + 1));
 				[intersectionsDisponibles[i], intersectionsDisponibles[j]] = [intersectionsDisponibles[j], intersectionsDisponibles[i]];
 			}
 
-			// 3. Assigner une coordonnée unique à chaque bille visible (Sauf la bille blanche)
+			// Assigner une coordonnée unique à chaque bille visible (Sauf la bille blanche)
 			let indexIntersection = 0;
 			activeBalls.forEach(ball => {
 				const ballId = ball.getAttribute('data-id');
-				// On ne déplace de manière totalement aléatoire que les billes de couleur visibles (id > 0)
 				if (ballId !== '0' && ball.style.display !== 'none' && indexIntersection < intersectionsDisponibles.length) {
 					const pos = intersectionsDisponibles[indexIntersection];
-
 					ball.style.left = `${pos.x}px`;
 					ball.style.top = `${pos.y}px`;
-
 					indexIntersection++;
 				}
 			});
 
-			// ====================================================================
-			// GÉNERATION DES ZONES UNIQUE ZD ET ZA + PLACEMENT DE LA BLANCHE
-			// ====================================================================
-
-			// 1. Nettoyer les anciennes zones déjà présentes pour éviter les duplicatas
+			// Nettoyer les anciennes zones déjà présentes pour éviter les duplicatas
 			window.dessinsSauvegardes = window.dessinsSauvegardes.filter(dessin => !dessin.estZoneGrille);
 
-			// 2. Initialisation dynamique de la liste pour les IDs de zone (1 à 8)
-			const listeIdsZones = Array.from({
-				length: 8
-			}, (v, k) => k + 1);
+			// Initialisation dynamique de la liste pour les IDs de zone (1 à 8)
+			const listeIdsZones = Array.from({ length: 8 }, (v, k) => k + 1);
 
 			// Mélange de la liste des IDs (Fisher-Yates)
 			for (let i = listeIdsZones.length - 1; i > 0; i--) {
@@ -1401,39 +1388,35 @@ const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
 
 			const nbZD = 1;
 			const nbZA = 1;
-
-			// Couleur par défaut requise par la structure des objets
 			const couleurActive = (document.getElementById('marker-color')) ? document.getElementById('marker-color').value : '#ffffff';
 
-			// 4. Générer l'unique Zone de Départ (ZD)
+			// Générer l'unique Zone de Départ (ZD)
 			let savedZdId = 1;
 			for (let i = 0; i < nbZD; i++) {
 				const zoneId = listeIdsZones.pop();
-				savedZdId = zoneId; // On mémorise l'ID de la ZD pour y téléporter la bille blanche
+				savedZdId = zoneId;
 				window.dessinsSauvegardes.push({
 					couleur: couleurActive,
 					estZoneGrille: true,
 					zoneId: zoneId,
-					mode: 'standard', // 'standard' = Zone Départ (ZD)
+					mode: 'standard',
 					points: []
 				});
 			}
 
-			// 5. Générer l'unique Zone d'Arrivée (ZA)
+			// Générer l'unique Zone d'Arrivée (ZA)
 			for (let i = 0; i < nbZA; i++) {
 				const zoneId = listeIdsZones.pop();
 				window.dessinsSauvegardes.push({
 					couleur: couleurActive,
 					estZoneGrille: true,
 					zoneId: zoneId,
-					mode: 'alternatif', // 'alternatif' = Zone Arrivée (ZA)
+					mode: 'alternatif',
 					points: []
 				});
 			}
 
-						// ====================================================================
-			// ALIGNEMENT AUTOMATIQUE DE LA BILLE BLANCHE AU CENTRE DE LA ZD
-			// ====================================================================
+			// Alignement de la blanche au centre de la ZD
 			const cueBall = activeBalls.find(b => b.getAttribute('data-id') === '0');
 			if (cueBall) {
 				const zoneCols = 4;
@@ -1454,27 +1437,17 @@ const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
 				cueBall.style.top = `${centreZoneY - 12}px`;
 			}
 
-			// ====================================================================
-			// NOUVEAU : BOUCLE ANTI-COLLISION GLOBALE EN CASCADE
-			// ====================================================================
-			// On fait vibrer et se repousser les billes de manière itérative 
-			// pour qu'aucune ne reste superposée à une autre après le chaos du Random.
+			// Boucle anti-collision globale en cascade
 			let collisionGlobaleDetectee = true;
 			let tentativeSecurite = 0;
 
 			while (collisionGlobaleDetectee && tentativeSecurite < 15) {
 				collisionGlobaleDetectee = false;
-				
 				activeBalls.forEach(ball => {
-					// On ignore les billes masquées du mode de jeu actuel
 					if (ball.style.display !== 'none') {
-						// resolveCollisions renvoie la position finale modifiée s'il y a eu poussée
 						const ancienneX = ball.style.left;
 						const ancienneY = ball.style.top;
-						
 						resolveCollisions(ball);
-						
-						// Si la bille a bougé durant son traitement, on valide qu'un ajustement a eu lieu
 						if (ball.style.left !== ancienneX || ball.style.top !== ancienneY) {
 							collisionGlobaleDetectee = true;
 						}
@@ -1483,19 +1456,39 @@ const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
 				tentativeSecurite++;
 			}
 
-			// 6. Forcer le rafraîchissement immédiat du canvas pour dessiner les nouvelles zones
 			if (typeof window.redessinerToutesLesLignes === "function") {
 				window.redessinerToutesLesLignes();
 			}
 
-			// 7. Mettre à jour l'affichage de texte de la bille active
 			const displayEl = document.getElementById('ball-position-display');
 			if (displayEl) {
 				displayEl.innerText = "Position : Aléatoire, Blanche centrée et collisions résolues !";
 			}
 			rafraichirListeLateraleBilles();
+		}
+
+		// 2. ATTACHEMENT DE L'ÉCOUTEUR TACTILE (IPAD / IPHONE)
+		btnRandomHD.addEventListener('touchstart', (e) => {
+			if (e.cancelable) e.preventDefault();
+			e.stopPropagation(); // Évite que le toucher traverse le bouton et dessine sur la table
+
+			executerGenerationAleatoire();
+			btnRandomHD.blur();
+		}, {
+			passive: false
+		});
+
+		// 3. ATTACHEMENT DE L'ÉCOUTEUR DE SOURIS (PC / MAC)
+		btnRandomHD.addEventListener('click', (e) => {
+			// Sécurité : ignore si c'est une émulation de clic provoquée par un événement tactile
+			if (e.pointerType === 'touch' || (e.clientX === 0 && e.clientY === 0)) return; 
+			e.stopPropagation();
+
+			executerGenerationAleatoire();
+			btnRandomHD.blur();
 		});
 	}
+
 
 
 	// --- GESTION DU MASQUAGE DE LA SECTION COMPLETE (TITRE + TABLEAU) ---
