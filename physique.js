@@ -932,6 +932,8 @@ window.detecterEtEffacerDessin = function(clicX, clicY) {
 
 
 
+
+
 function appliquerRestrictionsModeVue() {
     if (!window.isViewMode) {
         console.log("✏️ Mode Édition Actif.");

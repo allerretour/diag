@@ -383,6 +383,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
+
+
+
+
+
+
+
+
 const btnToggleLockAll = document.getElementById('btn-toggle-lock-all');
 
 if (btnToggleLockAll) {
@@ -804,6 +812,18 @@ if (btnToggleLockAll) {
 				});
 			});
 
+			// --- NOUVEAU : Extraction des couleurs personnalisées des poches ---
+			const etatPoches = [];
+			document.querySelectorAll('.pocket').forEach(p => {
+				const pocketId = p.getAttribute('data-pocket-id') || p.className.split(' ')[1];
+				// On récupère la valeur actuelle de la variable CSS, sinon noir par défaut
+				const couleurCentre = p.style.getPropertyValue('--pocket-color').trim() || "#000000";
+				etatPoches.push({
+					id: pocketId,
+					color: couleurCentre
+				});
+			});
+
 
 			// Récupération des valeurs textuelles nettoyées
 			const configTitle = titleInput ? titleInput.value.trim() : "configuration_billard";
@@ -826,6 +846,7 @@ if (btnToggleLockAll) {
 				logoImageRaw: window.logoBase64Courant,
 				billes: listBilles,
 				lignesDessinees: window.dessinsSauvegardes || [],
+				pochesColoriees: etatPoches, // <--- AJOUT SÉCURISÉ ICI : Liste des couleurs de poches
 				optionsVisuelles: {
 					grille: chkToggleGrid ? chkToggleGrid.checked : false,
 					hd: chkHighDensityGrid ? chkHighDensityGrid.checked : false,
@@ -1194,6 +1215,25 @@ const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
 					if (modalGuide) {
 						modalGuide.close();
 					}
+
+					// --- NOUVEAU : Restauration de la couleur des poches depuis le fichier .diag ---
+					// Par sécurité, on commence par remettre toutes les poches en noir pur par défaut
+					document.querySelectorAll('.pocket').forEach(p => {
+						p.style.setProperty('--pocket-color', '#000000');
+					});
+
+					// Si le fichier contient des données de poches, on applique les couleurs enregistrées
+					if (donneesImportees.pochesColoriees && Array.isArray(donneesImportees.pochesColoriees)) {
+						donneesImportees.pochesColoriees.forEach(pocketData => {
+							// On cherche la poche soit par son data-pocket-id, soit par sa classe de secours (tl, tc, tr, etc.)
+							const pocheElement = document.querySelector(`[data-pocket-id="${pocketData.id}"]`) || 										document.querySelector(`.pocket.${pocketData.id}`);
+							if (pocheElement) {
+								pocheElement.style.setProperty('--pocket-color', pocketData.color);
+							}
+						});
+					}
+
+
 
 				} catch (error) {
 					alert("Erreur lors de la lecture du fichier DIAG. Vérifiez sa structure.");
@@ -1716,6 +1756,16 @@ const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
 					visible: true
 				});
 
+				// NOUVEAU : Initialisation de la structure des poches par défaut (noir pur) pour le fichier de la manche
+				const pochesParDefaut = [];
+				document.querySelectorAll('.pocket').forEach(p => {
+					const pocketId = p.getAttribute('data-pocket-id') || p.className.split(' ')[1];
+					pochesParDefaut.push({
+						id: pocketId,
+						color: "#000000"
+					});
+				});
+
 				let intersectionIdx = 0;
 
 				// Préparation de la structure du fichier TXT avec magnétisme actif
@@ -1781,6 +1831,7 @@ const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
 					logoImageRaw: logoAExporter, // <--- AJOUT SÉCURISÉ ICI : Transmet la chaîne Base64
 					billes: listBillesExport,
 					lignesDessinees: zonesDessinees,
+					pochesColoriees: pochesParDefaut, // <--- AJOUT STRUCTUREL : Sauvegarde l'état initialisé des poches
 					optionsVisuelles: {
 
 						grille: chkToggleGrid ? chkToggleGrid.checked : true,
@@ -1859,3 +1910,114 @@ const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
 	ajusterLargeurPanneaux();
 
 });
+
+
+		// --- LOGIQUE DE PEINTURE ET RÉINITIALISATION DES POCHES CORRIGÉE ---
+	const pockets = document.querySelectorAll('.pocket');
+	const markerColor = document.getElementById('marker-color');
+	const historiqueTapsPoches = {}; // Enregistre l'horodatage pour PC (clic) et iPad (touch)
+
+	pockets.forEach((pocket, index) => {
+		// Fonction unique pour appliquer une couleur (ou noir pur)
+		const appliquerCouleurCentre = (couleur) => {
+			if (couleur === "#000000") {
+				// Au lieu de mettre du noir, on supprime la propriété pour masquer instantanément le X
+				pocket.style.removeProperty('--pocket-color');
+				pocket.style.borderColor = "#333"; // Restaure la bordure grise d'origine
+			} else {
+				pocket.style.setProperty('--pocket-color', couleur);
+			}
+		};
+
+		// 1. ACTION SIMPLE : Coloration au clic
+		const peindrePoche = (e) => {
+			if (window.outilTraceActif === "paintPocket") {
+				if (e && e.cancelable) e.preventDefault();
+				if (e && e.stopPropagation) e.stopPropagation();
+
+				let couleurAAppliquer = markerColor ? markerColor.value : '#ffffff';
+				if (window.billeSelectionneeCourante) {
+					couleurAAppliquer = window.billeSelectionneeCourante.style.backgroundColor;
+				}
+
+				appliquerCouleurCentre(couleurAAppliquer);
+			}
+		};
+
+		// 2. ACTION DOUBLE : Réinitialisation en noir pur au double-clic
+		const reinitialiserPoche = (e) => {
+			if (window.outilTraceActif === "paintPocket") {
+				if (e && e.stopPropagation) e.stopPropagation();
+				if (e && e.preventDefault) e.preventDefault();
+				appliquerCouleurCentre("#000000"); // Remet le cœur en noir pur
+			}
+		};
+
+		// Événements standards pour PC/Mac (Souris - En secours pour les extrémités hors canvas)
+		pocket.addEventListener('click', peindrePoche);
+		pocket.addEventListener('dblclick', reinitialiserPoche);
+
+		// INTERCEPTION UNIQUE : Gère le clic simple ET le double-clic au centre parfait à travers le Canvas
+		pocket.addEventListener('pocheTraversee', (e) => {
+			const originalEvent = e.detail.originalEvent;
+			
+			// Calcul du double-clic universel (Valable pour le clic Souris traversant et le touch iPad)
+			const tempsActuel = Date.now();
+			const dernierTap = historiqueTapsPoches[index] || 0;
+			const intervalle = tempsActuel - dernierTap;
+			historiqueTapsPoches[index] = tempsActuel;
+
+			if (intervalle > 40 && intervalle < 300) {
+				// C'est un double-clic/double-tap : Réinitialisation immédiate
+				reinitialiserPoche(originalEvent);
+			} else {
+				// C'est un clic simple : On peint le centre
+				peindrePoche(originalEvent);
+			}
+		});
+
+		// Événements pour iPad/iPhone (Tactile en direct hors canvas aux extrémités)
+		pocket.addEventListener('touchstart', (e) => {
+			if (window.outilTraceActif !== "paintPocket") return;
+			
+			const tempsActuel = Date.now();
+			const dernierTap = historiqueTapsPoches[index] || 0;
+			const intervalle = tempsActuel - dernierTap;
+			historiqueTapsPoches[index] = tempsActuel;
+
+			if (intervalle > 40 && intervalle < 300) {
+				reinitialiserPoche(e);
+			} else {
+				peindrePoche(e);
+			}
+		}, { passive: false });
+	});
+
+	// Écouteur sur les boutons de la palette pour modifier l'aspect visuel de la souris
+	document.querySelectorAll('.tool-btn').forEach(btn => {
+		const majCurseurOutil = () => {
+			setTimeout(() => {
+				document.body.setAttribute('data-active-tool', window.outilTraceActif || "select");
+			}, 20);
+		};
+		btn.addEventListener('click', majCurseurOutil);
+		btn.addEventListener('touchstart', majCurseurOutil, { passive: true });
+	});
+
+
+
+
+
+
+
+	// Écouteur sur les boutons de la palette pour modifier l'aspect visuel de la souris
+	document.querySelectorAll('.tool-btn').forEach(btn => {
+		const majCurseurOutil = () => {
+			setTimeout(() => {
+				document.body.setAttribute('data-active-tool', window.outilTraceActif || "select");
+			}, 20);
+		};
+		btn.addEventListener('click', majCurseurOutil);
+		btn.addEventListener('touchstart', majCurseurOutil, { passive: true });
+	});
+

@@ -3,7 +3,6 @@
 
 <head>
 
-
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -1205,6 +1204,53 @@
 	white-space: nowrap;      /* Évite que le mot saute à la ligne si la colonne est étroite */
 }
 
+
+.pocket {
+	position: absolute;
+	width: 44px;
+	height: 44px;
+	/* Votre dégradé radial inchangé */
+	background: radial-gradient(circle, var(--pocket-color, #000) 0%, var(--pocket-color, #000) 35%, #000 45%, #000 100%);
+	border-radius: 50%;
+	border: 3px solid #333 !important;
+	z-index: 1;
+	transition: background 0.2s ease;
+	
+	/* ÉTAPES CRITIQUES POUR LE CENTRAGE DU X */
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+}
+
+/* Génération dynamique du X noir au centre de la couleur */
+.pocket::after {
+	/* Le X ne s'affiche que si --pocket-color est définie (différente de noir) */
+	content: "✓";
+	color: #000000 !important;
+	font-family: 'Arial', system-ui, -apple-system, sans-serif !important;
+	font-weight: 900 !important;
+	font-size: 14px !important;
+	line-height: 1 !important;
+	text-align: center !important;
+	pointer-events: none !important; /* Évite de bloquer les clics et double-clics */
+	
+	/* Masqué par défaut lorsque la poche est noire (#000000) */
+	opacity: 0;
+	transition: opacity 0.15s ease;
+}
+
+/* Rendre le X visible dès que la variable CSS de couleur est présente */
+.pocket[style*="--pocket-color"]::after {
+	opacity: 1;
+}
+
+/* Optionnel : Effet visuel au survol pour indiquer que la poche est cliquable */
+body[data-active-tool="paintPocket"] .pocket:hover {
+	cursor: cell;
+	box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+}
+
+
 		
 	</style>
 </head>
@@ -1356,7 +1402,8 @@
            
 			<button type="button" class="tool-btn tool-eraser" data-tool="erase" title="Effacer un élément (Gomme)"><span class="btn-text">🧼 Gomme</span></button>
 
-
+			<!-- NOUEAU BOUTON : COLORATION DES POCHES -->
+			<button type="button" class="tool-btn" data-tool="paintPocket" title="Colorer une poche au clic avec la couleur active du marqueur">💧 Poches</button>
 
 
 		</div>
@@ -1432,12 +1479,13 @@
 				<div class="cushion right"></div>
 
 				<!-- Poches -->
-				<div class="pocket tl"></div>
-				<div class="pocket tc"></div>
-				<div class="pocket tr"></div>
-				<div class="pocket bl"></div>
-				<div class="pocket bc"></div>
-				<div class="pocket br"></div>
+				<div class="pocket tl" data-pocket-id="tl"></div>
+				<div class="pocket tc" data-pocket-id="tc"></div>
+				<div class="pocket tr" data-pocket-id="tr"></div>
+				<div class="pocket bl" data-pocket-id="bl"></div>
+				<div class="pocket bc" data-pocket-id="bc"></div>
+				<div class="pocket br" data-pocket-id="br"></div>
+
 			</div>
 
 

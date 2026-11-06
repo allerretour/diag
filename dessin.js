@@ -114,14 +114,16 @@ function gererLogiquePalette(btn, e) {
 	}
 
 
-	const canvas = document.getElementById('drawing-canvas');
+		const canvas = document.getElementById('drawing-canvas');
 	if (canvas) {
+		// CORRECTION : L'outil paintPocket a besoin de laisser passer le clic à travers le canvas ou d'activer le pointeur
 		if (window.outilTraceActif !== "select") {
 			canvas.style.pointerEvents = 'auto';
 		} else {
 			canvas.style.pointerEvents = 'none';
 		}
 	}
+
 
 	rafraichirTexteBoutonsPalette();
 	if (typeof window.redessinerToutesLesLignes === "function") window.redessinerToutesLesLignes();
@@ -170,6 +172,14 @@ function rafraichirTexteBoutonsPalette() {
 			colorSelect.value = hexCouleur;
 		}
 	}
+
+
+	const btnPocket = document.querySelector('.tool-btn[data-tool="paintPocket"]');
+	if (btnPocket && window.outilTraceActif !== 'paintPocket') {
+		btnPocket.innerText = "💧 Poches";
+	}
+
+
 
 	let couleurSelectionnee = colorSelect ? colorSelect.value : '#ffffff';
 
@@ -324,6 +334,13 @@ document.addEventListener("DOMContentLoaded", () => {
 			animationFrameId = null;
 		});
 	});
+
+
+
+
+
+
+
 
 	// Fonction d'assistance pour assombrir/saturer dynamiquement la couleur choisie pour le contour 3D
 	function obtenirOmbre3DCouleur(couleurHex) {
@@ -1368,6 +1385,15 @@ document.addEventListener("DOMContentLoaded", () => {
 	}
 
 	if (clearBtn) {
+
+		// Fonction utilitaire pour nettoyer les poches en cascade
+		const viderToutesLesPoches = () => {
+			const toutesLesPoches = document.querySelectorAll('.pocket');
+			toutesLesPoches.forEach(p => {
+				p.style.setProperty('--pocket-color', '#000000');
+			});
+		};
+
 		// Événement pour l'iPad / iPhone
 		clearBtn.addEventListener('touchstart', (e) => {
 			if (e.cancelable) e.preventDefault();
@@ -1375,6 +1401,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 			ctx.clearRect(0, 0, canvas.width, canvas.height);
 			window.dessinsSauvegardes = [];
+
+			// NOUVEAU : Réinitialise le cœur de toutes les poches
+			viderToutesLesPoches();
+
 			if (typeof window.redessinerToutesLesLignes === "function") window.redessinerToutesLesLignes();
 
 			clearBtn.blur();
@@ -1391,6 +1421,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 			ctx.clearRect(0, 0, canvas.width, canvas.height);
 			window.dessinsSauvegardes = [];
+
+			// NOUVEAU : Réinitialise le cœur de toutes les poches
+			viderToutesLesPoches();
+
 			if (typeof window.redessinerToutesLesLignes === "function") window.redessinerToutesLesLignes();
 
 			clearBtn.blur();
@@ -1769,6 +1803,34 @@ document.addEventListener('keydown', (e) => {
 		}
 		return;
 	}
+
+	// NOUVEAU - SÉCURITÉ & INTERCEPTION OUTIL POCHES : Récupère la poche sous le canvas
+	if (window.outilTraceActif === "paintPocket") {
+		if (e.cancelable) e.preventDefault();
+
+		// 1. On désactive temporairement les événements sur le canvas pour lire en dessous
+		const canvasTemp = document.getElementById('drawing-canvas');
+		if (canvasTemp) canvasTemp.style.pointerEvents = 'none';
+
+		// 2. Récupération des coordonnées physiques de l'écran (Souris ou iPad)
+		const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX;
+		const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : e.clientY;
+		const elementSousCurseur = document.elementFromPoint(clientX, clientY);
+
+		// 3. On réactive immédiatement le canvas pour ne pas bloquer les autres outils
+		if (canvasTemp) canvasTemp.style.pointerEvents = 'auto';
+
+		// 4. Si l'élément sous le curseur est une poche (ou est à l'intérieur), on lui transmet l'événement
+		const pocheCible = elementSousCurseur ? elementSousCurseur.closest('.pocket') : null;
+		if (pocheCible) {
+			// On déclenche l'événement personnalisé configuré ci-dessous
+			pocheCible.dispatchEvent(new CustomEvent('pocheTraversee', { detail: { originalEvent: e } }));
+		}
+		return;
+	}
+
+
+
 
 	// === 2. NOUVEAU : LOGIQUE TACTILE POUR L'OUTIL ZONE ===
 	if (window.outilTraceActif === "zoneTactique") {
