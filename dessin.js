@@ -1230,7 +1230,8 @@ document.addEventListener("DOMContentLoaded", () => {
 					const centre = dessin.points[0];
 					const tempQuadrant = window.quadrantCibleCourant;
 					window.quadrantCibleCourant = dessin.hasOwnProperty('quadrant') ? dessin.quadrant : 0;
-					dessinerCible(centre.x, centre.y, dessin.couleur);
+					
+					dessinerCible(centre.x, centre.y, window.COULEUR_CIBLE_TACTIQUE || '#cbd5e1');
 					window.quadrantCibleCourant = tempQuadrant;
 				}
 				return;
@@ -1249,7 +1250,7 @@ document.addEventListener("DOMContentLoaded", () => {
 					const centre = dessin.points[0];
 					const tempTaille = window.tailleCarreCourante;
 					window.tailleCarreCourante = dessin.taille || 95;
-					dessinerCarre(centre.x, centre.y, dessin.couleur);
+					dessinerCarre(centre.x, centre.y, window.COULEUR_CARRE_TACTIQUE || '#cbd5e1');
 					window.tailleCarreCourante = tempTaille;
 				}
 				return;
@@ -1323,8 +1324,8 @@ document.addEventListener("DOMContentLoaded", () => {
 				couleurActive = window.billeSelectionneeCourante.style.backgroundColor;
 			}
 
-			if (formeActive === 'cible') dessinerCible(mouseX, mouseY, couleurActive);
-			if (formeActive === 'carre') dessinerCarre(mouseX, mouseY, couleurActive);
+			if (formeActive === 'cible') dessinerCible(mouseX, mouseY, window.COULEUR_CIBLE_TACTIQUE || '#cbd5e1');
+			if (formeActive === 'carre') dessinerCarre(mouseX, mouseY, window.COULEUR_CARRE_TACTIQUE || '#cbd5e1');
 			if (formeActive === 'repereX') dessinerRepereXGras(mouseX, mouseY, couleurActive);
 			if (formeActive === 'effetBlanche') dessinerEffetsBilleBlanche(mouseX, mouseY, couleurActive, window.niveauForceCourant);
 			if (formeActive === 'pointContact') dessinerPointContact(mouseX, mouseY, couleurActive, window.pourcentageContactCourant, window.coteContactCourant);

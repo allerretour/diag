@@ -15,7 +15,6 @@ window.isViewMode = (urlParams.get('mode') === 'view' || urlParams.get('view') =
 
 
 
-
 // --- Nuancier Officiel des Billes de Billard ---
 const ballColors = {
 	1: '#f1c40f', // Jaune
@@ -86,3 +85,10 @@ window.logoBase64Courant = null;      // Stocke la chaîne Base64 du logo person
 // --- Mémoire Tactile (Spécifique iPad / Gestes) ---
 window.historiqueTapsBilles = {};     // Enregistre l'horodatage des taps pour la détection du double-tap
 window.timersSelectionBilles = {};    // Stocke les instances de timers pour discriminer tap simple et double-tap
+
+
+// --- Couleur fixe globale pour l'outil de cible tactique ---
+window.COULEUR_CIBLE_TACTIQUE = '#cbd5e1'; // Gris pâle
+
+window.COULEUR_CARRE_TACTIQUE = '#cbd5e1'; // Gris pâle pour le carré
+
