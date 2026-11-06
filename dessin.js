@@ -355,9 +355,9 @@ document.addEventListener("DOMContentLoaded", () => {
 	const cote = (coteFige !== undefined) ? coteFige : window.coteContactCourant;
 	const couleurMarqueur = couleur || (colorSelect ? colorSelect.value : '#ffffff');
 
-	// Dimensions réduites d'environ 15% pour libérer de l'espace visuel
-	const largeurCadre = 185;
-	const hauteurCadre = 140;
+	// === DIMENSIONS RÉDUITES (OPTIMISATION DE L'ESPACE VISUEL) ===
+	const largeurCadre = 150; // Réduit de 185 à 150
+	const hauteurCadre = 115; // Réduit de 140 à 115
 	
 	// Calage géométrique sur la grille de pixels pour un rendu de contour parfait
 	const adj = (ctx.lineWidth % 2 === 1) ? 0.5 : 0;
@@ -373,10 +373,10 @@ document.addEventListener("DOMContentLoaded", () => {
 	ctx.lineWidth = 1;
 	ctx.stroke();
 
-	// Billes proportionnellement réduites (22px au lieu de 26px)
+	// === BILLES PROPORTIONNELLEMENT RÉDUITES ===
 	const centreCadreX = Math.floor(x) + adj;
-	const centreCadreY = Math.floor(y - 8) + adj;
-	const rayonBille = 22;
+	const centreCadreY = Math.floor(y - 6) + adj; // Réajusté pour recentrage vertical
+	const rayonBille = 18; // Réduit de 22 à 18
 	const diametreBille = rayonBille * 2;
 	const decalageX = diametreBille * (1 - (pct / 100));
 
@@ -397,7 +397,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	gradCible.addColorStop(0, "#ffffff");
 	gradCible.addColorStop(0.35, couleurMarqueur);
 	gradCible.addColorStop(0.85, couleurMarqueur);
-	gradCible.addColorStop(1, obtenirOmbre3DCouleur(couleurMarqueur)); // Utilise votre fonction d'ombre résine
+	gradCible.addColorStop(1, obtenirOmbre3DCouleur(couleurMarqueur));
 
 	ctx.beginPath();
 	ctx.arc(centreCadreX, centreCadreY, rayonBille, 0, 2 * Math.PI);
@@ -489,16 +489,19 @@ document.addEventListener("DOMContentLoaded", () => {
 	const forceActuelle = (forceFige !== undefined) ? forceFige : window.niveauForceCourant;
 	const jaugeActive = forceActuelle > 0;
 
-	// Échelle réduite pour correspondre au panneau d'impact (185px de large)
-	const largeurCadre = jaugeActive ? 185 : 135;
-	const hauteurCadre = 155;
+	// === GÉOMÉTRIE DU CADRE RÉDUIT ===
+	const largeurCadre = jaugeActive ? 150 : 110;
+	const hauteurCadre = 125;
 	const demiLargeur = largeurCadre / 2;
-	const rayonBille = 48; 
+	const demiHauteur = hauteurCadre / 2;
+	const rayonBille = 36;
 
 	// Alignement sous-pixel pour éliminer le flou sur les tracés de cadres fins
 	const adj = (ctx.lineWidth % 2 === 1) ? 0.5 : 0;
 	const cadreX = Math.floor(x - demiLargeur) + adj;
-	const cadreY = Math.floor(y - rayonBille - 30) + adj;
+	
+	// === CORRECTIF CRITIQUE : CENTRAGE VERTICAL PARFAIT SUR L'AXE Y ===
+	const cadreY = Math.floor(y - demiHauteur) + adj; // Cadre calé précisément autour du centre y
 	const arrondiCoins = 12;
 
 	ctx.beginPath();
@@ -509,8 +512,20 @@ document.addEventListener("DOMContentLoaded", () => {
 	ctx.lineWidth = 1;
 	ctx.stroke();
 
-	const shiftX = jaugeActive ? -18 : 0;
-	const billeX = Math.floor(x + shiftX) + adj;
+	// === CENTRAGE HORIZONTAL DES ÉLÉMENTS (BILLE ET JAUGE) ===
+	let billeX, jaugeX;
+	const jaugeWidth = 8;
+
+	if (jaugeActive) {
+		// La zone utile (150px) est segmentée pour équilibrer la bille et la jauge
+		billeX = Math.floor(cadreX + 48) + adj;
+		jaugeX = Math.floor(cadreX + 122 - (jaugeWidth / 2)) + adj;
+	} else {
+		// Sans jauge, la bille occupe le centre horizontal absolu
+		billeX = Math.floor(cadreX + demiLargeur) + adj;
+	}
+	
+	// L'axe Y de la bille correspond maintenant fidèlement au centre Y du pointeur
 	const billeY = Math.floor(y) + adj;
 
 	// --- RENDU 3D ULTRA-LISSE DE LA BILLE BLANCHE (Dégradés adoucis) ---
@@ -557,7 +572,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	ctx.stroke();
 
 	// --- POINTS D'EFFETS TACTIQUES (Petits boutons de visée contrastés) ---
-	const distanceCentre = 32;
+	const distanceCentre = 24; 
 	const diagPoint = distanceCentre * cos45;
 	const pointsEffets = [
 		{ dx: 0, dy: 0, estCentre: true },
@@ -591,19 +606,16 @@ document.addEventListener("DOMContentLoaded", () => {
 	ctx.font = "600 10px system-ui, -apple-system, sans-serif";
 	ctx.textAlign = "center";
 	ctx.textBaseline = "bottom";
-	ctx.fillText("CONTACT", billeX, billeY - rayonBille - 10);
+	ctx.fillText("CONTACT", billeX, billeY - rayonBille - 8);
 
-	// --- JAUGE DE PUISSANCE COMPACTE ET NETTE ---
+	// --- JAUGE DE PUISSANCE COMPACTE ET CENTRÉE VERTICALEMENT ---
 	if (jaugeActive) {
-		const jaugeWidth = 10;
 		const jaugeHeight = rayonBille * 2;
-		const jaugeX = Math.floor(cadreX + largeurCadre - 35) + adj;
-		const jaugeY = Math.floor(billeY - rayonBille) + adj;
 
 		ctx.fillStyle = "rgba(150, 165, 185, 0.85)";
-		ctx.fillText("FORCE", jaugeX + (jaugeWidth / 2), jaugeY - 10);
+		ctx.fillText("FORCE", jaugeX + (jaugeWidth / 2), billeY - rayonBille - 8);
 
-		const grad = ctx.createLinearGradient(jaugeX, jaugeY + jaugeHeight, jaugeX, jaugeY);
+		const grad = ctx.createLinearGradient(jaugeX, billeY + rayonBille, jaugeX, billeY - rayonBille);
 		grad.addColorStop(0, "#2ecc71");
 		grad.addColorStop(0.4, "#f1c40f");
 		grad.addColorStop(0.7, "#e67e22");
@@ -611,23 +623,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
 		ctx.save();
 		ctx.beginPath();
-		ctx.roundRect(jaugeX, jaugeY, jaugeWidth, jaugeHeight, 4);
+		ctx.roundRect(jaugeX, billeY - rayonBille, jaugeWidth, jaugeHeight, 4);
 		ctx.fillStyle = grad;
 		ctx.fill();
 		ctx.restore();
 
-		const hauteurCibleY = Math.floor(jaugeY + jaugeHeight - ((forceActuelle / 4) * jaugeHeight)) + adj;
+		const hauteurCibleY = Math.floor((billeY + rayonBille) - ((forceActuelle / 4) * jaugeHeight)) + adj;
 
-		// Curseur flèche indicateur
+		// Curseur flèche indicateur de force (repositionné à gauche de la jauge)
 		ctx.fillStyle = "#ffffff";
 		ctx.beginPath();
 		ctx.moveTo(jaugeX - 3, hauteurCibleY);
-		ctx.lineTo(jaugeX - 8, hauteurCibleY - 3.5);
-		ctx.lineTo(jaugeX - 8, hauteurCibleY + 3.5);
+		ctx.lineTo(jaugeX - 7, hauteurCibleY - 3);
+		ctx.lineTo(jaugeX - 7, hauteurCibleY + 3);
 		ctx.closePath();
 		ctx.fill();
 
-		// Ligne de coupe sur la jauge
+		// Ligne de coupe blanche sur la jauge
 		ctx.strokeStyle = "#ffffff";
 		ctx.lineWidth = 1;
 		ctx.beginPath();
@@ -637,13 +649,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
 		// Valeur numérique de la puissance
 		ctx.fillStyle = couleursForce[forceActuelle];
-		ctx.font = "bold 11px system-ui, -apple-system, sans-serif";
+		ctx.font = "bold 10px system-ui, -apple-system, sans-serif";
 		ctx.textBaseline = "top";
-		ctx.fillText(`${forceActuelle * 25}%`, jaugeX + (jaugeWidth / 2), jaugeY + jaugeHeight + 6);
+		ctx.fillText(`${forceActuelle * 25}%`, jaugeX + (jaugeWidth / 2), billeY + rayonBille + 5);
 	}
 
 	ctx.restore();
 }
+
 
 	function dessinerRepereXGras(x, y, couleur, texteFige) {
 		ctx.save();

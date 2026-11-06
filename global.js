@@ -29,7 +29,7 @@ const ballColors = {
 };
 
 // --- Ordre de Défilement Tactique (Touche 9 / Repère X) ---
-const cycleCaracteres = ["A", "B", "C", "D", "E", "F", "🎯", "🔵", "1", "2", "3", "4", "5", "6"];
+const cycleCaracteres = ["A", "B", "C", "D", "E", "F", "🎯", "🔵","🔹", "1", "2", "3", "4", "5", "6"];
 
 // --- Paramètres de Rendu de Force (Touche 0 / Effets) ---
 const labelsForce = {
