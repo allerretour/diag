@@ -982,6 +982,110 @@ const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
 		});
 	}
 
+
+
+
+
+// ====================================================================
+// EXPORTATION & COPIE D'IMAGE PNG EN 1 CLIC (PRESSE-PAPIERS + FALLBACK)
+// ====================================================================
+const btnCopyImage = document.getElementById('btn-copy-image');
+
+if (btnCopyImage) {
+    btnCopyImage.addEventListener('click', async () => {
+        const tableFrame = document.getElementById('table-frame') || document.getElementById('pool-table');
+        if (!tableFrame) return;
+
+        // 1. Sauvegarde et nettoyage temporaire des éléments parasites de l'UI
+        const texteOriginalBtn = btnCopyImage.innerText;
+        btnCopyImage.innerText = "⏳ Capture...";
+        btnCopyImage.disabled = true;
+
+        // Retire temporairement le contour blanc de sélection d'une bille pour une image propre
+        const billeActiveTemp = window.billeSelectionneeCourante;
+        if (billeActiveTemp) {
+            billeActiveTemp.style.outline = 'none';
+        }
+
+        // Masque le badge flottant de coordonnées s'il est encore affiché
+        const badgeFlottant = document.getElementById('ball-drag-live-badge');
+        if (badgeFlottant) badgeFlottant.style.display = 'none';
+
+        try {
+            // 2. Capture haute définition (scale: 2 pour un rendu ultra-net sur écrans Retina/iPad)
+            const canvasCapture = await html2canvas(tableFrame, {
+                backgroundColor: null,
+                scale: 2,
+                useCORS: true,
+                logging: false
+            });
+
+            // 3. Conversion en Blob PNG et copie dans le presse-papiers
+            canvasCapture.toBlob(async (blob) => {
+                if (!blob) throw new Error("Échec de création de l'image.");
+
+                let copieReussie = false;
+
+                // Tentative de copie directe dans le presse-papiers (Ctrl+V prêt !)
+                if (navigator.clipboard && window.ClipboardItem) {
+                    try {
+                        const item = new ClipboardItem({ "image/png": blob });
+                        await navigator.clipboard.write([item]);
+                        copieReussie = true;
+                        btnCopyImage.innerText = "✅ Copiée !";
+                    } catch (errClip) {
+                        console.warn("Copie presse-papiers bloquée par le navigateur, passage au téléchargement :", errClip);
+                    }
+                }
+
+                // Fallback automatique : Si le navigateur (ex: Safari iOS ou HTTP non sécurisé) bloque le presse-papiers, on télécharge le PNG
+                if (!copieReussie) {
+                    const titleInput = document.getElementById('input-title');
+                    const nomBase = (titleInput && titleInput.value.trim() !== "")
+                        ? titleInput.value.trim().replace(/[/\\?%*:|"<>]/g, '-')
+                        : "diagramme_billard";
+
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${nomBase}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+
+                    btnCopyImage.innerText = "💾 Téléchargée !";
+                }
+
+                // Restauration du bouton après 2 secondes
+                setTimeout(() => {
+                    btnCopyImage.innerText = texteOriginalBtn;
+                    btnCopyImage.disabled = false;
+                }, 2000);
+
+            }, 'image/png');
+
+        } catch (erreur) {
+            console.error("Erreur lors de la capture d'image :", erreur);
+            alert("Impossible de générer l'image. Vérifiez que la librairie html2canvas est bien chargée.");
+            btnCopyImage.innerText = texteOriginalBtn;
+            btnCopyImage.disabled = false;
+        } finally {
+            // 4. Restauration du contour blanc sur la bille qui était sélectionnée
+            if (billeActiveTemp) {
+                billeActiveTemp.style.outline = '2px solid #ffffff';
+                billeActiveTemp.style.outlineOffset = '2px';
+            }
+        }
+    });
+}
+
+
+
+
+
+
+
 	// --- GESTION DE L'AFFICHAGE DU LOGO SUR LE TAPIS ---
 	const chkShowLogo = document.getElementById('chk-show-logo');
 	const tableLogoOverlay = document.getElementById('table-logo-overlay');
