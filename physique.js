@@ -931,6 +931,30 @@ window.detecterEtEffacerDessin = function(clicX, clicY) {
 };
 
 
+// --- DÉTECTION D'UNE FORME TACTIQUE POUR DÉPLACEMENT ---
+window.trouverFormeTactiqueProche = function(clicX, clicY) {
+	// Parcours inversé pour attraper la forme située au premier plan
+	for (let i = window.dessinsSauvegardes.length - 1; i >= 0; i--) {
+		const dessin = window.dessinsSauvegardes[i];
+		const estFormeDeplacable = dessin.estCible || dessin.estCarre || dessin.estEffetBlanche || dessin.estRepereX || dessin.estPointContact;
+
+		if (estFormeDeplacable && dessin.points && dessin.points.length > 0) {
+			const pt = dessin.points[0];
+			// Rayon de tolérance adapté à la taille de la forme
+			let tolerance = 25;
+			if (dessin.estCible || dessin.estCarre) tolerance = 55;
+			if (dessin.estPointContact || dessin.estEffetBlanche) tolerance = 60;
+
+			if (estProchePoint(clicX, clicY, pt.x, pt.y, tolerance)) {
+				return dessin;
+			}
+		}
+	}
+	return null;
+};
+
+
+
 
 
 

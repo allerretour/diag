@@ -300,6 +300,14 @@ document.addEventListener("DOMContentLoaded", () => {
 	const toggleDrawingsCheck = document.getElementById('chk-toggle-drawings');
 
 	let isDrawing = false;
+
+	let isDraggingForme = false;
+	let dragOffsetFormeX = 0;
+	let dragOffsetFormeY = 0;
+	window.formeTactiqueSelectionnee = null;
+
+
+
 	let currentLine = null;
 	let startPoint = null;
 	let isCtrlPressed = false;
@@ -334,6 +342,90 @@ document.addEventListener("DOMContentLoaded", () => {
 			animationFrameId = null;
 		});
 	});
+
+
+
+
+		// 1. DÉBUT DU DÉPLACEMENT D'UNE FORME (Souris & Tactile)
+	function gererDebutDeplacementForme(e) {
+		if (window.isViewMode || window.outilTraceActif !== "select") return;
+		if (e.type === 'mousedown' && e.button !== 0) return;
+
+		// Si l'utilisateur clique sur une bille, on laisse la bille gérer son propre drag
+		if (e.target.closest('.ball')) {
+			window.formeTactiqueSelectionnee = null;
+			window.redessinerToutesLesLignes();
+			return;
+		}
+
+		const coords = obtenirCoordonneesEvenement(e, table);
+		const formeTrouvee = window.trouverFormeTactiqueProche(coords.x, coords.y);
+
+		if (formeTrouvee) {
+			if (e.cancelable) e.preventDefault();
+			window.formeTactiqueSelectionnee = formeTrouvee;
+			isDraggingForme = true;
+
+			// Désélectionne la bille active s'il y en avait une
+			if (window.billeSelectionneeCourante) {
+				window.billeSelectionneeCourante.style.outline = 'none';
+				window.billeSelectionneeCourante = null;
+				if (typeof rafraichirListeLateraleBilles === "function") rafraichirListeLateraleBilles();
+			}
+
+			// Mémorise le décalage entre le curseur et le centre de la forme pour éviter tout saut
+			dragOffsetFormeX = coords.x - formeTrouvee.points[0].x;
+			dragOffsetFormeY = coords.y - formeTrouvee.points[0].y;
+
+			window.redessinerToutesLesLignes();
+		} else if (window.formeTactiqueSelectionnee) {
+			// Clic dans le vide : désélectionne la forme
+			window.formeTactiqueSelectionnee = null;
+			window.redessinerToutesLesLignes();
+		}
+	}
+
+	// 2. MOUVEMENT DE LA FORME
+	function gererMouvementDeplacementForme(e) {
+		if (!isDraggingForme || !window.formeTactiqueSelectionnee) return;
+		if (e.cancelable) e.preventDefault();
+
+		const coords = obtenirCoordonneesEvenement(e, table);
+		let newX = coords.x - dragOffsetFormeX;
+		let newY = coords.y - dragOffsetFormeY;
+
+		// Applique les limites de la table
+		const posClampee = clampPositionDessin(newX, newY);
+		newX = posClampee.x;
+		newY = posClampee.y;
+
+		// Optionnel : Magnétisme sur la grille si activé (sauf si Shift est maintenu)
+		if (typeof calculerSnapGrille === "function" && !e.shiftKey) {
+			const snap = calculerSnapGrille(newX - 12, newY - 12, null, true);
+			newX = snap.x + 12;
+			newY = snap.y + 12;
+		}
+
+		window.formeTactiqueSelectionnee.points[0] = { x: newX, y: newY };
+		window.redessinerToutesLesLignes();
+	}
+
+	// 3. FIN DU DÉPLACEMENT
+	function gererFinDeplacementForme() {
+		if (isDraggingForme) {
+			isDraggingForme = false;
+		}
+	}
+
+	// Attachement des écouteurs hybrides sur la table
+	table.addEventListener('mousedown', gererDebutDeplacementForme);
+	table.addEventListener('touchstart', gererDebutDeplacementForme, { passive: false });
+
+	document.addEventListener('mousemove', gererMouvementDeplacementForme);
+	document.addEventListener('touchmove', gererMouvementDeplacementForme, { passive: false });
+
+	document.addEventListener('mouseup', gererFinDeplacementForme);
+	document.addEventListener('touchend', gererFinDeplacementForme);
 
 
 
@@ -1309,6 +1401,60 @@ document.addEventListener("DOMContentLoaded", () => {
 				ctx.stroke();
 			}
 		});
+
+
+				// === SURBRILLANCE ADAPTATIVE SELON LA FORME TACTIQUE SÉLECTIONNÉE ===
+		if (window.formeTactiqueSelectionnee && window.formeTactiqueSelectionnee.points && window.formeTactiqueSelectionnee.points.length > 0) {
+			const f = window.formeTactiqueSelectionnee;
+			const pt = f.points[0];
+			
+			ctx.save();
+			ctx.strokeStyle = "#ffffff";
+			ctx.lineWidth = 1.5;
+			ctx.setLineDash([4, 4]); // Pointillés fins blancs
+			ctx.shadowColor = "rgba(0, 0, 0, 0.6)";
+			ctx.shadowBlur = 4;
+
+			if (f.estCible) {
+				// Épouse exactement le carré extérieur de 175x175 (marge de 3px)
+				ctx.beginPath();
+				ctx.roundRect(pt.x - 90.5, pt.y - 90.5, 181, 181, 10);
+				ctx.stroke();
+			} 
+			else if (f.estCarre) {
+				// Épouse la taille exacte du carré sélectionné (95, 135 ou 180)
+				const taille = (f.taille || 95) + 6;
+				const demi = taille / 2;
+				ctx.beginPath();
+				ctx.roundRect(pt.x - demi, pt.y - demi, taille, taille, 17);
+				ctx.stroke();
+			} 
+			else if (f.estPointContact) {
+				// Épouse le panneau Contact (150x115)
+				ctx.beginPath();
+				ctx.roundRect(pt.x - 78, pt.y - 60.5, 156, 121, 14);
+				ctx.stroke();
+			} 
+			else if (f.estEffetBlanche) {
+				// Épouse le panneau Effets selon la présence de la jauge (150x125 ou 110x125)
+				const largeur = (f.force > 0 ? 150 : 110) + 6;
+				const hauteur = 125 + 6;
+				ctx.beginPath();
+				ctx.roundRect(pt.x - (largeur / 2), pt.y - (hauteur / 2), largeur, hauteur, 14);
+				ctx.stroke();
+			} 
+			else if (f.estRepereX) {
+				// Cercle ajusté autour de l'étoile, du cercle ou de la lettre
+				ctx.beginPath();
+				ctx.arc(pt.x, pt.y, 17, 0, 2 * Math.PI);
+				ctx.stroke();
+			}
+
+			ctx.restore();
+		}
+
+
+
 
 		// === RENDU EN DIRECT DE L'APERÇU FANTÔME (SOUS LE CURSEUR) ===
 		// CORRECTION : On détermine l'outil actif qu'il vienne de la palette OU du clavier
