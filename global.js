@@ -74,6 +74,7 @@ window.quadrantCibleCourant = 0;      // Index du quadrant actif (0: BD, 1: BG, 
 
 // --- Configuration de l'Outil : Effet Blanche (Touche 0) ---
 window.niveauForceCourant = 0;        // Force sélectionnée (0: désactivé, 1: 25%, 2: 50%, 3: 75%, 4: 100%)
+window.indexPointEffetCourant = 0;    // NOUVEAU : 0 = Centre, 1 à 8 = Points périphériques
 
 // --- Configuration de l'Outil : Point de Contact (Touche P) ---
 window.pourcentageContactCourant = 100; // Quantité d'impact courante (0 à 100%)

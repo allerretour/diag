@@ -361,8 +361,55 @@ document.addEventListener("DOMContentLoaded", () => {
 		const coords = obtenirCoordonneesEvenement(e, table);
 		const formeTrouvee = window.trouverFormeTactiqueProche(coords.x, coords.y);
 
-		if (formeTrouvee) {
+				if (formeTrouvee) {
 			if (e.cancelable) e.preventDefault();
+
+			// --- NOUVEAU : DÉTECTION D'UN CLIC SUR L'UN DES 9 POINTS D'EFFET ---
+			if (formeTrouvee.estEffetBlanche && formeTrouvee.points && formeTrouvee.points.length > 0) {
+				const centreForme = formeTrouvee.points[0];
+				const jaugeActive = (formeTrouvee.force || 0) > 0;
+				const demiLargeur = (jaugeActive ? 150 : 110) / 2;
+				
+				// Calcul exact du centre de la bille blanche à l'intérieur du cadre
+				const billeX = jaugeActive ? (centreForme.x - demiLargeur + 48) : centreForme.x;
+				const billeY = centreForme.y;
+
+				const d = 24;
+				const diag = d * Math.cos(Math.PI / 4);
+				const offsets = [
+					{ dx: 0, dy: 0 },                   // 0 : Centre
+					{ dx: 0, dy: -d },                  // 1 : Haut (Coulé)
+					{ dx: 0, dy: d },                   // 2 : Bas (Rétro)
+					{ dx: -d, dy: 0 },                  // 3 : Gauche
+					{ dx: d, dy: 0 },                   // 4 : Droite
+					{ dx: -diag, dy: -diag },           // 5 : Haut-Gauche
+					{ dx: diag, dy: -diag },            // 6 : Haut-Droite
+					{ dx: -diag, dy: diag },            // 7 : Bas-Gauche
+					{ dx: diag, dy: diag }              // 8 : Bas-Droite
+				];
+
+				// Vérifie si le clic/toucher est à moins de 9px d'un des 9 points
+				for (let i = 0; i < offsets.length; i++) {
+					const px = billeX + offsets[i].dx;
+					const py = billeY + offsets[i].dy;
+					if (Math.hypot(coords.x - px, coords.y - py) <= 11) {
+						formeTrouvee.pointEffet = i;
+						window.indexPointEffetCourant = i;
+						window.formeTactiqueSelectionnee = formeTrouvee;
+
+						// Désélectionne la bille active s'il y en avait une
+						if (window.billeSelectionneeCourante) {
+							window.billeSelectionneeCourante.style.outline = 'none';
+							window.billeSelectionneeCourante = null;
+							if (typeof rafraichirListeLateraleBilles === "function") rafraichirListeLateraleBilles();
+						}
+
+						window.redessinerToutesLesLignes();
+						return; // Stoppe ici pour changer le point sans déplacer le panneau
+					}
+				}
+			}
+
 			window.formeTactiqueSelectionnee = formeTrouvee;
 			isDraggingForme = true;
 
@@ -383,8 +430,8 @@ document.addEventListener("DOMContentLoaded", () => {
 			window.formeTactiqueSelectionnee = null;
 			window.redessinerToutesLesLignes();
 		}
-	}
 
+	}
 	// 2. MOUVEMENT DE LA FORME
 	function gererMouvementDeplacementForme(e) {
 		if (!isDraggingForme || !window.formeTactiqueSelectionnee) return;
@@ -583,7 +630,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		}
 	}
 
-	function dessinerEffetsBilleBlanche(x, y, couleur, forceFige) {
+	function dessinerEffetsBilleBlanche(x, y, couleur, forceFige, pointIndexFige) {
 	ctx.save();
 	
 	// === CONFIGURATION DU LISSAGE ET SÉCURITÉ ANTI-ALIASING ===
@@ -681,34 +728,41 @@ document.addEventListener("DOMContentLoaded", () => {
 	ctx.stroke();
 
 	// --- POINTS D'EFFETS TACTIQUES (Petits boutons de visée contrastés) ---
+	const pointActif = (pointIndexFige !== undefined) ? pointIndexFige : (window.indexPointEffetCourant || 0);
+
 	const distanceCentre = 24; 
 	const diagPoint = distanceCentre * cos45;
 	const pointsEffets = [
-		{ dx: 0, dy: 0, estCentre: true },
-		{ dx: 0, dy: -distanceCentre, estCentre: false },
-		{ dx: 0, dy: distanceCentre, estCentre: false },
-		{ dx: -distanceCentre, dy: 0, estCentre: false },
-		{ dx: distanceCentre, dy: 0, estCentre: false },
-		{ dx: -diagPoint, dy: -diagPoint, estCentre: false },
-		{ dx: diagPoint, dy: -diagPoint, estCentre: false },
-		{ dx: -diagPoint, dy: diagPoint, estCentre: false },
-		{ dx: diagPoint, dy: diagPoint, estCentre: false }
+		{ dx: 0, dy: 0 },                   // 0 : Centre
+		{ dx: 0, dy: -distanceCentre },     // 1 : Haut (Coulé)
+		{ dx: 0, dy: distanceCentre },      // 2 : Bas (Rétro)
+		{ dx: -distanceCentre, dy: 0 },     // 3 : Gauche
+		{ dx: distanceCentre, dy: 0 },      // 4 : Droite
+		{ dx: -diagPoint, dy: -diagPoint }, // 5 : Haut-Gauche
+		{ dx: diagPoint, dy: -diagPoint },  // 6 : Haut-Droite
+		{ dx: -diagPoint, dy: diagPoint },  // 7 : Bas-Gauche
+		{ dx: diagPoint, dy: diagPoint }    // 8 : Bas-Droite
 	];
 
-	pointsEffets.forEach(pt => {
+		pointsEffets.forEach((pt, index) => {
 		const ptX = billeX + pt.dx;
 		const ptY = billeY + pt.dy;
+		const estSelectionne = (index === pointActif);
 		
 		ctx.beginPath();
-		ctx.arc(ptX, ptY, pt.estCentre ? 4.5 : 2.5, 0, 2 * Math.PI);
-		ctx.fillStyle = pt.estCentre ? "rgba(255, 255, 255, 0.95)" : "rgba(255, 255, 255, 0.55)";
+		// Point rouge à 6.5px, repères inactifs réduits à 1.8px
+		ctx.arc(ptX, ptY, estSelectionne ? 6.5 : 1.8, 0, 2 * Math.PI);
+		
+		// Repères inactifs beaucoup plus pâles (opacité baissée à 0.22)
+		ctx.fillStyle = estSelectionne ? "#e74c3c" : "rgba(100, 116, 139, 0.22)";
 		ctx.fill();
 		
-		// Légère ombre portée sous le point d'impact pour le faire ressortir de la bille
-		ctx.strokeStyle = "rgba(15, 23, 42, 0.4)";
-		ctx.lineWidth = 1;
+		// Contour quasi invisible sur les points inactifs (0.12)
+		ctx.strokeStyle = estSelectionne ? "#ffffff" : "rgba(15, 23, 42, 0.12)";
+		ctx.lineWidth = estSelectionne ? 1.8 : 0.8;
 		ctx.stroke();
 	});
+
 
 	// --- LABELS ET TYPOGRAPHIE SYSTEM-UI ---
 	ctx.fillStyle = "rgba(150, 165, 185, 0.85)";
@@ -1350,14 +1404,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
 			// === GESTION DE LA FORME D'EFFETS BILLE BLANCHE SAUVEGARDÉE ===
 			if (dessin.estEffetBlanche) {
-    if (dessin.points && dessin.points.length > 0) {
-        const centre = dessin.points[0];
-        // Sécurité anti-mutation : on extrait strictement la force stockée dans le dessin
-        const forceDuDessin = dessin.hasOwnProperty('force') ? dessin.force : 0;
-        dessinerEffetsBilleBlanche(centre.x, centre.y, dessin.couleur, forceDuDessin);
-    }
-    return;
+	if (dessin.points && dessin.points.length > 0) {
+		const centre = dessin.points[0];
+		const forceDuDessin = dessin.hasOwnProperty('force') ? dessin.force : 0;
+		const pointDuDessin = dessin.hasOwnProperty('pointEffet') ? dessin.pointEffet : 0;
+		dessinerEffetsBilleBlanche(centre.x, centre.y, dessin.couleur, forceDuDessin, pointDuDessin);
+	}
+	return;
 }
+
+
 
 			if (dessin.estRepereX) {
 				if (dessin.points && dessin.points[0]) {
@@ -1473,7 +1529,16 @@ document.addEventListener("DOMContentLoaded", () => {
 			if (formeActive === 'cible') dessinerCible(mouseX, mouseY, window.COULEUR_CIBLE_TACTIQUE || '#cbd5e1');
 			if (formeActive === 'carre') dessinerCarre(mouseX, mouseY, window.COULEUR_CARRE_TACTIQUE || '#cbd5e1');
 			if (formeActive === 'repereX') dessinerRepereXGras(mouseX, mouseY, couleurActive);
-			if (formeActive === 'effetBlanche') dessinerEffetsBilleBlanche(mouseX, mouseY, couleurActive, window.niveauForceCourant);
+			if (formeActive === 'effetBlanche') {
+	dessinerEffetsBilleBlanche(
+		mouseX, 
+		mouseY, 
+		couleurActive, 
+		window.niveauForceCourant, 
+		window.indexPointEffetCourant || 0
+	);
+}
+
 			if (formeActive === 'pointContact') dessinerPointContact(mouseX, mouseY, couleurActive, window.pourcentageContactCourant, window.coteContactCourant);
 
 			ctx.restore();
@@ -2178,9 +2243,11 @@ function clampPositionDessin(x, y) {
 					nouvelElement.texte = window.repereXTexte;
 				}
 				if (outilTactiqueActif === 'effetBlanche') {
-					nouvelElement.estEffetBlanche = true;
-					nouvelElement.force = window.niveauForceCourant;
-				}
+	nouvelElement.estEffetBlanche = true;
+	nouvelElement.force = window.niveauForceCourant;
+	nouvelElement.pointEffet = window.indexPointEffetCourant || 0; // Sauvegarde le point choisi
+}
+
 				if (outilTactiqueActif === 'pointContact') {
 					nouvelElement.estPointContact = true;
 					nouvelElement.pourcentage = window.pourcentageContactCourant;
