@@ -333,7 +333,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		mouseY = Math.round(e.clientY - rect.top);
 
 		// Modifié pour réagir si la palette OU le clavier est utilisé
-		const aUnOutilActif = outilActif || ['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact'].includes(window.outilTraceActif);
+		const aUnOutilActif = outilActif || ['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact', 'ghostBall'].includes(window.outilTraceActif);
 		if (!aUnOutilActif) return;
 		if (animationFrameId) return;
 
@@ -609,6 +609,195 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	ctx.restore();
 }
+
+
+
+function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
+	ctx.save();
+	ctx.imageSmoothingEnabled = true;
+	ctx.imageSmoothingQuality = 'high';
+
+	const rayon = 12; // Rayon exact d'une bille (diamètre 24px)
+	const distanceContact = rayon * 2; // 24px entre les deux centres
+	const couleurRepli = couleur || (colorSelect ? colorSelect.value : '#ffffff');
+
+	// --- LIMITES INTÉRIEURES DES BANDES (Centre de bille au contact du caoutchouc) ---
+	const minX = 19 + rayon;       // 31px
+	const maxX = 19 + 754 - rayon; // 761px
+	const minY = 18 + rayon;       // 30px
+	const maxY = 18 + 364 - rayon; // 370px
+
+	// Calcule le point d'arrêt exact avant de dépasser une bande (marge 4px pour la pointe de flèche)
+	function limiterAuTapis(startX, startY, angle, longueurMax) {
+		const cos = Math.cos(angle);
+		const sin = Math.sin(angle);
+		let distMax = longueurMax;
+
+		if (cos > 0.0001) {
+			distMax = Math.min(distMax, (maxX - 4 - startX) / cos);
+		} else if (cos < -0.0001) {
+			distMax = Math.min(distMax, (minX + 4 - startX) / cos);
+		}
+
+		if (sin > 0.0001) {
+			distMax = Math.min(distMax, (maxY - 4 - startY) / sin);
+		} else if (sin < -0.0001) {
+			distMax = Math.min(distMax, (minY + 4 - startY) / sin);
+		}
+
+		distMax = Math.max(0, distMax);
+		return {
+			x: startX + cos * distMax,
+			y: startY + sin * distMax,
+			longueur: distMax
+		};
+	}
+
+	let ghostX = mouseX;
+	let ghostY = mouseY;
+	let cibleCentre = null;
+	let couleurCible = couleurRepli;
+
+	// 1. Récupération ou détection de la bille cible la plus proche
+	if (donneeFigee && donneeFigee.cibleCentre && donneeFigee.points && donneeFigee.points.length > 0) {
+		ghostX = donneeFigee.points[0].x;
+		ghostY = donneeFigee.points[0].y;
+		cibleCentre = donneeFigee.cibleCentre;
+		couleurCible = donneeFigee.couleurCible || couleurRepli;
+	} else {
+		let distanceMin = 65; // Rayon d'aimantation autour d'une bille objet
+		if (Array.isArray(activeBalls)) {
+			activeBalls.forEach(ball => {
+				const ballId = ball.getAttribute('data-id');
+				if (ballId !== '0' && ball.style.display !== 'none') {
+					const bx = (parseFloat(ball.style.left) || 0) + rayon;
+					const by = (parseFloat(ball.style.top) || 0) + rayon;
+					const dist = Math.hypot(mouseX - bx, mouseY - by);
+
+					if (dist < distanceMin) {
+						distanceMin = dist;
+						cibleCentre = { x: bx, y: by };
+						couleurCible = ball.style.backgroundColor || couleurRepli;
+					}
+				}
+			});
+		}
+
+		// Si une bille cible est détectée, on colle la bille fantôme à son contour (24px)
+		if (cibleCentre) {
+			const angleImpact = Math.atan2(mouseY - cibleCentre.y, mouseX - cibleCentre.x);
+			ghostX = cibleCentre.x + Math.cos(angleImpact) * distanceContact;
+			ghostY = cibleCentre.y + Math.sin(angleImpact) * distanceContact;
+		}
+	}
+
+	// Empêche la bille fantôme elle-même de sortir des bandes
+	ghostX = Math.max(minX, Math.min(maxX, ghostX));
+	ghostY = Math.max(minY, Math.min(maxY, ghostY));
+
+	// 2. Recherche de la bille blanche sur le tapis pour tracer la ligne de visée
+	let blancheCentre = donneeFigee ? donneeFigee.blancheCentre : null;
+	if (!blancheCentre && Array.isArray(activeBalls)) {
+		const cueBall = activeBalls.find(b => b.getAttribute('data-id') === '0');
+		if (cueBall && cueBall.style.display !== 'none') {
+			blancheCentre = {
+				x: (parseFloat(cueBall.style.left) || 0) + rayon,
+				y: (parseFloat(cueBall.style.top) || 0) + rayon
+			};
+		}
+	}
+
+	// 3. Tracé des lignes géométriques bornées aux bandes
+	if (cibleCentre) {
+		const angleImpact = Math.atan2(cibleCentre.y - ghostY, cibleCentre.x - ghostX);
+
+		// A. Ligne de visée (Bille Blanche -> Bille Fantôme)
+		if (blancheCentre) {
+			ctx.save();
+			ctx.beginPath();
+			ctx.setLineDash([5, 5]);
+			ctx.strokeStyle = "rgba(255, 255, 255, 0.75)";
+			ctx.lineWidth = 2;
+			ctx.moveTo(blancheCentre.x, blancheCentre.y);
+			ctx.lineTo(ghostX, ghostY);
+			ctx.stroke();
+			ctx.restore();
+		}
+
+		// B. Trajectoire projetée de la bille objet (prend la couleur de la bille cible)
+		const finCible = limiterAuTapis(cibleCentre.x, cibleCentre.y, angleImpact, 130);
+		if (finCible.longueur > 6) {
+			ctx.save();
+			ctx.beginPath();
+			ctx.setLineDash([]);
+			ctx.strokeStyle = couleurCible;
+			ctx.lineWidth = 2.5;
+			ctx.moveTo(cibleCentre.x, cibleCentre.y);
+			ctx.lineTo(finCible.x, finCible.y);
+			ctx.stroke();
+			dessinerPointeFleche(cibleCentre.x, cibleCentre.y, finCible.x, finCible.y, couleurCible);
+			ctx.restore();
+		}
+
+		// C. Ligne tangente à 90° (en blanc pur)
+		let angleTangente = angleImpact + Math.PI / 2;
+		if (blancheCentre) {
+			const angleArrivee = Math.atan2(ghostY - blancheCentre.y, ghostX - blancheCentre.x);
+			const diff = Math.sin(angleArrivee - angleImpact);
+			angleTangente = diff >= 0 ? angleImpact + Math.PI / 2 : angleImpact - Math.PI / 2;
+		}
+
+		const finTangente = limiterAuTapis(ghostX, ghostY, angleTangente, 95);
+		if (finTangente.longueur > 6) {
+			ctx.save();
+			ctx.beginPath();
+			ctx.setLineDash([3, 4]);
+			ctx.strokeStyle = "#ffffff";
+			ctx.lineWidth = 2;
+			ctx.moveTo(ghostX, ghostY);
+			ctx.lineTo(finTangente.x, finTangente.y);
+			ctx.stroke();
+			dessinerPointeFleche(ghostX, ghostY, finTangente.x, finTangente.y, "#ffffff");
+			ctx.restore();
+		}
+	}
+
+	// 4. Dessin de la Bille Fantôme
+	ctx.save();
+	ctx.beginPath();
+	ctx.arc(ghostX, ghostY, rayon, 0, 2 * Math.PI);
+	ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
+	ctx.fill();
+
+	ctx.lineWidth = 2;
+	ctx.strokeStyle = "#ffffff";
+	ctx.setLineDash([3, 3]);
+	ctx.stroke();
+
+	// Point central de visée
+	ctx.beginPath();
+	ctx.setLineDash([]);
+	ctx.arc(ghostX, ghostY, 2, 0, 2 * Math.PI);
+	ctx.fillStyle = "#ffffff";
+	ctx.fill();
+	ctx.restore();
+
+	ctx.restore();
+
+	return {
+		x: ghostX,
+		y: ghostY,
+		cibleCentre: cibleCentre,
+		blancheCentre: blancheCentre,
+		couleurCible: couleurCible
+	};
+}
+
+
+
+
+
+
 
 
 	function configurerStyleDessin(couleur, estPointille) {
@@ -1382,6 +1571,14 @@ document.addEventListener("DOMContentLoaded", () => {
 				}
 				return;
 			}
+			
+		if (dessin.estGhostBall) {
+			if (dessin.points && dessin.points.length > 0) {
+				dessinerBilleFantome(dessin.points[0].x, dessin.points[0].y, dessin.couleur, dessin);
+		}
+		return;
+	}
+
 
 			if (dessin.estPointContact) {
 				if (dessin.points && dessin.points.length > 0) {
@@ -1460,7 +1657,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 				// === SURBRILLANCE ADAPTATIVE SELON LA FORME TACTIQUE SÉLECTIONNÉE ===
-		if (window.formeTactiqueSelectionnee && window.formeTactiqueSelectionnee.points && window.formeTactiqueSelectionnee.points.length > 0) {
+				if (window.formeTactiqueSelectionnee && window.formeTactiqueSelectionnee.points && window.formeTactiqueSelectionnee.points.length > 0) {
 			const f = window.formeTactiqueSelectionnee;
 			const pt = f.points[0];
 			
@@ -1505,6 +1702,12 @@ document.addEventListener("DOMContentLoaded", () => {
 				ctx.arc(pt.x, pt.y, 17, 0, 2 * Math.PI);
 				ctx.stroke();
 			}
+			else if (f.estGhostBall) {
+				// Cercle ajusté autour de la bille fantôme (rayon bille 12px + marge 4px)
+				ctx.beginPath();
+				ctx.arc(pt.x, pt.y, 16, 0, 2 * Math.PI);
+				ctx.stroke();
+			}
 
 			ctx.restore();
 		}
@@ -1512,10 +1715,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
+
 		// === RENDU EN DIRECT DE L'APERÇU FANTÔME (SOUS LE CURSEUR) ===
 		// CORRECTION : On détermine l'outil actif qu'il vienne de la palette OU du clavier
 		const formeActive = (window.outilTraceActif !== "select") ? window.outilTraceActif : outilActif;
-		const listeFormesTactiques = ['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact'];
+		const listeFormesTactiques = ['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact', 'ghostBall'];
 
 		if (listeFormesTactiques.includes(formeActive)) {
 			ctx.save();
@@ -1525,6 +1729,8 @@ document.addEventListener("DOMContentLoaded", () => {
 			if (window.billeSelectionneeCourante) {
 				couleurActive = window.billeSelectionneeCourante.style.backgroundColor;
 			}
+			
+			if (formeActive === 'ghostBall') dessinerBilleFantome(mouseX, mouseY, couleurActive);
 
 			if (formeActive === 'cible') dessinerCible(mouseX, mouseY, window.COULEUR_CIBLE_TACTIQUE || '#cbd5e1');
 			if (formeActive === 'carre') dessinerCarre(mouseX, mouseY, window.COULEUR_CARRE_TACTIQUE || '#cbd5e1');
@@ -1745,6 +1951,14 @@ document.addEventListener('keydown', (e) => {
 		if (outilActif) canvas.style.pointerEvents = 'auto';
 		window.redessinerToutesLesLignes();
 	}
+	
+	if (e.key.toLowerCase() === 'g') {
+		e.preventDefault();
+		outilActif = (outilActif === 'ghostBall') ? null : 'ghostBall';
+		if (outilActif) canvas.style.pointerEvents = 'auto';
+		window.redessinerToutesLesLignes();
+	}
+
 
 	if (e.key.toLowerCase() === 'p') {
 		e.preventDefault();
@@ -2105,7 +2319,7 @@ document.addEventListener('keydown', (e) => {
 
 	// === 3. MODE FORMES TACTIQUES (Aperçus fantômes : Cible, Carré, Effet, Contact, Repère X) ===
 	const outilTactiqueActif = (window.outilTraceActif !== "select") ? window.outilTraceActif : outilActif;
-	if (['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact'].includes(outilTactiqueActif)) {
+	if (['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact', 'ghostBall'].includes(outilTactiqueActif)) {
 		isDrawing = true;
 
 		// APPLICATION DU BRIDAGE DÈS LE PREMIER CLIC DE DÉPÔT
@@ -2155,7 +2369,7 @@ function clampPositionDessin(x, y) {
     let y = coords.y;
 
     // === EN DIRECT SUR IPAD - RAFRAÎCHIT L'APERÇU FANTÔME AU GLISSEMENT ===
-    const listeFormesTactiques = ['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact'];
+    const listeFormesTactiques = ['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact', 'ghostBall'];
     if (listeFormesTactiques.includes(window.outilTraceActif) || outilActif) {
         if (e.cancelable) e.preventDefault();
 
@@ -2212,7 +2426,7 @@ function clampPositionDessin(x, y) {
 	function declencherFinTrace(e) {
 		// === VALIDATION DU DÉPÔT AU RELÂCHEMENT DU DOIGT SUR IPAD ===
 		const outilTactiqueActif = (window.outilTraceActif !== "select") ? window.outilTraceActif : outilActif;
-		const listeFormesTactiques = ['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact'];
+		const listeFormesTactiques = ['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact', 'ghostBall'];
 
 		if (listeFormesTactiques.includes(outilTactiqueActif)) {
 			if (isDrawing) {
@@ -2227,6 +2441,16 @@ function clampPositionDessin(x, y) {
 						y: mouseY
 					}]
 				};
+				
+				if (outilTactiqueActif === 'ghostBall') {
+					const resultatGhost = dessinerBilleFantome(mouseX, mouseY, couleurActive);
+					nouvelElement.estGhostBall = true;
+					nouvelElement.points = [{ x: resultatGhost.x, y: resultatGhost.y }];
+					nouvelElement.cibleCentre = resultatGhost.cibleCentre;
+					nouvelElement.blancheCentre = resultatGhost.blancheCentre;
+					nouvelElement.couleurCible = resultatGhost.couleurCible;
+				}
+
 
 				if (outilTactiqueActif === 'cible') {
 					nouvelElement.estCible = true;
@@ -2243,11 +2467,10 @@ function clampPositionDessin(x, y) {
 					nouvelElement.texte = window.repereXTexte;
 				}
 				if (outilTactiqueActif === 'effetBlanche') {
-	nouvelElement.estEffetBlanche = true;
-	nouvelElement.force = window.niveauForceCourant;
-	nouvelElement.pointEffet = window.indexPointEffetCourant || 0; // Sauvegarde le point choisi
-}
-
+					nouvelElement.estEffetBlanche = true;
+					nouvelElement.force = window.niveauForceCourant;
+					nouvelElement.pointEffet = window.indexPointEffetCourant || 0;
+				}
 				if (outilTactiqueActif === 'pointContact') {
 					nouvelElement.estPointContact = true;
 					nouvelElement.pourcentage = window.pourcentageContactCourant;
@@ -2257,20 +2480,18 @@ function clampPositionDessin(x, y) {
 				window.dessinsSauvegardes.push(nouvelElement);
 			}
 
-						// Nettoyage des états
+			// Nettoyage des états
 			isDrawing = false;
 			outilActif = null;
 
-			// Retour au dernier outil de tracé utilisé à la place du bouton neutre 'select'
+			// Retour au dernier outil de tracé utilisé
 			const boutonDernierOutil = document.querySelector(`.tool-btn[data-tool="${window.dernierOutilValide}"]`);
 			if (boutonDernierOutil) {
 				boutonDernierOutil.click();
 			} else {
-				// Repli de sécurité si l'outil mémorisé n'est pas trouvé
 				const btnSelect = document.querySelector('.tool-btn[data-tool="select"]');
 				if (btnSelect) btnSelect.click();
 			}
-
 
 			if (typeof window.redessinerToutesLesLignes === "function") window.redessinerToutesLesLignes();
 			return;
@@ -2284,6 +2505,7 @@ function clampPositionDessin(x, y) {
 			canvas.style.pointerEvents = 'auto';
 		}
 	}
+
 
 function commencerDessin(e) {
 	// CORRECTION ESSENTIELLE : Nettoie l'aperçu clavier pour éviter la superposition parasite de formes

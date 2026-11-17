@@ -889,7 +889,7 @@ window.detecterEtEffacerDessin = function(clicX, clicY) {
 		const dessin = window.dessinsSauvegardes[i];
 
 		// 1. Cas des formes ponctuelles standards
-		if (dessin.estCible || dessin.estCarre || dessin.estEffetBlanche || dessin.estRepereX) {
+		if (dessin.estCible || dessin.estCarre || dessin.estEffetBlanche || dessin.estRepereX || dessin.estGhostBall) {
 			if (dessin.points) {
 				const pt = Array.isArray(dessin.points) ? dessin.points[0] : dessin.points;
 				if (pt && estProchePoint(clicX, clicY, pt.x, pt.y, 30)) {
@@ -936,7 +936,7 @@ window.trouverFormeTactiqueProche = function(clicX, clicY) {
 	// Parcours inversé pour attraper la forme située au premier plan
 	for (let i = window.dessinsSauvegardes.length - 1; i >= 0; i--) {
 		const dessin = window.dessinsSauvegardes[i];
-		const estFormeDeplacable = dessin.estCible || dessin.estCarre || dessin.estEffetBlanche || dessin.estRepereX || dessin.estPointContact;
+		const estFormeDeplacable = dessin.estCible || dessin.estCarre || dessin.estEffetBlanche || dessin.estRepereX || dessin.estPointContact || dessin.estGhostBall;
 
 		if (estFormeDeplacable && dessin.points && dessin.points.length > 0) {
 			const pt = dessin.points[0];
