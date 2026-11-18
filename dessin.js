@@ -761,6 +761,8 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 	// Variable pour stocker le texte du badge d'impact calculé
 	let texteBadgeImpact = null;
 	let estCoupImpossible = false;
+	let pctCalcule = null; // <-- AJOUTER
+	let coteCalcule = 1;   // <-- AJOUTER (1 = Gauche, -1 = Droite)
 
 	// 3. Tracé des lignes géométriques et calcul de l'impact
 	if (cibleCentre) {
@@ -782,6 +784,10 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 				const pctBrut = Math.round(cosAngleCoupe * 100);
 				// CORRECTION : Inversé pour correspondre au repère Y vers le bas du Canvas
 				const coteStr = sinAngleCoupe > 0 ? "D" : "G";
+
+				// <-- AJOUTER CES 2 LIGNES POUR LE PANNEAU IMPACT
+				pctCalcule = (pctBrut >= 98) ? 100 : pctBrut;
+				coteCalcule = (sinAngleCoupe > 0) ? -1 : 1; // -1 = Droite, 1 = Gauche (selon votre convention dessinerPointContact)
 
 				if (pctBrut >= 98) {
 					texteBadgeImpact = "100% (Plein)";
@@ -958,7 +964,9 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 		y: ghostY,
 		cibleCentre: cibleCentre,
 		blancheCentre: blancheCentre,
-		couleurCible: couleurCible
+		couleurCible: couleurCible,
+		pctImpact: pctCalcule,   // <-- AJOUTER
+		coteImpact: coteCalcule  // <-- AJOUTER
 	};
 }
 
@@ -2614,8 +2622,24 @@ function clampPositionDessin(x, y) {
 	nouvelElement.estGhostBall = true;
 	nouvelElement.points = [{ x: resultatGhost.x, y: resultatGhost.y }];
 	nouvelElement.cibleCentre = resultatGhost.cibleCentre;
-	nouvelElement.blancheCentre = resultatGhost.blancheCentre; // <--- AJOUTER CETTE LIGNE
+	nouvelElement.blancheCentre = resultatGhost.blancheCentre;
 	nouvelElement.couleurCible = resultatGhost.couleurCible;
+
+	// --- NOUVEAU : DÉPÔT AUTOMATIQUE DU PANNEAU IMPACT AU MILIEU DE LA TABLE ---
+	// On vérifie qu'un impact valide a bien été calculé (bille blanche + bille cible présentes et angle <= 90°)
+	if (resultatGhost.pctImpact !== null) {
+		// Centre exact de la zone de jeu (gridLeft=19 + 754/2 = 396, gridTop=18 + 364/2 = 200)
+		const milieuTableX = 396;
+		const milieuTableY = 200;
+
+		window.dessinsSauvegardes.push({
+			couleur: resultatGhost.couleurCible || couleurActive,
+			estPointContact: true,
+			pourcentage: resultatGhost.pctImpact,
+			cote: resultatGhost.coteImpact,
+			points: [{ x: milieuTableX, y: milieuTableY }]
+		});
+	}
 
 	// Durée d'affichage du badge après le dépôt (2500 ms = 2,5 secondes)
 	const DUREE_AFFICHAGE_MS = 2500;
