@@ -432,7 +432,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		}
 
 	}
-	// 2. MOUVEMENT DE LA FORME
+		// 2. MOUVEMENT DE LA FORME
 	function gererMouvementDeplacementForme(e) {
 		if (!isDraggingForme || !window.formeTactiqueSelectionnee) return;
 		if (e.cancelable) e.preventDefault();
@@ -446,7 +446,43 @@ document.addEventListener("DOMContentLoaded", () => {
 		newX = posClampee.x;
 		newY = posClampee.y;
 
-		// Optionnel : Magnétisme sur la grille si activé (sauf si Shift est maintenu)
+				// --- SI C'EST UNE BILLE FANTÔME EN DÉPLACEMENT ---
+		if (window.formeTactiqueSelectionnee.estGhostBall) {
+			const resultatGhost = dessinerBilleFantome(newX, newY, window.formeTactiqueSelectionnee.couleur);
+
+			window.formeTactiqueSelectionnee.points = [{ x: resultatGhost.x, y: resultatGhost.y }];
+			window.formeTactiqueSelectionnee.cibleCentre = resultatGhost.cibleCentre;
+			window.formeTactiqueSelectionnee.blancheCentre = resultatGhost.blancheCentre;
+			window.formeTactiqueSelectionnee.couleurCible = resultatGhost.couleurCible;
+			window.formeTactiqueSelectionnee.enDeplacement = true;
+
+			// --- NOUVEAU : SYNCHRONISATION DU PANNEAU QUANTITÉ D'IMPACT ---
+			if (resultatGhost.pctImpact !== null) {
+				// Cherche le panneau lié par ID, sinon prend le dernier panneau d'impact existant
+				let panneauImpact = window.dessinsSauvegardes.find(
+					d => d.estPointContact && d.lieAGhostId === window.formeTactiqueSelectionnee.ghostId
+				);
+
+				if (!panneauImpact) {
+					const panneaux = window.dessinsSauvegardes.filter(d => d.estPointContact);
+					if (panneaux.length > 0) panneauImpact = panneaux[panneaux.length - 1];
+				}
+
+				if (panneauImpact) {
+					panneauImpact.pourcentage = resultatGhost.pctImpact;
+					panneauImpact.cote = resultatGhost.coteImpact;
+					if (resultatGhost.couleurCible) {
+						panneauImpact.couleur = resultatGhost.couleurCible;
+					}
+				}
+			}
+
+			window.redessinerToutesLesLignes();
+			return;
+		}
+
+
+		// Magnétisme sur la grille pour les autres formes (Cible, Carré, Repère...)
 		if (typeof calculerSnapGrille === "function" && !e.shiftKey) {
 			const snap = calculerSnapGrille(newX - 12, newY - 12, null, true);
 			newX = snap.x + 12;
@@ -457,12 +493,37 @@ document.addEventListener("DOMContentLoaded", () => {
 		window.redessinerToutesLesLignes();
 	}
 
-	// 3. FIN DU DÉPLACEMENT
+
+		// 3. FIN DU DÉPLACEMENT
 	function gererFinDeplacementForme() {
 		if (isDraggingForme) {
 			isDraggingForme = false;
+
+			// --- NOUVEAU : RELANCE LE COMPTE À REBOURS DU BADGE POUR LA BILLE FANTÔME ---
+			if (window.formeTactiqueSelectionnee && window.formeTactiqueSelectionnee.estGhostBall) {
+				const formeGhost = window.formeTactiqueSelectionnee;
+				formeGhost.enDeplacement = false;
+
+				const DUREE_AFFICHAGE_MS = 2500;
+				formeGhost.expireBadgeLe = Date.now() + DUREE_AFFICHAGE_MS;
+
+				setTimeout(() => {
+					const animerFondu = () => {
+						if (typeof window.redessinerToutesLesLignes === "function") {
+							window.redessinerToutesLesLignes();
+						}
+						if (Date.now() < formeGhost.expireBadgeLe || formeGhost.enDeplacement) {
+							requestAnimationFrame(animerFondu);
+						}
+					};
+					requestAnimationFrame(animerFondu);
+				}, DUREE_AFFICHAGE_MS - 400);
+
+				window.redessinerToutesLesLignes();
+			}
 		}
 	}
+
 
 	// Attachement des écouteurs hybrides sur la table
 	table.addEventListener('mousedown', gererDebutDeplacementForme);
@@ -903,9 +964,10 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 	ctx.restore();
 
 			// 5. AFFICHAGE DU BADGE DE POURCENTAGE D'IMPACT (GRAND FORMAT + DÉCALAGE ÉLOIGNÉ)
-	const maintenant = Date.now();
-	const estApercuEnDirect = !donneeFigee;
+		const maintenant = Date.now();
+	const estApercuEnDirect = !donneeFigee || donneeFigee.enDeplacement;
 	const badgeEncoreVisible = estApercuEnDirect || (donneeFigee.expireBadgeLe && maintenant < donneeFigee.expireBadgeLe);
+
 
 	if (texteBadgeImpact && badgeEncoreVisible) {
 		ctx.save();
@@ -2617,29 +2679,32 @@ function clampPositionDessin(x, y) {
 					}]
 				};
 				
-			if (outilTactiqueActif === 'ghostBall') {
+					if (outilTactiqueActif === 'ghostBall') {
 	const resultatGhost = dessinerBilleFantome(mouseX, mouseY, couleurActive);
+	const idLiaisonGhost = Date.now(); // Identifiant unique de liaison
+
 	nouvelElement.estGhostBall = true;
+	nouvelElement.ghostId = idLiaisonGhost;
 	nouvelElement.points = [{ x: resultatGhost.x, y: resultatGhost.y }];
 	nouvelElement.cibleCentre = resultatGhost.cibleCentre;
 	nouvelElement.blancheCentre = resultatGhost.blancheCentre;
 	nouvelElement.couleurCible = resultatGhost.couleurCible;
 
-	// --- NOUVEAU : DÉPÔT AUTOMATIQUE DU PANNEAU IMPACT AU MILIEU DE LA TABLE ---
-	// On vérifie qu'un impact valide a bien été calculé (bille blanche + bille cible présentes et angle <= 90°)
+	// --- DÉPÔT AUTOMATIQUE DU PANNEAU IMPACT LIÉ À CE GHOST ---
 	if (resultatGhost.pctImpact !== null) {
-		// Centre exact de la zone de jeu (gridLeft=19 + 754/2 = 396, gridTop=18 + 364/2 = 200)
 		const milieuTableX = 396;
 		const milieuTableY = 200;
 
 		window.dessinsSauvegardes.push({
 			couleur: resultatGhost.couleurCible || couleurActive,
 			estPointContact: true,
+			lieAGhostId: idLiaisonGhost, // Lien vers la bille fantôme
 			pourcentage: resultatGhost.pctImpact,
 			cote: resultatGhost.coteImpact,
 			points: [{ x: milieuTableX, y: milieuTableY }]
 		});
 	}
+
 
 	// Durée d'affichage du badge après le dépôt (2500 ms = 2,5 secondes)
 	const DUREE_AFFICHAGE_MS = 2500;
