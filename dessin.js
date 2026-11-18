@@ -621,28 +621,46 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 	const distanceContact = rayon * 2; // 24px entre les deux centres
 	const couleurRepli = couleur || (colorSelect ? colorSelect.value : '#ffffff');
 
+	// === PARAMÈTRES D'AIMANTATION (EN DEGRÉS) ===
+	const TOLERANCE_IMPACT_PLEIN_DEGRES = 3; // Aimant pour le coup droit (plein contact)
+	const TOLERANCE_AIMANT_POCHE_DEGRES = 4; // Aimant pour l'empochage vers les 6 poches
+
+	const seuilPleinRadian = Math.sin((TOLERANCE_IMPACT_PLEIN_DEGRES * Math.PI) / 180);
+	const seuilPocheRadian = Math.sin((TOLERANCE_AIMANT_POCHE_DEGRES * Math.PI) / 180);
+
 	// --- LIMITES INTÉRIEURES DES BANDES (Centre de bille au contact du caoutchouc) ---
 	const minX = 19 + rayon;       // 31px
 	const maxX = 19 + 754 - rayon; // 761px
 	const minY = 18 + rayon;       // 30px
 	const maxY = 18 + 364 - rayon; // 370px
 
-	// Calcule le point d'arrêt exact avant de dépasser une bande (marge 4px pour la pointe de flèche)
-	function limiterAuTapis(startX, startY, angle, longueurMax) {
+	// --- COORDONNÉES DES 6 POCHES DU TAPIS ---
+	const pochesTapis = [
+		{ x: 19, y: 18 },             // Haut-Gauche
+		{ x: 19 + 377, y: 18 },       // Milieu-Haut (396px)
+		{ x: 19 + 754, y: 18 },       // Haut-Droit (773px)
+		{ x: 19, y: 18 + 364 },       // Bas-Gauche (382px)
+		{ x: 19 + 377, y: 18 + 364 }, // Milieu-Bas (396px, 382px)
+		{ x: 19 + 754, y: 18 + 364 }  // Bas-Droit (773px, 382px)
+	];
+
+	function limiterAuTapis(startX, startY, angle, longueurMax, ignorerBordures = false) {
 		const cos = Math.cos(angle);
 		const sin = Math.sin(angle);
 		let distMax = longueurMax;
 
-		if (cos > 0.0001) {
-			distMax = Math.min(distMax, (maxX - 4 - startX) / cos);
-		} else if (cos < -0.0001) {
-			distMax = Math.min(distMax, (minX + 4 - startX) / cos);
-		}
+		if (!ignorerBordures) {
+			if (cos > 0.0001) {
+				distMax = Math.min(distMax, (maxX - 4 - startX) / cos);
+			} else if (cos < -0.0001) {
+				distMax = Math.min(distMax, (minX + 4 - startX) / cos);
+			}
 
-		if (sin > 0.0001) {
-			distMax = Math.min(distMax, (maxY - 4 - startY) / sin);
-		} else if (sin < -0.0001) {
-			distMax = Math.min(distMax, (minY + 4 - startY) / sin);
+			if (sin > 0.0001) {
+				distMax = Math.min(distMax, (maxY - 4 - startY) / sin);
+			} else if (sin < -0.0001) {
+				distMax = Math.min(distMax, (minY + 4 - startY) / sin);
+			}
 		}
 
 		distMax = Math.max(0, distMax);
@@ -653,12 +671,24 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 		};
 	}
 
+	// 1. Recherche de la bille blanche sur le tapis
+	let blancheCentre = donneeFigee ? donneeFigee.blancheCentre : null;
+	if (!blancheCentre && Array.isArray(activeBalls)) {
+		const cueBall = activeBalls.find(b => b.getAttribute('data-id') === '0');
+		if (cueBall && cueBall.style.display !== 'none') {
+			blancheCentre = {
+				x: (parseFloat(cueBall.style.left) || 0) + rayon,
+				y: (parseFloat(cueBall.style.top) || 0) + rayon
+			};
+		}
+	}
+
 	let ghostX = mouseX;
 	let ghostY = mouseY;
 	let cibleCentre = null;
 	let couleurCible = couleurRepli;
 
-	// 1. Récupération ou détection de la bille cible la plus proche
+	// 2. Récupération ou détection de la bille cible la plus proche
 	if (donneeFigee && donneeFigee.cibleCentre && donneeFigee.points && donneeFigee.points.length > 0) {
 		ghostX = donneeFigee.points[0].x;
 		ghostY = donneeFigee.points[0].y;
@@ -685,9 +715,42 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 
 		// Si une bille cible est détectée, on colle la bille fantôme à son contour (24px)
 		if (cibleCentre) {
-			const angleImpact = Math.atan2(mouseY - cibleCentre.y, mouseX - cibleCentre.x);
-			ghostX = cibleCentre.x + Math.cos(angleImpact) * distanceContact;
-			ghostY = cibleCentre.y + Math.sin(angleImpact) * distanceContact;
+			let angleDepuisCible = Math.atan2(mouseY - cibleCentre.y, mouseX - cibleCentre.x);
+			let estAimantePlein = false;
+
+			// A. AIMANTATION SUR L'AXE DE PLEIN CONTACT (Prioritaire)
+			if (blancheCentre) {
+				const anglePleinContact = Math.atan2(blancheCentre.y - cibleCentre.y, blancheCentre.x - cibleCentre.x);
+				if (Math.cos(angleDepuisCible - anglePleinContact) > 0 && Math.abs(Math.sin(angleDepuisCible - anglePleinContact)) <= seuilPleinRadian) {
+					angleDepuisCible = anglePleinContact;
+					estAimantePlein = true;
+				}
+			}
+
+			// B. AIMANTATION VERS LES POCHES (Si non verrouillé en plein contact)
+			if (!estAimantePlein) {
+				const angleTirActuel = angleDepuisCible + Math.PI; // Direction opposée (vers la poche)
+				let ecartMinPoche = seuilPocheRadian;
+				let angleVersPocheRetenu = null;
+
+				pochesTapis.forEach(poche => {
+					const angleVersPoche = Math.atan2(poche.y - cibleCentre.y, poche.x - cibleCentre.x);
+					if (Math.cos(angleTirActuel - angleVersPoche) > 0) {
+						const ecart = Math.abs(Math.sin(angleTirActuel - angleVersPoche));
+						if (ecart < ecartMinPoche) {
+							ecartMinPoche = ecart;
+							angleVersPocheRetenu = angleVersPoche;
+						}
+					}
+				});
+
+				if (angleVersPocheRetenu !== null) {
+					angleDepuisCible = angleVersPocheRetenu + Math.PI;
+				}
+			}
+
+			ghostX = cibleCentre.x + Math.cos(angleDepuisCible) * distanceContact;
+			ghostY = cibleCentre.y + Math.sin(angleDepuisCible) * distanceContact;
 		}
 	}
 
@@ -695,27 +758,15 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 	ghostX = Math.max(minX, Math.min(maxX, ghostX));
 	ghostY = Math.max(minY, Math.min(maxY, ghostY));
 
-	// 2. Recherche de la bille blanche sur le tapis pour tracer la ligne de visée
-	let blancheCentre = donneeFigee ? donneeFigee.blancheCentre : null;
-	if (!blancheCentre && Array.isArray(activeBalls)) {
-		const cueBall = activeBalls.find(b => b.getAttribute('data-id') === '0');
-		if (cueBall && cueBall.style.display !== 'none') {
-			blancheCentre = {
-				x: (parseFloat(cueBall.style.left) || 0) + rayon,
-				y: (parseFloat(cueBall.style.top) || 0) + rayon
-			};
-		}
-	}
-
-	// 3. Tracé des lignes géométriques bornées aux bandes
+	// 3. Tracé des lignes géométriques
 	if (cibleCentre) {
 		const angleImpact = Math.atan2(cibleCentre.y - ghostY, cibleCentre.x - ghostX);
 
-		// A. Ligne de visée (Bille Blanche -> Bille Fantôme)
+		// A. Ligne de visée (Bille Blanche -> Bille Fantôme) en trait plein
 		if (blancheCentre) {
 			ctx.save();
 			ctx.beginPath();
-			ctx.setLineDash([5, 5]);
+			ctx.setLineDash([]); // Trait plein continu
 			ctx.strokeStyle = "rgba(255, 255, 255, 0.75)";
 			ctx.lineWidth = 2;
 			ctx.moveTo(blancheCentre.x, blancheCentre.y);
@@ -724,8 +775,27 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 			ctx.restore();
 		}
 
-		// B. Trajectoire projetée de la bille objet (prend la couleur de la bille cible)
-		const finCible = limiterAuTapis(cibleCentre.x, cibleCentre.y, angleImpact, 130);
+
+		// B. Trajectoire projetée de la bille objet (s'allonge jusqu'à la poche si alignée)
+		let pocheAlignee = null;
+		let ecartPocheMin = seuilPocheRadian;
+
+		pochesTapis.forEach(poche => {
+			const angleVersPoche = Math.atan2(poche.y - cibleCentre.y, poche.x - cibleCentre.x);
+			if (Math.cos(angleImpact - angleVersPoche) > 0) {
+				const ecart = Math.abs(Math.sin(angleImpact - angleVersPoche));
+				if (ecart <= ecartPocheMin) {
+					ecartPocheMin = ecart;
+					pocheAlignee = poche;
+				}
+			}
+		});
+
+		const longueurTrajectoire = pocheAlignee
+			? Math.max(10, Math.hypot(pocheAlignee.x - cibleCentre.x, pocheAlignee.y - cibleCentre.y) - 10)
+			: 130;
+
+		const finCible = limiterAuTapis(cibleCentre.x, cibleCentre.y, angleImpact, longueurTrajectoire, Boolean(pocheAlignee));
 		if (finCible.longueur > 6) {
 			ctx.save();
 			ctx.beginPath();
@@ -739,26 +809,35 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 			ctx.restore();
 		}
 
-		// C. Ligne tangente à 90° (en blanc pur)
+		// C. Ligne tangente à 90° (en blanc pur) — Masquée si l'impact est plein
+		let afficherTangente = true;
 		let angleTangente = angleImpact + Math.PI / 2;
+
 		if (blancheCentre) {
 			const angleArrivee = Math.atan2(ghostY - blancheCentre.y, ghostX - blancheCentre.x);
 			const diff = Math.sin(angleArrivee - angleImpact);
-			angleTangente = diff >= 0 ? angleImpact + Math.PI / 2 : angleImpact - Math.PI / 2;
+
+			if (Math.cos(angleArrivee - angleImpact) > 0 && Math.abs(diff) <= seuilPleinRadian) {
+				afficherTangente = false;
+			} else {
+				angleTangente = diff >= 0 ? angleImpact + Math.PI / 2 : angleImpact - Math.PI / 2;
+			}
 		}
 
-		const finTangente = limiterAuTapis(ghostX, ghostY, angleTangente, 95);
-		if (finTangente.longueur > 6) {
-			ctx.save();
-			ctx.beginPath();
-			ctx.setLineDash([3, 4]);
-			ctx.strokeStyle = "#ffffff";
-			ctx.lineWidth = 2;
-			ctx.moveTo(ghostX, ghostY);
-			ctx.lineTo(finTangente.x, finTangente.y);
-			ctx.stroke();
-			dessinerPointeFleche(ghostX, ghostY, finTangente.x, finTangente.y, "#ffffff");
-			ctx.restore();
+		if (afficherTangente) {
+			const finTangente = limiterAuTapis(ghostX, ghostY, angleTangente, 95);
+			if (finTangente.longueur > 6) {
+				ctx.save();
+				ctx.beginPath();
+				ctx.setLineDash([3, 4]);
+				ctx.strokeStyle = "#ffffff";
+				ctx.lineWidth = 2;
+				ctx.moveTo(ghostX, ghostY);
+				ctx.lineTo(finTangente.x, finTangente.y);
+				ctx.stroke();
+				dessinerPointeFleche(ghostX, ghostY, finTangente.x, finTangente.y, "#ffffff");
+				ctx.restore();
+			}
 		}
 	}
 
@@ -792,7 +871,6 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 		couleurCible: couleurCible
 	};
 }
-
 
 
 
