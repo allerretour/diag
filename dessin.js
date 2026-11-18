@@ -364,16 +364,68 @@ document.addEventListener("DOMContentLoaded", () => {
 				if (formeTrouvee) {
 			if (e.cancelable) e.preventDefault();
 
-			// --- NOUVEAU : DÉTECTION D'UN CLIC SUR L'UN DES 9 POINTS D'EFFET ---
+			// --- DÉTECTION D'UN CLIC SUR LES 9 POINTS D'EFFET OU SUR LA JAUGE DE FORCE ---
 			if (formeTrouvee.estEffetBlanche && formeTrouvee.points && formeTrouvee.points.length > 0) {
 				const centreForme = formeTrouvee.points[0];
 				const jaugeActive = (formeTrouvee.force || 0) > 0;
 				const demiLargeur = (jaugeActive ? 150 : 110) / 2;
+				const cadreX = centreForme.x - demiLargeur;
 				
 				// Calcul exact du centre de la bille blanche à l'intérieur du cadre
-				const billeX = jaugeActive ? (centreForme.x - demiLargeur + 48) : centreForme.x;
+				const billeX = jaugeActive ? (cadreX + 48) : centreForme.x;
 				const billeY = centreForme.y;
+				const rayonBille = 36;
 
+				// 1. Vérification du clic sur la zone de la jauge FORCE (à droite de la bille)
+				if (jaugeActive) {
+					const jaugeCentreX = cadreX + 122;
+					// Zone cliquable autour de la jauge (largeur +/- 18px, hauteur de la bille + marge)
+					if (Math.abs(coords.x - jaugeCentreX) <= 18 && Math.abs(coords.y - billeY) <= rayonBille + 18) {
+						const basJaugeY = billeY + rayonBille;
+						const hautJaugeY = billeY - rayonBille;
+
+						if (coords.y > basJaugeY + 4) {
+							// Clic sur le pourcentage en bas : désactive la jauge (0%)
+							formeTrouvee.force = 0;
+						} else {
+							// Calcul du niveau de 1 (25%) à 4 (100%) selon la hauteur cliquée
+							const ratio = Math.max(0, Math.min(1, (basJaugeY - coords.y) / (rayonBille * 2)));
+							formeTrouvee.force = Math.max(1, Math.min(4, Math.ceil(ratio * 4)));
+						}
+
+						window.niveauForceCourant = formeTrouvee.force;
+						window.formeTactiqueSelectionnee = formeTrouvee;
+
+						if (window.billeSelectionneeCourante) {
+							window.billeSelectionneeCourante.style.outline = 'none';
+							window.billeSelectionneeCourante = null;
+							if (typeof rafraichirListeLateraleBilles === "function") rafraichirListeLateraleBilles();
+						}
+
+						if (typeof rafraichirTexteBoutonsPalette === "function") rafraichirTexteBoutonsPalette();
+						window.redessinerToutesLesLignes();
+						return; // Stoppe ici pour modifier la force sans déplacer le panneau
+					}
+				} else {
+					// Si la jauge est masquée (0%), un clic sur la bordure droite du cadre l'active à 25%
+					if (coords.x >= billeX + rayonBille - 2 && coords.x <= cadreX + 110 && Math.abs(coords.y - billeY) <= rayonBille + 12) {
+						formeTrouvee.force = 1;
+						window.niveauForceCourant = 1;
+						window.formeTactiqueSelectionnee = formeTrouvee;
+
+						if (window.billeSelectionneeCourante) {
+							window.billeSelectionneeCourante.style.outline = 'none';
+							window.billeSelectionneeCourante = null;
+							if (typeof rafraichirListeLateraleBilles === "function") rafraichirListeLateraleBilles();
+						}
+
+						if (typeof rafraichirTexteBoutonsPalette === "function") rafraichirTexteBoutonsPalette();
+						window.redessinerToutesLesLignes();
+						return;
+					}
+				}
+
+				// 2. Vérification du clic sur l'un des 9 points d'effet
 				const d = 24;
 				const diag = d * Math.cos(Math.PI / 4);
 				const offsets = [
@@ -388,7 +440,6 @@ document.addEventListener("DOMContentLoaded", () => {
 					{ dx: diag, dy: diag }              // 8 : Bas-Droite
 				];
 
-				// Vérifie si le clic/toucher est à moins de 9px d'un des 9 points
 				for (let i = 0; i < offsets.length; i++) {
 					const px = billeX + offsets[i].dx;
 					const py = billeY + offsets[i].dy;
@@ -397,7 +448,6 @@ document.addEventListener("DOMContentLoaded", () => {
 						window.indexPointEffetCourant = i;
 						window.formeTactiqueSelectionnee = formeTrouvee;
 
-						// Désélectionne la bille active s'il y en avait une
 						if (window.billeSelectionneeCourante) {
 							window.billeSelectionneeCourante.style.outline = 'none';
 							window.billeSelectionneeCourante = null;
@@ -409,6 +459,7 @@ document.addEventListener("DOMContentLoaded", () => {
 					}
 				}
 			}
+
 
 			window.formeTactiqueSelectionnee = formeTrouvee;
 			isDraggingForme = true;
@@ -682,9 +733,10 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 	const distanceContact = rayon * 2; // 24px entre les deux centres
 	const couleurRepli = couleur || (colorSelect ? colorSelect.value : '#ffffff');
 
-	// === PARAMÈTRES D'AIMANTATION (EN DEGRÉS) ===
-	const TOLERANCE_IMPACT_PLEIN_DEGRES = 3; // Aimant pour le coup droit (plein contact)
-	const TOLERANCE_AIMANT_POCHE_DEGRES = 4; // Aimant pour l'empochage vers les 6 poches
+		// === PARAMÈTRES D'AIMANTATION (EN DEGRÉS) ===
+	const TOLERANCE_IMPACT_PLEIN_DEGRES = 0.8; // Aimant très fin : plein contact uniquement à 100 %
+	const TOLERANCE_AIMANT_POCHE_DEGRES = 4;   // Aimant pour l'empochage vers les 6 poches
+
 
 	const seuilPleinRadian = Math.sin((TOLERANCE_IMPACT_PLEIN_DEGRES * Math.PI) / 180);
 	const seuilPocheRadian = Math.sin((TOLERANCE_AIMANT_POCHE_DEGRES * Math.PI) / 180);
@@ -846,11 +898,10 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 				// CORRECTION : Inversé pour correspondre au repère Y vers le bas du Canvas
 				const coteStr = sinAngleCoupe > 0 ? "D" : "G";
 
-				// <-- AJOUTER CES 2 LIGNES POUR LE PANNEAU IMPACT
-				pctCalcule = (pctBrut >= 98) ? 100 : pctBrut;
-				coteCalcule = (sinAngleCoupe > 0) ? -1 : 1; // -1 = Droite, 1 = Gauche (selon votre convention dessinerPointContact)
+								pctCalcule = pctBrut;
+				coteCalcule = (sinAngleCoupe > 0) ? -1 : 1; // -1 = Droite, 1 = Gauche
 
-				if (pctBrut >= 98) {
+				if (pctBrut === 100) {
 					texteBadgeImpact = "100% (Plein)";
 				} else {
 					let fraction = "";
@@ -860,6 +911,7 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 
 					texteBadgeImpact = `${pctBrut}%${fraction} (${coteStr})`;
 				}
+
 			}
 
 
@@ -911,37 +963,146 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 			ctx.restore();
 		}
 
-		// C. Ligne tangente à 90° (en blanc pur)
+				// C. Ligne tangente à 90° (Carreau) + Trajectoire d'effet (Coulé / Rétro)
 		let afficherTangente = !estCoupImpossible;
 		let angleTangente = angleImpact + Math.PI / 2;
+		let sensRotation = 1;
 
 		if (blancheCentre && afficherTangente) {
 			const angleArrivee = Math.atan2(ghostY - blancheCentre.y, ghostX - blancheCentre.x);
 			const diff = Math.sin(angleArrivee - angleImpact);
+			sensRotation = diff >= 0 ? 1 : -1;
 
 			if (Math.cos(angleArrivee - angleImpact) > 0 && Math.abs(diff) <= seuilPleinRadian) {
 				afficherTangente = false;
 			} else {
-				angleTangente = diff >= 0 ? angleImpact + Math.PI / 2 : angleImpact - Math.PI / 2;
+				angleTangente = angleImpact + (sensRotation * Math.PI / 2);
 			}
 		}
 
+		// --- NOUVEAU : LECTURE DU PANNEAU EFFET BLANCHE ACTIF ---
+		let panneauEffet = null;
+		if (Array.isArray(window.dessinsSauvegardes)) {
+			const effets = window.dessinsSauvegardes.filter(d => d.estEffetBlanche);
+			if (effets.length > 0) panneauEffet = effets[effets.length - 1];
+		}
+
+		const pointEffetActif = panneauEffet ? (panneauEffet.pointEffet || 0) : (window.indexPointEffetCourant || 0);
+		const forceEffetActif = panneauEffet ? (panneauEffet.force || 0) : (window.niveauForceCourant || 0);
+		const aUnPanneauEffet = Boolean(panneauEffet) || window.outilTraceActif === 'effetBlanche' || outilActif === 'effetBlanche';
+
+		// Classification : Haut (1, 5, 6 = Coulé), Bas (2, 7, 8 = Rétro), Milieu (0, 3, 4 = Carreau)
+		const estCoule = [1, 5, 6].includes(pointEffetActif);
+		const estRetro = [2, 7, 8].includes(pointEffetActif);
+
+				// 1. Tracé de la ligne tangente neutre de référence (très discrète et sans pointe)
 		if (afficherTangente) {
 			const finTangente = limiterAuTapis(ghostX, ghostY, angleTangente, 95);
 			if (finTangente.longueur > 6) {
 				ctx.save();
 				ctx.beginPath();
-				ctx.setLineDash([3, 4]);
-				ctx.strokeStyle = "#ffffff";
-				ctx.lineWidth = 2;
+				ctx.setLineDash([2, 5]);
+				ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+				ctx.lineWidth = 1.2;
 				ctx.moveTo(ghostX, ghostY);
 				ctx.lineTo(finTangente.x, finTangente.y);
 				ctx.stroke();
-				dessinerPointeFleche(ghostX, ghostY, finTangente.x, finTangente.y, "#ffffff");
 				ctx.restore();
 			}
 		}
-	}
+
+
+
+		// 2. NOUVELLE LIGNE DE TRAJECTOIRE SELON L'EFFET (Haut / Bas / Milieu)
+		if (!estCoupImpossible && aUnPanneauEffet) {
+			// Calcul du ratio d'impact (1.0 = plein contact, proche de 0.0 = coupe très fine)
+			let facteurImpact = 1;
+			if (blancheCentre) {
+				const angleArrivee = Math.atan2(ghostY - blancheCentre.y, ghostX - blancheCentre.x);
+				const cosImpact = Math.max(0, Math.cos(angleArrivee - angleImpact));
+				// Progression au carré : très faible sur coupe fine, très marquée sur gros impact
+				facteurImpact = Math.pow(cosImpact, 2);
+			}
+
+			// Amplitude combinant la jauge de force et la progression d'impact
+			const multiplicateurForce = (forceEffetActif > 0 ? (0.55 + forceEffetActif * 0.18) : 0.85) * facteurImpact;
+			let angleSortieBlanche = angleTangente;
+			let couleurTrajectoire = "#ffffff";
+			let tracerCourbe = false;
+
+			if (estCoule) {
+				couleurTrajectoire = "#2ecc71"; // Vert pour le coulé (Haut)
+				if (!afficherTangente) {
+					// Coup droit : avance tout droit dans l'axe d'impact
+					angleSortieBlanche = angleImpact;
+				} else {
+					// Déviation fortement accentuée sur gros impact
+					angleSortieBlanche = angleTangente - (sensRotation * (Math.PI / 3.5) * multiplicateurForce);
+					tracerCourbe = true;
+				}
+			} else if (estRetro) {
+				couleurTrajectoire = "#e74c3c"; // Rouge pour le rétro (Bas)
+				if (!afficherTangente) {
+					// Coup droit : recule directement vers la bille blanche
+					angleSortieBlanche = angleImpact + Math.PI;
+				} else {
+					// Recul fortement accentué sur gros impact
+					angleSortieBlanche = angleTangente + (sensRotation * (Math.PI / 3.2) * multiplicateurForce);
+					tracerCourbe = true;
+				}
+			} else {
+				// Milieu (0, 3, 4) : Suit la tangente à 90° (Carreau)
+				couleurTrajectoire = "#38bdf8"; // Bleu clair pour le carreau (Milieu)
+				if (!afficherTangente) {
+					// Coup droit sans effet haut/bas : la blanche s'arrête sur place
+					angleSortieBlanche = null;
+				}
+			}
+
+						if (angleSortieBlanche !== null) {
+				// Longueur proportionnelle à la jauge de force (0% -> 80px, 25% -> 65px, 50% -> 95px, 75% -> 130px, 100% -> 170px)
+				const longueursParForce = {
+					0: 85,
+					1: 60,  // 25% (Doux)
+					2: 95,  // 50% (Moyen)
+					3: 135, // 75% (Fort)
+					4: 180  // 100% (Max)
+				};
+				const longueurEffet = longueursParForce[forceEffetActif] || 85;
+				const finEffet = limiterAuTapis(ghostX, ghostY, angleSortieBlanche, longueurEffet);
+
+				if (finEffet.longueur > 8) {
+					ctx.save();
+					ctx.beginPath();
+					ctx.setLineDash([5, 4]);
+					ctx.strokeStyle = couleurTrajectoire;
+					ctx.lineWidth = 2.5;
+					ctx.moveTo(ghostX, ghostY);
+
+					if (tracerCourbe) {
+						const distCtrl = finEffet.longueur * 0.48;
+						const ctrlX = ghostX + Math.cos(angleTangente) * distCtrl;
+						const ctrlY = ghostY + Math.sin(angleTangente) * distCtrl;
+						ctx.quadraticCurveTo(ctrlX, ctrlY, finEffet.x, finEffet.y);
+						ctx.stroke();
+						dessinerPointeFleche(ctrlX, ctrlY, finEffet.x, finEffet.y, couleurTrajectoire);
+					} else {
+						ctx.lineTo(finEffet.x, finEffet.y);
+						ctx.stroke();
+						dessinerPointeFleche(ghostX, ghostY, finEffet.x, finEffet.y, couleurTrajectoire);
+					}
+
+					ctx.restore();
+				}
+			}
+
+		}
+
+
+
+
+
+			}
 
 	// 4. Dessin de la Bille Fantôme
 	ctx.save();
@@ -1170,24 +1331,34 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 		{ dx: diagPoint, dy: diagPoint }    // 8 : Bas-Droite
 	];
 
-		pointsEffets.forEach((pt, index) => {
+				// --- DÉTERMINATION DE LA COULEUR DU POINT ACTIF SELON LA TRAJECTOIRE ---
+	let couleurPointActif = "#38bdf8"; // Bleu clair par défaut (Milieu : 0, 3, 4)
+	if ([1, 5, 6].includes(pointActif)) {
+		couleurPointActif = "#2ecc71"; // Vert (Haut / Coulé : 1, 5, 6)
+	} else if ([2, 7, 8].includes(pointActif)) {
+		couleurPointActif = "#e74c3c"; // Rouge (Bas / Rétro : 2, 7, 8)
+	}
+
+
+	pointsEffets.forEach((pt, index) => {
 		const ptX = billeX + pt.dx;
 		const ptY = billeY + pt.dy;
 		const estSelectionne = (index === pointActif);
 		
 		ctx.beginPath();
-		// Point rouge à 6.5px, repères inactifs réduits à 1.8px
+		// Point actif à 6.5px, repères inactifs réduits à 1.8px
 		ctx.arc(ptX, ptY, estSelectionne ? 6.5 : 1.8, 0, 2 * Math.PI);
 		
-		// Repères inactifs beaucoup plus pâles (opacité baissée à 0.22)
-		ctx.fillStyle = estSelectionne ? "#e74c3c" : "rgba(100, 116, 139, 0.22)";
+		// Applique la couleur synchronisée avec le tracé de trajectoire
+		ctx.fillStyle = estSelectionne ? couleurPointActif : "rgba(100, 116, 139, 0.22)";
 		ctx.fill();
 		
-		// Contour quasi invisible sur les points inactifs (0.12)
+		// Contour blanc sur le point actif pour le détacher proprement sur la bille blanche
 		ctx.strokeStyle = estSelectionne ? "#ffffff" : "rgba(15, 23, 42, 0.12)";
 		ctx.lineWidth = estSelectionne ? 1.8 : 0.8;
 		ctx.stroke();
 	});
+
 
 
 	// --- LABELS ET TYPOGRAPHIE SYSTEM-UI ---
