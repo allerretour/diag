@@ -671,9 +671,9 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 		};
 	}
 
-	// 1. Recherche de la bille blanche sur le tapis
-	let blancheCentre = donneeFigee ? donneeFigee.blancheCentre : null;
-	if (!blancheCentre && Array.isArray(activeBalls)) {
+		// 1. Recherche de la bille blanche sur le tapis (UNIQUEMENT pour l'aperçu en direct)
+	let blancheCentre = donneeFigee ? (donneeFigee.blancheCentre || null) : null;
+	if (!donneeFigee && Array.isArray(activeBalls)) {
 		const cueBall = activeBalls.find(b => b.getAttribute('data-id') === '0');
 		if (cueBall && cueBall.style.display !== 'none') {
 			blancheCentre = {
@@ -682,6 +682,7 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 			};
 		}
 	}
+
 
 	let ghostX = mouseX;
 	let ghostY = mouseY;
@@ -757,17 +758,52 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 	// Empêche la bille fantôme elle-même de sortir des bandes
 	ghostX = Math.max(minX, Math.min(maxX, ghostX));
 	ghostY = Math.max(minY, Math.min(maxY, ghostY));
+	// Variable pour stocker le texte du badge d'impact calculé
+	let texteBadgeImpact = null;
+	let estCoupImpossible = false;
 
-	// 3. Tracé des lignes géométriques
+	// 3. Tracé des lignes géométriques et calcul de l'impact
 	if (cibleCentre) {
 		const angleImpact = Math.atan2(cibleCentre.y - ghostY, cibleCentre.x - ghostX);
 
-		// A. Ligne de visée (Bille Blanche -> Bille Fantôme) en trait plein
+		// A. Ligne de visée (Bille Blanche -> Bille Fantôme) + CALCUL DU POURCENTAGE
 		if (blancheCentre) {
+			const angleArrivee = Math.atan2(ghostY - blancheCentre.y, ghostX - blancheCentre.x);
+			
+			// Calcul du cosinus de l'angle de coupe
+			const cosAngleCoupe = Math.cos(angleArrivee - angleImpact);
+			const sinAngleCoupe = Math.sin(angleArrivee - angleImpact);
+
+						if (cosAngleCoupe <= 0.01) {
+				// Angle >= 90° : La blanche devrait traverser la bille cible
+				estCoupImpossible = true;
+				texteBadgeImpact = "Angle impossible (>90°)";
+			} else {
+				const pctBrut = Math.round(cosAngleCoupe * 100);
+				// CORRECTION : Inversé pour correspondre au repère Y vers le bas du Canvas
+				const coteStr = sinAngleCoupe > 0 ? "D" : "G";
+
+				if (pctBrut >= 98) {
+					texteBadgeImpact = "100% (Plein)";
+				} else {
+					let fraction = "";
+					if (Math.abs(pctBrut - 75) <= 3) fraction = " · 3/4";
+					else if (Math.abs(pctBrut - 50) <= 3) fraction = " · 1/2";
+					else if (Math.abs(pctBrut - 25) <= 3) fraction = " · 1/4";
+
+					texteBadgeImpact = `${pctBrut}%${fraction} (${coteStr})`;
+				}
+			}
+
+
 			ctx.save();
 			ctx.beginPath();
-			ctx.setLineDash([]); // Trait plein continu
-			ctx.strokeStyle = "rgba(255, 255, 255, 0.75)";
+			if (estCoupImpossible) {
+				ctx.setLineDash([4, 4]);
+			} else {
+				ctx.setLineDash([]);
+			}
+			ctx.strokeStyle = estCoupImpossible ? "rgba(231, 76, 60, 0.85)" : "rgba(255, 255, 255, 0.75)";
 			ctx.lineWidth = 2;
 			ctx.moveTo(blancheCentre.x, blancheCentre.y);
 			ctx.lineTo(ghostX, ghostY);
@@ -775,8 +811,7 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 			ctx.restore();
 		}
 
-
-		// B. Trajectoire projetée de la bille objet (s'allonge jusqu'à la poche si alignée)
+		// B. Trajectoire projetée de la bille objet
 		let pocheAlignee = null;
 		let ecartPocheMin = seuilPocheRadian;
 
@@ -809,11 +844,11 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 			ctx.restore();
 		}
 
-		// C. Ligne tangente à 90° (en blanc pur) — Masquée si l'impact est plein
-		let afficherTangente = true;
+		// C. Ligne tangente à 90° (en blanc pur)
+		let afficherTangente = !estCoupImpossible;
 		let angleTangente = angleImpact + Math.PI / 2;
 
-		if (blancheCentre) {
+		if (blancheCentre && afficherTangente) {
 			const angleArrivee = Math.atan2(ghostY - blancheCentre.y, ghostX - blancheCentre.x);
 			const diff = Math.sin(angleArrivee - angleImpact);
 
@@ -845,11 +880,11 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 	ctx.save();
 	ctx.beginPath();
 	ctx.arc(ghostX, ghostY, rayon, 0, 2 * Math.PI);
-	ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
+	ctx.fillStyle = estCoupImpossible ? "rgba(231, 76, 60, 0.25)" : "rgba(255, 255, 255, 0.18)";
 	ctx.fill();
 
 	ctx.lineWidth = 2;
-	ctx.strokeStyle = "#ffffff";
+	ctx.strokeStyle = estCoupImpossible ? "#e74c3c" : "#ffffff";
 	ctx.setLineDash([3, 3]);
 	ctx.stroke();
 
@@ -857,9 +892,64 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 	ctx.beginPath();
 	ctx.setLineDash([]);
 	ctx.arc(ghostX, ghostY, 2, 0, 2 * Math.PI);
-	ctx.fillStyle = "#ffffff";
+	ctx.fillStyle = estCoupImpossible ? "#e74c3c" : "#ffffff";
 	ctx.fill();
 	ctx.restore();
+
+			// 5. AFFICHAGE DU BADGE DE POURCENTAGE D'IMPACT (GRAND FORMAT + DÉCALAGE ÉLOIGNÉ)
+	const maintenant = Date.now();
+	const estApercuEnDirect = !donneeFigee;
+	const badgeEncoreVisible = estApercuEnDirect || (donneeFigee.expireBadgeLe && maintenant < donneeFigee.expireBadgeLe);
+
+	if (texteBadgeImpact && badgeEncoreVisible) {
+		ctx.save();
+
+		// Calcul d'un fondu progressif sur les 400 dernières millisecondes
+		if (!estApercuEnDirect && donneeFigee.expireBadgeLe) {
+			const tempsRestant = donneeFigee.expireBadgeLe - maintenant;
+			if (tempsRestant < 400) {
+				ctx.globalAlpha = Math.max(0, tempsRestant / 400);
+			}
+		}
+
+		ctx.setLineDash([]);
+		ctx.font = "bold 16px system-ui, -apple-system, sans-serif";
+		const largeurTexte = ctx.measureText(texteBadgeImpact).width;
+		
+		const padX = 14;
+		const hauteurBadge = 32;
+		const largeurBadge = largeurTexte + padX * 2;
+
+		// Écartement vertical augmenté à 38px (au lieu de 10px)
+		const ecartementVertical = 38;
+
+		let badgeY = ghostY - rayon - hauteurBadge - ecartementVertical;
+		// Si trop près de la bande du haut, on le bascule largement en dessous
+		if (badgeY < 24) {
+			badgeY = ghostY + rayon + ecartementVertical;
+		}
+
+		// Centrage horizontal avec sécurité sur les bandes gauche et droite
+		let badgeX = ghostX - largeurBadge / 2;
+		badgeX = Math.max(24, Math.min(792 - 24 - largeurBadge, badgeX));
+
+		ctx.beginPath();
+		ctx.roundRect(badgeX, badgeY, largeurBadge, hauteurBadge, 8);
+		ctx.fillStyle = estCoupImpossible ? "rgba(180, 35, 24, 0.96)" : "rgba(11, 15, 23, 0.95)";
+		ctx.fill();
+		ctx.strokeStyle = estCoupImpossible ? "rgba(255, 255, 255, 0.5)" : "rgba(255, 255, 255, 0.3)";
+		ctx.lineWidth = 1.5;
+		ctx.stroke();
+
+		ctx.fillStyle = "#ffffff";
+		ctx.textAlign = "center";
+		ctx.textBaseline = "middle";
+		ctx.fillText(texteBadgeImpact, badgeX + largeurBadge / 2, badgeY + hauteurBadge / 2 + 1);
+		ctx.restore();
+	}
+
+
+
 
 	ctx.restore();
 
@@ -871,7 +961,6 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 		couleurCible: couleurCible
 	};
 }
-
 
 
 
@@ -2520,14 +2609,33 @@ function clampPositionDessin(x, y) {
 					}]
 				};
 				
-				if (outilTactiqueActif === 'ghostBall') {
-					const resultatGhost = dessinerBilleFantome(mouseX, mouseY, couleurActive);
-					nouvelElement.estGhostBall = true;
-					nouvelElement.points = [{ x: resultatGhost.x, y: resultatGhost.y }];
-					nouvelElement.cibleCentre = resultatGhost.cibleCentre;
-					nouvelElement.blancheCentre = resultatGhost.blancheCentre;
-					nouvelElement.couleurCible = resultatGhost.couleurCible;
-				}
+			if (outilTactiqueActif === 'ghostBall') {
+	const resultatGhost = dessinerBilleFantome(mouseX, mouseY, couleurActive);
+	nouvelElement.estGhostBall = true;
+	nouvelElement.points = [{ x: resultatGhost.x, y: resultatGhost.y }];
+	nouvelElement.cibleCentre = resultatGhost.cibleCentre;
+	nouvelElement.blancheCentre = resultatGhost.blancheCentre; // <--- AJOUTER CETTE LIGNE
+	nouvelElement.couleurCible = resultatGhost.couleurCible;
+
+	// Durée d'affichage du badge après le dépôt (2500 ms = 2,5 secondes)
+	const DUREE_AFFICHAGE_MS = 2500;
+
+	nouvelElement.expireBadgeLe = Date.now() + DUREE_AFFICHAGE_MS;
+
+	// Déclenche l'animation de fondu 400 ms avant la fin
+	setTimeout(() => {
+		const animerFondu = () => {
+			if (typeof window.redessinerToutesLesLignes === "function") {
+				window.redessinerToutesLesLignes();
+			}
+			if (Date.now() < nouvelElement.expireBadgeLe) {
+				requestAnimationFrame(animerFondu);
+			}
+		};
+		requestAnimationFrame(animerFondu);
+	}, DUREE_AFFICHAGE_MS - 400);
+}
+
 
 
 				if (outilTactiqueActif === 'cible') {
