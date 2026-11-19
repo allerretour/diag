@@ -73,7 +73,7 @@ window.tailleCarreCourante = 95;      // Dimension active du carré en pixels (9
 window.quadrantCibleCourant = 0;      // Index du quadrant actif (0: BD, 1: BG, 2: HG, 3: HD)
 
 // --- Configuration de l'Outil : Effet Blanche (Touche 0) ---
-window.niveauForceCourant = 0;        // Force sélectionnée (0: désactivé, 1: 25%, 2: 50%, 3: 75%, 4: 100%)
+window.niveauForceCourant = 2;        // Force sélectionnée (0: désactivé, 1: 25%, 2: 50%, 3: 75%, 4: 100%)
 window.indexPointEffetCourant = 0;    // NOUVEAU : 0 = Centre, 1 à 8 = Points périphériques
 
 // --- Configuration de l'Outil : Point de Contact (Touche P) ---
