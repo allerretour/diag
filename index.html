@@ -259,8 +259,9 @@
 			z-index: 10;
 			box-shadow: 3px 5px 6px rgba(0, 0, 0, 0.4);
 			/* Ombre sur le tapis */
+			touch-action: none; /* Indispensable pour le glisser-déposer fluide sur iPad/mobile */
 			user-select: none;
-			/* Empêche le texte ou la bille de se surligner en bleu au double-clic */
+			-webkit-user-select: none;
 
 		}
 

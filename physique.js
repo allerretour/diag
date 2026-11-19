@@ -279,146 +279,122 @@ function resolveCollisions(currentBall) {
 }
 
 function makeDraggable(element) {
-	let currentX, currentY, initialX, initialY;
+	let initialX = 0;
+	let initialY = 0;
 	let isDragging = false;
+	let activePointerId = null;
 
-	element.addEventListener('mousedown', dragStart);
-	element.addEventListener('touchstart', dragStart, {
-		passive: true
-	});
-	document.addEventListener('mousemove', drag);
-	document.addEventListener('touchmove', drag, {
-		passive: false
-	});
-	document.addEventListener('mouseup', dragEnd);
-	document.addEventListener('touchend', dragEnd);
+	element.addEventListener('pointerdown', dragStart);
+	element.addEventListener('pointermove', drag);
+	element.addEventListener('pointerup', dragEnd);
+	element.addEventListener('pointercancel', dragEnd);
 
 	function dragStart(e) {
+		// Ignore le clic droit de la souris (0 = clic gauche, doigt ou stylet)
+		if (e.pointerType === 'mouse' && e.button !== 0) return;
 		if (element.style.display === 'none') return;
 
-                // NOUVEAU : Sécurité mode visualisateur
-    		if (window.isViewMode) {
-        		return; // Bloque instantanément toute tentative de déplacement
-   		 }
+		// Sécurité mode visualisateur (lecture seule)
+		if (window.isViewMode) return;
 
-		
-		// --- NOUVEAU : SÉCURITÉ DE VERROUILLAGE DE POSITION ---
+		// Sécurité de verrouillage de position
 		const ballId = element.getAttribute('data-id');
-		if (window.billesVerrouillees.has(ballId)) {
-			return; // Bloque instantanément le glissement si la bille est verrouillée
+		if (window.billesVerrouillees && window.billesVerrouillees.has(ballId)) return;
+
+		// Bloque le déplacement si un outil de tracé est actif
+		if (window.outilTraceActif !== "select") return;
+
+		// Empêche le déclenchement d'événements parasites sur la table en dessous
+		e.stopPropagation();
+
+		const xOffset = parseFloat(element.style.left) || 0;
+		const yOffset = parseFloat(element.style.top) || 0;
+
+		initialX = e.clientX - xOffset;
+		initialY = e.clientY - yOffset;
+		isDragging = true;
+		activePointerId = e.pointerId;
+
+		// Capture exclusive du pointeur : remplace tous les écouteurs sur document
+		element.setPointerCapture(e.pointerId);
+
+		// Nettoyage des outlines des autres billes
+		if (window.billeSelectionneeCourante) {
+			window.billeSelectionneeCourante.style.outline = 'none';
+			window.billeSelectionneeCourante.style.outlineOffset = '';
 		}
-		
-		// --- SÉCURITÉ ANTICORRUPTION : BLOQUE LE GLISSEMENT DES BILLES SI UN OUTIL EST ACTIF ---
-		if (window.outilTraceActif !== "select") {
-			return; // Bloque instantanément le drag-and-drop si on est en mode dessin (crayon, ligne, flèche, gomme...)
+		if (Array.isArray(activeBalls)) {
+			activeBalls.forEach(b => {
+				b.style.outline = 'none';
+				b.style.outlineOffset = '';
+			});
 		}
 
-		const xOffset = parseInt(element.style.left) || 0;
-		const yOffset = parseInt(element.style.top) || 0;
+		// Sélection et mise en évidence de la bille active
+		window.billeSelectionneeCourante = element;
+		element.style.outline = '2px solid #ffffff';
+		element.style.outlineOffset = '2px';
 
-		if (e.type === 'touchstart') {
-			initialX = e.touches[0].clientX - xOffset;
-			initialY = e.touches[0].clientY - yOffset;
-		} else {
-			initialX = e.clientX - xOffset;
-			initialY = e.clientY - yOffset;
-		}
+		mettreAJourAffichagePosition(element, xOffset, yOffset);
 
-		if (e.target === element || element.contains(e.target)) {
-			isDragging = true;
-
-			// ====================================================================
-			// CORRECTION DU BLOCAGE : NETTOYAGE AGRESSIF DE TOUS LES OUTLINES
-			// ====================================================================
-			// Supprime l'outline de la variable mémorisée
-			if (window.billeSelectionneeCourante) {
-				window.billeSelectionneeCourante.style.outline = 'none';
-				window.billeSelectionneeCourante.style.outlineOffset = '';
-			}
-
-			// Sécurité subsidiaire : Nettoie graphiquement toutes les billes du tapis
-			// pour éliminer les contours résiduels laissés par l'ouverture du picker
-			if (Array.isArray(activeBalls)) {
-				activeBalls.forEach(b => {
-					b.style.outline = 'none';
-					b.style.outlineOffset = '';
-				});
-			}
-
-			// Mémorise la nouvelle bille sélectionnée
-			window.billeSelectionneeCourante = element;
-
-			// Applique le nouveau repère visuel actif
-			element.style.outline = '2px solid #ffffff';
-			element.style.outlineOffset = '2px';
-
-			// Mettre à jour l'affichage et synchroniser la couleur de la palette
-			mettreAJourAffichagePosition(element, xOffset, yOffset);
-
-			if (typeof rafraichirTexteBoutonsPalette === "function") {
-				rafraichirTexteBoutonsPalette();
-			}
+		if (typeof rafraichirTexteBoutonsPalette === "function") {
+			rafraichirTexteBoutonsPalette();
 		}
 	}
 
 	function drag(e) {
-		if (isDragging) {
-			if (e.cancelable) e.preventDefault();
-			if (e.type === 'touchmove') {
-				currentX = e.touches[0].clientX - initialX;
-				currentY = e.touches[0].clientY - initialY;
-			} else {
-				currentX = e.clientX - initialX;
-				currentY = e.clientY - initialY;
-			}
+		// Vérifie que l'événement provient bien du doigt/curseur qui a initié le drag
+		if (!isDragging || e.pointerId !== activePointerId) return;
 
-			const clamped = clampPosition(currentX, currentY);
-			const finalPos = calculerSnapGrille(clamped.x, clamped.y, element);
+		const currentX = e.clientX - initialX;
+		const currentY = e.clientY - initialY;
 
-			element.style.left = finalPos.x + 'px';
-			element.style.top = finalPos.y + 'px';
+		const clamped = clampPosition(currentX, currentY);
+		const finalPos = calculerSnapGrille(clamped.x, clamped.y, element);
 
-			resolveCollisions(element);
+		element.style.left = finalPos.x + 'px';
+		element.style.top = finalPos.y + 'px';
 
-			// ÉTAPE B : Mettre à jour l'affichage en temps réel pendant le déplacement
-			mettreAJourAffichagePosition(element, finalPos.x, finalPos.y);
-			rafraichirListeLateraleBilles();
-		}
+		const posApresCollision = resolveCollisions(element);
+
+		// Utilise la position réelle après collision pour le badge et la liste
+		mettreAJourAffichagePosition(element, posApresCollision.x, posApresCollision.y);
+		rafraichirListeLateraleBilles();
 	}
 
-		function dragEnd() {
-		if (isDragging) {
-			const finalPos = resolveCollisions(element);
-			isDragging = false;
+	function dragEnd(e) {
+		if (!isDragging || e.pointerId !== activePointerId) return;
 
-			// === APPLICATION DU FADEOUT SUR LE BADGE FLOUTANT (SOURIS / TACTILE) ===
-			const badge = document.getElementById('ball-drag-live-badge');
-			if (badge) {
-				// Utilise la même logique de délai (400ms) et de fondu (300ms)
-				setTimeout(() => {
-					// On vérifie que l'utilisateur n'a pas repris un drag entre-temps
-					if (!isDragging && document.getElementById('ball-drag-live-badge') === badge) {
-						badge.style.transition = "opacity 0.3s ease";
-						badge.style.opacity = "0";
+		resolveCollisions(element);
+		isDragging = false;
+		activePointerId = null;
 
-						setTimeout(() => {
-							if (badge.style.opacity === "0") {
-								badge.remove();
-							}
-						}, 300);
-					}
-				}, 400);
-			}
-
-			// 2. MISE À JOUR SILENCIEUSE DES COORDONNÉES INTERNES
-			rafraichirListeLateraleBilles();
+		// Libère proprement la capture du pointeur
+		if (element.hasPointerCapture(e.pointerId)) {
+			element.releasePointerCapture(e.pointerId);
 		}
+
+		// Disparition en fondu du badge flottant de coordonnées
+		const badge = document.getElementById('ball-drag-live-badge');
+		if (badge) {
+			setTimeout(() => {
+				if (!isDragging && document.getElementById('ball-drag-live-badge') === badge) {
+					badge.style.transition = "opacity 0.3s ease";
+					badge.style.opacity = "0";
+
+					setTimeout(() => {
+						if (badge.style.opacity === "0") {
+							badge.remove();
+						}
+					}, 300);
+				}
+			}, 400);
+		}
+
+		rafraichirListeLateraleBilles();
 	}
-
-
-
-
 }
+
 
 // --- GESTION DE L'AFFICHAGE DU TITRE SUR LE TAPIS ---
 const chkShowTitle = document.getElementById('chk-show-title');
