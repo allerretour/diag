@@ -102,7 +102,7 @@ function gererLogiquePalette(btn, e) {
 		window.repereXTexte = null;
 	}
 	if (toolSelected === 'effetBlanche') {
-		window.niveauForceCourant = 0;
+		window.niveauForceCourant = 2;
 	}
 
         // --- TOUT PREMIER CLIC : INITIALISATION DE L'OUTIL ---
@@ -988,69 +988,81 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 		const estCoule = [1, 5, 6].includes(pointEffetActif);
 		const estRetro = [2, 7, 8].includes(pointEffetActif);
 
+				// 1. Tracé de la ligne tangente neutre des DEUX CÔTÉS du point de contact (Ligne continue fine)
 		if (afficherTangente) {
-			const finTangente = limiterAuTapis(contactX, contactY, angleTangente, 95);
-			if (finTangente.longueur > 6) {
+			const longueurDemiTangente = 30; // Longueur de chaque côté (ajustable)
+			const finTangenteAvant = limiterAuTapis(contactX, contactY, angleTangente, longueurDemiTangente);
+			const finTangenteArriere = limiterAuTapis(contactX, contactY, angleTangente + Math.PI, longueurDemiTangente);
+
+			if (finTangenteAvant.longueur > 6 || finTangenteArriere.longueur > 6) {
 				ctx.save();
 				ctx.beginPath();
-				ctx.setLineDash([2, 5]);
-				ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
-				ctx.lineWidth = 1.2;
-				ctx.moveTo(contactX, contactY);
-				ctx.lineTo(finTangente.x, finTangente.y);
+				ctx.setLineDash([]); // Ligne continue pleine et fine
+				ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
+				ctx.lineWidth = 2;
+				ctx.moveTo(finTangenteArriere.x, finTangenteArriere.y);
+				ctx.lineTo(finTangenteAvant.x, finTangenteAvant.y);
 				ctx.stroke();
 				ctx.restore();
 			}
 		}
 
+
+
+				// 2. Ligne de trajectoire selon l'effet (Haut / Bas / Milieu)
 		if (!estCoupImpossible && aUnPanneauEffet) {
-			let facteurImpact = 1;
+			let ratioImpact = 1;
 			if (blancheCentre) {
 				const angleArrivee = Math.atan2(ghostY - blancheCentre.y, ghostX - blancheCentre.x);
-				const cosImpact = Math.max(0, Math.cos(angleArrivee - angleImpact));
-				facteurImpact = Math.pow(cosImpact, 2);
+				ratioImpact = Math.max(0, Math.cos(angleArrivee - angleImpact));
 			}
 
-			const multiplicateurForce = (forceEffetActif > 0 ? (0.55 + forceEffetActif * 0.18) : 0.85) * facteurImpact;
+			// Courbe agressive partagée pour le coulé et le rétro (puissance 1.2)
+						// Exposant 2.4 : adoucit les impacts moyens (50%) tout en gardant la puissance sur les gros impacts (80-100%)
+			const facteurImpact = Math.pow(ratioImpact, 2);
+			const multiplicateurGlobal = (forceEffetActif > 0 ? (0.55 + forceEffetActif * 0.22) : 0.85) * facteurImpact;
+
 			let angleSortieBlanche = angleTangente;
 			let couleurTrajectoire = "#ffffff";
 
 			if (estCoule) {
 				couleurTrajectoire = "#2ecc71";
+				const deviationCoule = Math.min(Math.PI * 0.48, (Math.PI / 1.9) * multiplicateurGlobal);
 				angleSortieBlanche = !afficherTangente
 					? angleImpact
-					: angleTangente - (sensRotation * (Math.PI / 3.5) * multiplicateurForce);
+					: angleTangente - (sensRotation * deviationCoule);
 			} else if (estRetro) {
 				couleurTrajectoire = "#e74c3c";
+				const deviationRetro = Math.min(Math.PI * 0.48, (Math.PI / 1.9) * multiplicateurGlobal);
 				angleSortieBlanche = !afficherTangente
 					? angleImpact + Math.PI
-					: angleTangente + (sensRotation * (Math.PI / 3.2) * multiplicateurForce);
+					: angleTangente + (sensRotation * deviationRetro);
 			} else {
 				couleurTrajectoire = "#38bdf8";
 				if (!afficherTangente) angleSortieBlanche = null;
 			}
 
-						if (angleSortieBlanche !== null) {
-				const longueursParForce = { 0: 85, 1: 60, 2: 95, 3: 135, 4: 180 };
-				const longueurEffet = longueursParForce[forceEffetActif] || 85;
-				// 1. Calcul de la fin de trajectoire depuis le point de contact
-				const finEffet = limiterAuTapis(contactX, contactY, angleSortieBlanche, longueurEffet);
 
-				if (finEffet.longueur > 8) {
+
+			if (angleSortieBlanche !== null) {
+				// Longueur fixe de 95px identique à la ligne tangente
+				const finEffet = limiterAuTapis(contactX, contactY, angleSortieBlanche, 95);
+
+				if (finEffet.longueur > 6) {
 					ctx.save();
 					ctx.beginPath();
-					ctx.setLineDash([5, 4]);
+					ctx.setLineDash([2, 5]);      // Mêmes pointillés fins que la tangente
+					ctx.globalAlpha = 0.65;       // Légère transparence pour rester discret
 					ctx.strokeStyle = couleurTrajectoire;
-					ctx.lineWidth = 2.5;
-					// 2. Départ du tracé au point de contact
+					ctx.lineWidth = 2;          // Même épaisseur fine de 1.2px que la tangente
 					ctx.moveTo(contactX, contactY);
 					ctx.lineTo(finEffet.x, finEffet.y);
 					ctx.stroke();
-					// 3. Orientation de la flèche depuis le point de contact
-					dessinerPointeFleche(contactX, contactY, finEffet.x, finEffet.y, couleurTrajectoire);
 					ctx.restore();
 				}
 			}
+
+
 
 		}
 	}
@@ -2451,7 +2463,7 @@ document.addEventListener('keydown', (e) => {
 			e.preventDefault();
 			if (outilActif !== 'effetBlanche') {
 				outilActif = 'effetBlanche';
-				window.niveauForceCourant = 0;
+				window.niveauForceCourant = 2;
 			} else {
 				window.niveauForceCourant++;
 				if (window.niveauForceCourant > 4) {
