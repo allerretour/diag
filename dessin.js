@@ -2786,23 +2786,31 @@ function clampPositionDessin(x, y) {
 
 
 	function declencherFinTrace(e) {
-		// === VALIDATION DU DÉPÔT AU RELÂCHEMENT DU DOIGT SUR IPAD ===
+		// === VALIDATION DU DÉPÔT AU RELÂCHEMENT SUR LA TABLE UNIQUEMENT ===
 		const outilTactiqueActif = (window.outilTraceActif !== "select") ? window.outilTraceActif : outilActif;
 		const listeFormesTactiques = ['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact', 'ghostBall'];
 
 		if (listeFormesTactiques.includes(outilTactiqueActif)) {
-			if (isDrawing) {
-				const couleurActive = window.billeSelectionneeCourante ?
-					window.billeSelectionneeCourante.style.backgroundColor :
-					(colorSelect ? colorSelect.value : '#ffffff');
+			// Sécurité : si isDrawing est faux (ex: clic sur un bouton de la palette pour faire tourner), on ne fait rien !
+			if (!isDrawing) return;
 
-				let nouvelElement = {
-					couleur: couleurActive,
-					points: [{
-						x: mouseX,
-						y: mouseY
-					}]
-				};
+			// Sécurité supplémentaire : on vérifie que le relâchement a bien lieu sur la table/canvas
+			if (e && e.target && !table.contains(e.target)) {
+				isDrawing = false;
+				return;
+			}
+
+			const couleurActive = window.billeSelectionneeCourante ?
+				window.billeSelectionneeCourante.style.backgroundColor :
+				(colorSelect ? colorSelect.value : '#ffffff');
+
+			let nouvelElement = {
+				couleur: couleurActive,
+				points: [{
+					x: mouseX,
+					y: mouseY
+				}]
+			};
 				
 if (outilTactiqueActif === 'ghostBall') {
 	const resultatGhost = dessinerBilleFantome(mouseX, mouseY, couleurActive);
@@ -2890,19 +2898,18 @@ if (outilTactiqueActif === 'ghostBall') {
 				}
 
 				window.dessinsSauvegardes.push(nouvelElement);
-			}
-
 			// Nettoyage des états
 			isDrawing = false;
 			outilActif = null;
 
-			// Retour au dernier outil de tracé utilisé
-			const boutonDernierOutil = document.querySelector(`.tool-btn[data-tool="${window.dernierOutilValide}"]`);
-			if (boutonDernierOutil) {
-				boutonDernierOutil.click();
-			} else {
-				const btnSelect = document.querySelector('.tool-btn[data-tool="select"]');
-				if (btnSelect) btnSelect.click();
+			// Retour systématique à l'outil Sélection après le dépôt de n'importe quelle forme tactique
+			const btnSelect = document.querySelector('.tool-btn[data-tool="select"]');
+			if (btnSelect) {
+				if (typeof gererLogiquePalette === "function") {
+					gererLogiquePalette(btnSelect, { preventDefault: () => {}, cancelable: false });
+				} else {
+					btnSelect.click();
+				}
 			}
 
 			if (typeof window.redessinerToutesLesLignes === "function") window.redessinerToutesLesLignes();
