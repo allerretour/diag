@@ -1009,38 +1009,39 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 
 
 
-				// 2. Ligne de trajectoire selon l'effet (Haut / Bas / Milieu)
-		if (!estCoupImpossible && aUnPanneauEffet) {
-			let ratioImpact = 1;
-			if (blancheCentre) {
-				const angleArrivee = Math.atan2(ghostY - blancheCentre.y, ghostX - blancheCentre.x);
-				ratioImpact = Math.max(0, Math.cos(angleArrivee - angleImpact));
-			}
+		// 2. Ligne de trajectoire selon l'effet (Haut / Bas / Milieu)
+if (!estCoupImpossible && aUnPanneauEffet) {
+	// Utilisation directe du pourcentage d'impact réel (0 à 1)
+	const pctNorm = (pctCalcule !== null) ? (pctCalcule / 100) : 1;
 
-			// Courbe agressive partagée pour le coulé et le rétro (puissance 1.2)
-						// Exposant 2.4 : adoucit les impacts moyens (50%) tout en gardant la puissance sur les gros impacts (80-100%)
-			const facteurImpact = Math.pow(ratioImpact, 2);
-			const multiplicateurGlobal = (forceEffetActif > 0 ? (0.55 + forceEffetActif * 0.22) : 0.85) * facteurImpact;
+	// Courbe adoucie entre 20% et 75% (exposant 2.6 sur le pourcentage réel)
+	// Exemples :
+	// - à 25% d'impact -> facteur ~ 0.03 (reste quasi sur la tangente)
+	// - à 50% d'impact -> facteur ~ 0.16 (déviation légère et réaliste)
+	// - à 75% d'impact -> facteur ~ 0.47 (déviation modérée)
+	// - à 95% d'impact -> facteur ~ 0.87 (fort coulé / rétro)
+	const facteurImpact = Math.pow(pctNorm, 2.6);
+	const multiplicateurGlobal = (forceEffetActif > 0 ? (0.50 + forceEffetActif * 0.20) : 0.78) * facteurImpact;
 
-			let angleSortieBlanche = angleTangente;
-			let couleurTrajectoire = "#ffffff";
+	let angleSortieBlanche = angleTangente;
+	let couleurTrajectoire = "#ffffff";
 
-			if (estCoule) {
-				couleurTrajectoire = "#2ecc71";
-				const deviationCoule = Math.min(Math.PI * 0.48, (Math.PI / 1.9) * multiplicateurGlobal);
-				angleSortieBlanche = !afficherTangente
-					? angleImpact
-					: angleTangente - (sensRotation * deviationCoule);
-			} else if (estRetro) {
-				couleurTrajectoire = "#e74c3c";
-				const deviationRetro = Math.min(Math.PI * 0.48, (Math.PI / 1.9) * multiplicateurGlobal);
-				angleSortieBlanche = !afficherTangente
-					? angleImpact + Math.PI
-					: angleTangente + (sensRotation * deviationRetro);
-			} else {
-				couleurTrajectoire = "#38bdf8";
-				if (!afficherTangente) angleSortieBlanche = null;
-			}
+	if (estCoule) {
+		couleurTrajectoire = "#2ecc71";
+		const deviationCoule = Math.min(Math.PI * 0.46, (Math.PI / 2) * multiplicateurGlobal);
+		angleSortieBlanche = !afficherTangente
+			? angleImpact
+			: angleTangente - (sensRotation * deviationCoule);
+	} else if (estRetro) {
+		couleurTrajectoire = "#e74c3c";
+		const deviationRetro = Math.min(Math.PI * 0.46, (Math.PI / 2) * multiplicateurGlobal);
+		angleSortieBlanche = !afficherTangente
+			? angleImpact + Math.PI
+			: angleTangente + (sensRotation * deviationRetro);
+	} else {
+		couleurTrajectoire = "#38bdf8";
+		if (!afficherTangente) angleSortieBlanche = null;
+	}
 
 
 
@@ -2803,7 +2804,7 @@ function clampPositionDessin(x, y) {
 					}]
 				};
 				
-					if (outilTactiqueActif === 'ghostBall') {
+if (outilTactiqueActif === 'ghostBall') {
 	const resultatGhost = dessinerBilleFantome(mouseX, mouseY, couleurActive);
 	const idLiaisonGhost = Date.now(); // Identifiant unique de liaison
 
@@ -2814,28 +2815,39 @@ function clampPositionDessin(x, y) {
 	nouvelElement.blancheCentre = resultatGhost.blancheCentre;
 	nouvelElement.couleurCible = resultatGhost.couleurCible;
 
-	// --- DÉPÔT AUTOMATIQUE DU PANNEAU IMPACT LIÉ À CE GHOST ---
+	// --- DÉPÔT AUTOMATIQUE DES PANNEAUX IMPACT ET EFFET LIÉS À CE GHOST ---
 	if (resultatGhost.pctImpact !== null) {
-		const milieuTableX = 396;
 		const milieuTableY = 200;
 
+		// 1. Panneau Quantité d'Impact (décalé légèrement à gauche : X = 310)
 		window.dessinsSauvegardes.push({
 			couleur: resultatGhost.couleurCible || couleurActive,
 			estPointContact: true,
-			lieAGhostId: idLiaisonGhost, // Lien vers la bille fantôme
+			lieAGhostId: idLiaisonGhost,
 			pourcentage: resultatGhost.pctImpact,
 			cote: resultatGhost.coteImpact,
-			points: [{ x: milieuTableX, y: milieuTableY }]
+			points: [{ x: 310, y: milieuTableY }]
 		});
-	}
 
+		// 2. Panneau Effets Bille Blanche (décalé légèrement à droite : X = 480)
+		// S'ajoute uniquement s'il n'y en a pas déjà un sur le tapis
+		const effetExistant = window.dessinsSauvegardes.find(d => d.estEffetBlanche);
+		if (!effetExistant) {
+			window.dessinsSauvegardes.push({
+				couleur: '#ffffff',
+				estEffetBlanche: true,
+				lieAGhostId: idLiaisonGhost,
+				force: window.niveauForceCourant || 2,
+				pointEffet: window.indexPointEffetCourant || 0,
+				points: [{ x: 480, y: milieuTableY }]
+			});
+		}
+	}
 
 	// Durée d'affichage du badge après le dépôt (2500 ms = 2,5 secondes)
 	const DUREE_AFFICHAGE_MS = 2500;
-
 	nouvelElement.expireBadgeLe = Date.now() + DUREE_AFFICHAGE_MS;
 
-	// Déclenche l'animation de fondu 400 ms avant la fin
 	setTimeout(() => {
 		const animerFondu = () => {
 			if (typeof window.redessinerToutesLesLignes === "function") {
@@ -2848,6 +2860,7 @@ function clampPositionDessin(x, y) {
 		requestAnimationFrame(animerFondu);
 	}, DUREE_AFFICHAGE_MS - 400);
 }
+
 
 
 
