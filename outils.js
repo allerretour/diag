@@ -1113,9 +1113,12 @@ const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
 				chkShowTitle.checked = opts.titreVisible;
 			}
 			if (chkToggleBallsList) {
-				chkToggleBallsList.checked = opts.hasOwnProperty('listeBillesVisible') ? opts.listeBillesVisible : true;
+				chkToggleBallsList.checked = window.isViewMode 
+				? false 
+				: (opts.hasOwnProperty('listeBillesVisible') ? opts.listeBillesVisible : true);
 				chkToggleBallsList.dispatchEvent(new Event('change'));
 			}
+
 
 			if (donneesImportees.logoImageRaw) {
 				window.logoBase64Courant = donneesImportees.logoImageRaw;

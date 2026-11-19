@@ -972,7 +972,9 @@ function appliquerRestrictionsModeVue() {
         'btn-toggle-palette',
         'modal-options',
         'btn-ouvrir-options',
-        'btn-ouvrir-guide',
+		// 'btn-toggle-balls-sidebar',
+		'balls-sidebar',
+		'btn-ouvrir-guide',
         'btn-export',
         'btn-export-text',
         'btn-export-serie-aleatoire'
@@ -1009,5 +1011,6 @@ function appliquerRestrictionsModeVue() {
         const labelParent = chkHD.closest('.control-item');
         if (labelParent) labelParent.style.display = 'none';
     }
+	
 }
 
