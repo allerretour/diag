@@ -1044,23 +1044,25 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 
 
 
-			if (angleSortieBlanche !== null) {
-				// Longueur fixe de 95px identique à la ligne tangente
-				const finEffet = limiterAuTapis(contactX, contactY, angleSortieBlanche, 95);
+						if (angleSortieBlanche !== null) {
+				// 1. Calcul de la fin de trajectoire depuis le centre du Ghost (ghostX, ghostY)
+				const finEffet = limiterAuTapis(ghostX, ghostY, angleSortieBlanche, 95);
 
 				if (finEffet.longueur > 6) {
 					ctx.save();
 					ctx.beginPath();
-					ctx.setLineDash([2, 5]);      // Mêmes pointillés fins que la tangente
-					ctx.globalAlpha = 0.65;       // Légère transparence pour rester discret
+					ctx.setLineDash([2, 5]);
+					ctx.globalAlpha = 0.65;
 					ctx.strokeStyle = couleurTrajectoire;
-					ctx.lineWidth = 2;          // Même épaisseur fine de 1.2px que la tangente
-					ctx.moveTo(contactX, contactY);
+					ctx.lineWidth = 2;
+					// 2. Départ du tracé au centre exact du Ghost
+					ctx.moveTo(ghostX, ghostY);
 					ctx.lineTo(finEffet.x, finEffet.y);
 					ctx.stroke();
 					ctx.restore();
 				}
 			}
+
 
 
 
