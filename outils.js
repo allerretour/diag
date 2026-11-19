@@ -1010,18 +1010,165 @@ const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
 		});
 	}
 
-	// IMPORTATION : Lit et réinjecte la configuration complète
+	
+		// ====================================================================
+	// SECTION 1 : MOTEUR DE RESTAURATION CENTRALISÉ & IMPORT FICHIER .DIAG
+	// ====================================================================
+	function appliquerDonneesConfiguration(donneesImportees) {
+		let listeBilles = [];
+		let nbVisibles = "15";
+		let titreImported = "Configuration importée";
+		let descImported = "";
+
+		if (donneesImportees.billes && Array.isArray(donneesImportees.billes)) {
+			listeBilles = donneesImportees.billes;
+			nbVisibles = donneesImportees.nombreBillesVisibles || "15";
+			titreImported = donneesImportees.titre || "Configuration sans titre";
+			descImported = donneesImportees.description || "";
+
+			window.dessinsSauvegardes = Array.isArray(donneesImportees.lignesDessinees)
+				? donneesImportees.lignesDessinees
+				: [];
+		} else if (Array.isArray(donneesImportees)) {
+			listeBilles = donneesImportees;
+			nbVisibles = donneesImportees.filter(b => parseInt(b.id, 10) > 0).length.toString();
+			window.dessinsSauvegardes = [];
+		} else {
+			throw new Error("Format de configuration non reconnu");
+		}
+
+		// 1. Ajuster le sélecteur de jeu
+		if (ballsCountSelect) {
+			ballsCountSelect.value = nbVisibles;
+		}
+
+		// Réinitialiser les billes verrouillées
+		if (!window.billesVerrouillees) window.billesVerrouillees = new Set();
+		window.billesVerrouillees.clear();
+
+		// 2. Restaurer positions, visibilité et verrouillage des billes
+		activeBalls.forEach(ball => {
+			const ballId = ball.getAttribute('data-id');
+			const savedBall = listeBilles.find(b => b.id === ballId) || null;
+
+			ball.style.outline = 'none';
+
+			if (savedBall) {
+				ball.style.left = savedBall.x;
+				ball.style.top = savedBall.y;
+
+				if (savedBall.hasOwnProperty('visible')) {
+					ball.style.display = savedBall.visible ? 'flex' : 'none';
+				} else {
+					const idNum = parseInt(ballId, 10);
+					ball.style.display = (idNum === 0 || idNum <= parseInt(nbVisibles, 10)) ? 'flex' : 'none';
+				}
+
+				if (savedBall.verrouillee) {
+					window.billesVerrouillees.add(ballId);
+				}
+			} else {
+				const idNum = parseInt(ballId, 10);
+				ball.style.display = (idNum === 0 || idNum <= parseInt(nbVisibles, 10)) ? 'flex' : 'none';
+			}
+		});
+
+		if (typeof rafraichirListeLateraleBilles === "function") {
+			rafraichirListeLateraleBilles();
+		}
+
+		// 3. Mettre à jour les titres et notes
+		if (titleInput) titleInput.value = titreImported;
+		if (descInput) descInput.value = descImported;
+		rafraichirZoneNotes();
+
+		// 4. Restaurer les options visuelles
+		if (donneesImportees.optionsVisuelles) {
+			const opts = donneesImportees.optionsVisuelles;
+
+			const chkToggleGrid = document.getElementById('chk-toggle-grid');
+			const chkHighDensityGrid = document.getElementById('chk-high-density-grid');
+			const chkMagnetism = document.getElementById('chk-magnetism');
+			const chkShowLogo = document.getElementById('chk-show-logo');
+			const chkShowTitle = document.getElementById('chk-show-title');
+			const chkToggleBallsList = document.getElementById('chk-toggle-balls-list');
+
+			if (chkHighDensityGrid && opts.hasOwnProperty('hd')) {
+				chkHighDensityGrid.checked = opts.hd;
+				chkHighDensityGrid.dispatchEvent(new Event('change'));
+			}
+			if (chkToggleGrid && opts.hasOwnProperty('grille')) {
+				chkToggleGrid.checked = opts.grille;
+				chkToggleGrid.dispatchEvent(new Event('change'));
+			}
+			if (chkMagnetism && opts.hasOwnProperty('magnetisme')) {
+				chkMagnetism.checked = opts.magnetisme;
+				chkMagnetism.dispatchEvent(new Event('change'));
+			}
+			if (chkShowLogo && opts.hasOwnProperty('logo')) {
+				chkShowLogo.checked = opts.logo;
+				chkShowLogo.dispatchEvent(new Event('change'));
+			}
+			if (chkShowTitle && opts.hasOwnProperty('titreVisible')) {
+				chkShowTitle.checked = opts.titreVisible;
+			}
+			if (chkToggleBallsList) {
+				chkToggleBallsList.checked = opts.hasOwnProperty('listeBillesVisible') ? opts.listeBillesVisible : true;
+				chkToggleBallsList.dispatchEvent(new Event('change'));
+			}
+
+			if (donneesImportees.logoImageRaw) {
+				window.logoBase64Courant = donneesImportees.logoImageRaw;
+				if (tableLogoOverlay) tableLogoOverlay.src = window.logoBase64Courant;
+			} else {
+				window.logoBase64Courant = null;
+				if (tableLogoOverlay) tableLogoOverlay.src = "logo.png";
+			}
+
+			if (opts.hasOwnProperty('couleurTapis')) {
+				const couleurEnregistree = opts.couleurTapis || "vert";
+				const radioAcocher = document.querySelector(`input[name="felt-color"][value="${couleurEnregistree}"]`);
+				if (radioAcocher) radioAcocher.checked = true;
+
+				const palette = palettesTapis[couleurEnregistree];
+				if (palette) {
+					Object.keys(palette).forEach(variable => {
+						document.documentElement.style.setProperty(variable, palette[variable]);
+					});
+				}
+			}
+		}
+
+		if (typeof rafraichirTitreSurTapis === "function") rafraichirTitreSurTapis();
+		if (typeof window.redessinerToutesLesLignes === "function") window.redessinerToutesLesLignes();
+		ajusterLargeurPanneaux();
+		if (modalGuide) modalGuide.close();
+
+		// 5. Restaurer les couleurs des poches
+		document.querySelectorAll('.pocket').forEach(p => {
+			p.style.setProperty('--pocket-color', '#000000');
+		});
+		if (donneesImportees.pochesColoriees && Array.isArray(donneesImportees.pochesColoriees)) {
+			donneesImportees.pochesColoriees.forEach(pocketData => {
+				const pocheElement = document.querySelector(`[data-pocket-id="${pocketData.id}"]`) || document.querySelector(`.pocket.${pocketData.id}`);
+				if (pocheElement) {
+					pocheElement.style.setProperty('--pocket-color', pocketData.color);
+				}
+			});
+		}
+	}
+
+	// Écouteur d'importation de fichier .diag
 	if (importTriggerBtn && fileImportInput) {
 		importTriggerBtn.addEventListener('click', () => fileImportInput.click());
 
 		fileImportInput.addEventListener('change', (event) => {
-			const file = event.target.files[0];
+			const file = event.target.files[0]; // <-- CORRECTION : ajout de [0]
 			if (!file) return;
 
-			// SÉCURITÉ : Vérification stricte de l'extension du fichier
 			if (!file.name.endsWith('.diag')) {
 				alert("Format refusé : Seuls les fichiers avec l'extension .diag sont acceptés.");
-				fileImportInput.value = ""; // Réinitialise l'input
+				fileImportInput.value = "";
 				return;
 			}
 
@@ -1029,232 +1176,152 @@ const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
 			reader.onload = (e) => {
 				try {
 					const donneesImportees = JSON.parse(e.target.result);
-
-					let listeBilles = [];
-					let nbVisibles = "15";
-					let titreImported = "Configuration importée";
-					let descImported = "";
-
-					if (donneesImportees.billes && Array.isArray(donneesImportees.billes)) {
-						listeBilles = donneesImportees.billes;
-						nbVisibles = donneesImportees.nombreBillesVisibles;
-						titreImported = donneesImportees.titre || "Configuration sans titre";
-						descImported = donneesImportees.description || "";
-
-						if (donneesImportees.lignesDessinees && Array.isArray(donneesImportees.lignesDessinees)) {
-							window.dessinsSauvegardes = donneesImportees.lignesDessinees;
-						} else {
-							window.dessinsSauvegardes = [];
-						}
-					} else if (Array.isArray(donneesImportees)) {
-						listeBilles = donneesImportees;
-						nbVisibles = donneesImportees.filter(b => parseInt(b.id, 10) > 0).length.toString();
-						window.dessinsSauvegardes = [];
-					} else {
-						throw new Error("Format JSON non reconnu");
-					}
-
-								// 1. Ajuster la valeur affichée dans le menu déroulant
-					if (ballsCountSelect) {
-						ballsCountSelect.value = nbVisibles;
-					}
-
-					// RÉSOLUTION DU BUG : Réinitialise le Set global des billes verrouillées lors d'un nouvel import
-					if (!window.billesVerrouillees) window.billesVerrouillees = new Set();
-					window.billesVerrouillees.clear();
-
-					// 2. Restaurer la position, la visibilité ET le verrouillage de chaque bille
-					activeBalls.forEach(ball => {
-						const ballId = ball.getAttribute('data-id');
-						
-						// CORRECTION ICI : On cherche directement dans l'objet lu "donneesImportees.billes" au lieu de "listBilles"
-						const savedBall = (donneesImportees.billes && Array.isArray(donneesImportees.billes)) 
-							? donneesImportees.billes.find(b => b.id === ballId) 
-							: null;
-
-						// On remet la bille à neuf (supprime l'outline de sélection au cas où)
-						ball.style.outline = 'none';
-
-						if (savedBall) {
-							ball.style.left = savedBall.x;
-							ball.style.top = savedBall.y;
-
-							// Gestion de la visibilité
-							if (savedBall.hasOwnProperty('visible')) {
-								ball.style.display = savedBall.visible ? 'flex' : 'none';
-							} else {
-								const idNum = parseInt(ballId, 10);
-								if (idNum === 0) {
-									ball.style.display = 'flex';
-								} else {
-									ball.style.display = idNum <= parseInt(nbVisibles, 10) ? 'flex' : 'none';
-								}
-							}
-
-							// Restaure l'état de verrouillage dans le Set global
-							if (savedBall.verrouillee) {
-								window.billesVerrouillees.add(ballId);
-							}
-						} else {
-							const idNum = parseInt(ballId, 10);
-							if (idNum === 0) {
-								ball.style.display = 'flex';
-							} else {
-								ball.style.display = idNum <= parseInt(nbVisibles, 10) ? 'flex' : 'none';
-							}
-						}
-					});
-
-					// On force le rafraîchissement complet de la liste pour faire réapparaître les cadenas
-					if (typeof rafraichirListeLateraleBilles === "function") {
-						rafraichirListeLateraleBilles();
-					}
-
-
-					// 3. Mettre à jour les champs de texte éditables
-					if (titleInput) titleInput.value = titreImported;
-					if (descInput) descInput.value = descImported;
-
-					// AJOUT DE SÉCURITÉ ICI :
-					rafraichirZoneNotes();
-
-					// ====================================================================
-					// AJOUT ICI : RESTAURATION ET DÉCLENCHEMENT DES TOGGLES VISUELS
-					// ====================================================================
-					if (donneesImportees.optionsVisuelles) {
-						const opts = donneesImportees.optionsVisuelles;
-
-						const chkToggleGrid = document.getElementById('chk-toggle-grid');
-						const chkHighDensityGrid = document.getElementById('chk-high-density-grid');
-						const chkMagnetism = document.getElementById('chk-magnetism');
-						const chkShowLogo = document.getElementById('chk-show-logo');
-						const chkShowTitle = document.getElementById('chk-show-title');
-						// On récupère notre nouvelle case à cocher
-						const chkToggleBallsList = document.getElementById('chk-toggle-balls-list');
-
-						// Restauration de la Grille HD d'abord (pour que la grille sache s'il faut générer en 16x8 ou 8x4)
-						if (chkHighDensityGrid && opts.hasOwnProperty('hd')) {
-							chkHighDensityGrid.checked = opts.hd;
-							chkHighDensityGrid.dispatchEvent(new Event('change'));
-						}
-
-						// Restauration de l'affichage de la Grille globale
-						if (chkToggleGrid && opts.hasOwnProperty('grille')) {
-							chkToggleGrid.checked = opts.grille;
-							chkToggleGrid.dispatchEvent(new Event('change'));
-						}
-
-						// Restauration du Magnétisme
-						if (chkMagnetism && opts.hasOwnProperty('magnetisme')) {
-							chkMagnetism.checked = opts.magnetisme;
-							chkMagnetism.dispatchEvent(new Event('change'));
-						}
-
-						// Restauration du Logo
-						if (chkShowLogo && opts.hasOwnProperty('logo')) {
-							chkShowLogo.checked = opts.logo;
-							chkShowLogo.dispatchEvent(new Event('change'));
-						}
-
-						// Restauration de l'affichage du Titre
-						if (chkShowTitle && opts.hasOwnProperty('titreVisible')) {
-							chkShowTitle.checked = opts.titreVisible;
-						}
-
-						// --- RESTAURATION DE LA BARRE LATÉRALE ---
-						if (chkToggleBallsList && opts.hasOwnProperty('listeBillesVisible')) {
-							chkToggleBallsList.checked = opts.listeBillesVisible;
-							// Déclenche l'événement de changement pour masquer/afficher la structure HTML immédiatement
-							chkToggleBallsList.dispatchEvent(new Event('change'));
-						} else if (chkToggleBallsList) {
-							// Optionnel : Comportement par défaut si un ancien JSON ne possède pas l'option
-							chkToggleBallsList.checked = true;
-							chkToggleBallsList.dispatchEvent(new Event('change'));
-						}
-
-						if (donneesImportees.hasOwnProperty('logoImageRaw') && donneesImportees.logoImageRaw) {
-							window.logoBase64Courant = donneesImportees.logoImageRaw;
-							if (tableLogoOverlay) {
-								tableLogoOverlay.src = window.logoBase64Courant; // Réinjecte l'image brute sauvegardée sur le tapis
-							}
-						} else {
-							// Si la configuration importée n'a pas de logo personnalisé, on remet l'image par défaut
-							window.logoBase64Courant = null;
-							if (tableLogoOverlay) {
-								tableLogoOverlay.src = "logo.png";
-							}
-						}
-
-						// --- RESTAURATION DE LA COULEUR DU TAPIS DEPUIS LE JSON ---
-						if (opts.hasOwnProperty('couleurTapis')) {
-							// Remplacer "bleu" par "vert" en cas d'absence dans le fichier JSON importé
-							const couleurEnregistree = opts.couleurTapis || "vert";
-
-							// 1. Coche le bouton radio correspondant dans l'interface utilisateur
-							const radioAcocher = document.querySelector(`input[name="felt-color"][value="${couleurEnregistree}"]`);
-							if (radioAcocher) {
-								radioAcocher.checked = true;
-							}
-
-							// 2. Réinjecte instantanément la bonne palette de variables CSS (:root)
-							const palette = palettesTapis[couleurEnregistree];
-							if (palette) {
-								Object.keys(palette).forEach(variable => {
-									document.documentElement.style.setProperty(variable, palette[variable]);
-								});
-							}
-						}
-
-					}
-
-					// Forcer l'écriture du titre sur le tapis après configuration du toggle
-					if (typeof rafraichirTitreSurTapis === "function") {
-						rafraichirTitreSurTapis();
-					}
-
-					// 4. Forcer le canvas à redessiner immédiatement
-					if (typeof window.redessinerToutesLesLignes === "function") {
-						window.redessinerToutesLesLignes();
-					}
-					
-					// --- AJOUT DE SÉCURITÉ POUR L'IMPORTATION ---
-					// Adapte la largeur des panneaux suite aux préférences du fichier .diag importé
-					ajusterLargeurPanneaux();
-
-					// alert(`Configuration "${titreImported}" restaurée avec succès !`);
-
-					if (modalGuide) {
-						modalGuide.close();
-					}
-
-					// --- NOUVEAU : Restauration de la couleur des poches depuis le fichier .diag ---
-					// Par sécurité, on commence par remettre toutes les poches en noir pur par défaut
-					document.querySelectorAll('.pocket').forEach(p => {
-						p.style.setProperty('--pocket-color', '#000000');
-					});
-
-					// Si le fichier contient des données de poches, on applique les couleurs enregistrées
-					if (donneesImportees.pochesColoriees && Array.isArray(donneesImportees.pochesColoriees)) {
-						donneesImportees.pochesColoriees.forEach(pocketData => {
-							// On cherche la poche soit par son data-pocket-id, soit par sa classe de secours (tl, tc, tr, etc.)
-							const pocheElement = document.querySelector(`[data-pocket-id="${pocketData.id}"]`) || 										document.querySelector(`.pocket.${pocketData.id}`);
-							if (pocheElement) {
-								pocheElement.style.setProperty('--pocket-color', pocketData.color);
-							}
-						});
-					}
-
-
-
+					appliquerDonneesConfiguration(donneesImportees);
 				} catch (error) {
 					alert("Erreur lors de la lecture du fichier DIAG. Vérifiez sa structure.");
 				}
-
 				fileImportInput.value = "";
 			};
 			reader.readAsText(file);
 		});
 	}
+
+
+		// ====================================================================
+	// SECTION 2 : PARTAGE & CHARGEMENT PAR LIEN URL COMPRESSÉ (#diag=...)
+	// ====================================================================
+	function uint8ToBase64Url(uint8Array) {
+		let binStr = '';
+		for (let i = 0; i < uint8Array.length; i++) {
+			binStr += String.fromCharCode(uint8Array[i]);
+		}
+		return btoa(binStr).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+	}
+
+	function base64UrlToUint8(base64Url) {
+		let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+		while (base64.length % 4) base64 += '=';
+		const binStr = atob(base64);
+		const bytes = new Uint8Array(binStr.length);
+		for (let i = 0; i < binStr.length; i++) {
+			bytes[i] = binStr.charCodeAt(i);
+		}
+		return bytes;
+	}
+
+	async function compresserTexte(texte) {
+		const bytes = new TextEncoder().encode(texte);
+		if (typeof CompressionStream !== "undefined") {
+			const cs = new CompressionStream('deflate-raw');
+			const writer = cs.writable.getWriter();
+			writer.write(bytes);
+			writer.close();
+			const buffer = await new Response(cs.readable).arrayBuffer();
+			return "c_" + uint8ToBase64Url(new Uint8Array(buffer));
+		}
+		return "u_" + uint8ToBase64Url(bytes);
+	}
+
+	async function decompresserTexte(payload) {
+		const format = payload.slice(0, 2);
+		const bytes = base64UrlToUint8(payload.slice(2));
+		if (format === "c_" && typeof DecompressionStream !== "undefined") {
+			const ds = new DecompressionStream('deflate-raw');
+			const writer = ds.writable.getWriter();
+			writer.write(bytes);
+			writer.close();
+			const buffer = await new Response(ds.readable).arrayBuffer();
+			return new TextDecoder().decode(buffer);
+		}
+		return new TextDecoder().decode(bytes);
+	}
+
+	async function genererLienPartage(modeLectureSeule = true) {
+		const listBilles = activeBalls.map(ball => {
+			const ballId = ball.getAttribute('data-id');
+			return {
+				id: ballId,
+				x: ball.style.left,
+				y: ball.style.top,
+				visible: ball.style.display !== 'none',
+				verrouillee: window.billesVerrouillees ? window.billesVerrouillees.has(ballId) : false
+			};
+		});
+
+		const etatPoches = Array.from(document.querySelectorAll('.pocket')).map(p => ({
+			id: p.getAttribute('data-pocket-id') || p.className.split(' ')[1], // <-- ajout de [1]
+			color: p.style.getPropertyValue('--pocket-color').trim() || "#000000"
+		}));
+
+
+		const donneesPartage = {
+			titre: titleInput ? titleInput.value.trim() : "",
+			description: descInput ? descInput.value : "",
+			nombreBillesVisibles: ballsCountSelect ? ballsCountSelect.value : "15",
+			billes: listBilles,
+			lignesDessinees: window.dessinsSauvegardes || [],
+			pochesColoriees: etatPoches,
+			optionsVisuelles: {
+				grille: document.getElementById('chk-toggle-grid')?.checked ?? false,
+				hd: document.getElementById('chk-high-density-grid')?.checked ?? false,
+				magnetisme: document.getElementById('chk-magnetism')?.checked ?? true,
+				logo: document.getElementById('chk-show-logo')?.checked ?? false,
+				titreVisible: document.getElementById('chk-show-title')?.checked ?? false,
+				couleurTapis: document.querySelector('input[name="felt-color"]:checked')?.value || "vert",
+				listeBillesVisible: document.getElementById('chk-toggle-balls-list')?.checked ?? true
+			}
+		};
+
+		const payloadEncode = await compresserTexte(JSON.stringify(donneesPartage));
+		const url = new URL(window.location.href);
+		url.hash = "";
+		if (modeLectureSeule) {
+			url.searchParams.set('mode', 'view');
+		} else {
+			url.searchParams.delete('mode');
+		}
+
+		return `${url.toString()}#diag=${payloadEncode}`;
+	}
+
+	// Écouteur du bouton "🔗 Lien"
+	const btnShareLink = document.getElementById('btn-share-link');
+	if (btnShareLink) {
+		btnShareLink.addEventListener('click', async () => {
+			try {
+				const lienComplet = await genererLienPartage(true);
+				await navigator.clipboard.writeText(lienComplet);
+				const texteOriginal = btnShareLink.innerText;
+				btnShareLink.innerText = "✅ Copié !";
+				setTimeout(() => { btnShareLink.innerText = texteOriginal; }, 2500);
+			} catch (err) {
+				const lienSecours = await genererLienPartage(true);
+				prompt("Copiez ce lien pour partager votre diagramme :", lienSecours);
+			}
+		});
+	}
+
+	// Lecture automatique du lien à l'ouverture de la page
+	async function chargerDepuisLienUrl() {
+		const hash = window.location.hash;
+		if (!hash || !hash.startsWith('#diag=')) return;
+
+		try {
+			const jsonStr = await decompresserTexte(hash.substring(6));
+			const donneesImportees = JSON.parse(jsonStr);
+			appliquerDonneesConfiguration(donneesImportees);
+		} catch (err) {
+			console.error("Erreur lors du chargement du diagramme depuis l'URL :", err);
+		}
+	}
+
+	// Lancement au démarrage
+	setTimeout(chargerDepuisLienUrl, 150);
+
+	
+	
+	
+	
 
 	// --- GESTION DE LA GRILLE VISUELLE ALIGNÉE SUR LES DIAMANDS (Bandes incluses, sans contour externe) ---
 	const gridOverlay = document.getElementById('grid-overlay');
