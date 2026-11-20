@@ -1306,17 +1306,26 @@ const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
 
 	// Lecture automatique du lien à l'ouverture de la page
 	async function chargerDepuisLienUrl() {
-		const hash = window.location.hash;
-		if (!hash || !hash.startsWith('#diag=')) return;
+	const hash = window.location.hash;
+	if (!hash || !hash.startsWith('#diag=')) return;
 
-		try {
-			const jsonStr = await decompresserTexte(hash.substring(6));
-			const donneesImportees = JSON.parse(jsonStr);
-			appliquerDonneesConfiguration(donneesImportees);
-		} catch (err) {
-			console.error("Erreur lors du chargement du diagramme depuis l'URL :", err);
-		}
+	try {
+		const jsonStr = await decompresserTexte(hash.substring(6));
+		const donneesImportees = JSON.parse(jsonStr);
+		appliquerDonneesConfiguration(donneesImportees);
+
+		// Masquer les éléments permettant l'importation par fichier .diag
+		const btnImport = document.getElementById('btn-import-trigger');
+		const inputImport = document.getElementById('file-import');
+		
+		if (btnImport) btnImport.style.display = 'none';
+		if (inputImport) inputImport.style.display = 'none';
+
+	} catch (err) {
+		console.error("Erreur lors du chargement du diagramme depuis l'URL :", err);
 	}
+	}
+
 
 	// Lancement au démarrage
 	setTimeout(chargerDepuisLienUrl, 150);
