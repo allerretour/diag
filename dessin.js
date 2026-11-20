@@ -796,7 +796,7 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 	let cibleCentre = null;
 	let couleurCible = couleurRepli;
 
-	// 2. Récupération ou détection de la bille cible la plus proche
+		// 2. Récupération ou détection de la bille cible la plus proche
 	if (donneeFigee && donneeFigee.cibleCentre && donneeFigee.points && donneeFigee.points.length > 0) {
 		ghostX = donneeFigee.points[0].x;
 		ghostY = donneeFigee.points[0].y;
@@ -867,22 +867,32 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 	let pctCalcule = null;
 	let coteCalcule = 1; // 1 = Gauche, -1 = Droite
 
-	// 3. Calcul géométrique de l'impact en prenant en compte les bords (diamètre = 24px)
+	// 3. Calcul géométrique exact de la fraction de bille
 	if (cibleCentre) {
 		const angleImpact = Math.atan2(cibleCentre.y - ghostY, cibleCentre.x - ghostX);
 
 		if (blancheCentre) {
 			const distTir = Math.hypot(ghostX - blancheCentre.x, ghostY - blancheCentre.y);
+			const distCentreACentre = Math.hypot(cibleCentre.x - blancheCentre.x, cibleCentre.y - blancheCentre.y);
 
-			if (distTir > 0.1) {
-				const dirX = (ghostX - blancheCentre.x) / distTir;
-				const dirY = (ghostY - blancheCentre.y) / distTir;
+			if (distTir > 0.1 && distCentreACentre > 0.1) {
+				// Vecteur unitaire de la trajectoire de tir (Blanche -> Ghost)
+				const dirTirX = (ghostX - blancheCentre.x) / distTir;
+				const dirTirY = (ghostY - blancheCentre.y) / distTir;
 
+				// Vecteur de la bille fantôme vers le centre de la cible
 				const vecCibleX = cibleCentre.x - ghostX;
 				const vecCibleY = cibleCentre.y - ghostY;
 
-				const projLongitudinale = vecCibleX * dirX + vecCibleY * dirY;
-				const decalageLateral = vecCibleX * dirY - vecCibleY * dirX;
+				// Vérifie que la blanche arrive bien par l'arrière (pas à travers la cible)
+				const projLongitudinale = vecCibleX * dirTirX + vecCibleY * dirTirY;
+
+				// Vecteur unitaire centre à centre (Blanche -> Cible) pour le vrai angle de coupe
+				const dirCentreX = (cibleCentre.x - blancheCentre.x) / distCentreACentre;
+				const dirCentreY = (cibleCentre.y - blancheCentre.y) / distCentreACentre;
+
+				// Projection latérale réelle par rapport à l'axe centre-à-centre
+				const decalageLateral = vecCibleX * dirCentreY - vecCibleY * dirCentreX;
 
 				if (projLongitudinale <= 0.1) {
 					estCoupImpossible = true;
@@ -892,11 +902,10 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 					const chevauchementPx = Math.max(0, diametre - Math.abs(decalageLateral));
 					const pctBrut = Math.round((chevauchementPx / diametre) * 100);
 
-										// Côté d'impact vu depuis la bille blanche (1 = Gauche, -1 = Droite)
+					// Côté d'impact vu depuis la bille blanche (1 = Gauche, -1 = Droite)
 					const coteStr = decalageLateral > 0 ? "D" : "G";
 					pctCalcule = pctBrut;
 					coteCalcule = decalageLateral > 0 ? -1 : 1;
-
 
 					if (pctBrut >= 99) {
 						texteBadgeImpact = "100% (Plein)";
@@ -922,7 +931,8 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 			ctx.restore();
 		}
 
-		// B. Trajectoire projetée de la bille objet
+
+						// B. Trajectoire projetée de la bille objet (jusqu'aux bandes ou la poche)
 		let pocheAlignee = null;
 		let ecartPocheMin = seuilPocheRadian;
 
@@ -939,29 +949,34 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 
 		const longueurTrajectoire = pocheAlignee
 			? Math.max(10, Math.hypot(pocheAlignee.x - cibleCentre.x, pocheAlignee.y - cibleCentre.y) - 10)
-			: 130;
+			: 2000; // Distance supérieure à la diagonale de la table : arrêt automatique sur les bandes
 
 		const finCible = limiterAuTapis(cibleCentre.x, cibleCentre.y, angleImpact, longueurTrajectoire, Boolean(pocheAlignee));
-		if (finCible.longueur > 6) {
+		
+		// Raccourcit la trajectoire de 10px (uniquement hors poche, ou retirez "!pocheAlignee ?" pour tout raccourcir)
+		const longueurFinale = !pocheAlignee ? Math.max(0, finCible.longueur + 12) : finCible.longueur;
+
+		if (longueurFinale > 6) {
+			const finX = cibleCentre.x + Math.cos(angleImpact) * longueurFinale;
+			const finY = cibleCentre.y + Math.sin(angleImpact) * longueurFinale;
+
 			ctx.save();
 			ctx.beginPath();
 			ctx.setLineDash([]);
 			ctx.strokeStyle = couleurCible;
 			ctx.lineWidth = 2.5;
 			ctx.moveTo(cibleCentre.x, cibleCentre.y);
-			ctx.lineTo(finCible.x, finCible.y);
+			ctx.lineTo(finX, finY);
 			ctx.stroke();
-			dessinerPointeFleche(cibleCentre.x, cibleCentre.y, finCible.x, finCible.y, couleurCible);
+			dessinerPointeFleche(cibleCentre.x, cibleCentre.y, finX, finY, couleurCible);
 			ctx.restore();
 		}
 
-		// C. Ligne tangente à 90° (Carreau) + Trajectoire d'effet (Coulé / Rétro)
+
+				// C. Ligne tangente à 90° (Depuis le centre du ghost vers le côté de la déviation)
 		let afficherTangente = !estCoupImpossible;
 		let angleTangente = angleImpact + Math.PI / 2;
 		let sensRotation = 1;
-
-		const contactX = ghostX + Math.cos(angleImpact) * rayon;
-		const contactY = ghostY + Math.sin(angleImpact) * rayon;
 
 		if (blancheCentre && afficherTangente) {
 			const angleArrivee = Math.atan2(ghostY - blancheCentre.y, ghostX - blancheCentre.x);
@@ -975,32 +990,18 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 			}
 		}
 
-		let panneauEffet = null;
-		if (Array.isArray(window.dessinsSauvegardes)) {
-			const effets = window.dessinsSauvegardes.filter(d => d.estEffetBlanche);
-			if (effets.length > 0) panneauEffet = effets[effets.length - 1];
-		}
-
-		const pointEffetActif = panneauEffet ? (panneauEffet.pointEffet || 0) : (window.indexPointEffetCourant || 0);
-		const forceEffetActif = panneauEffet ? (panneauEffet.force || 0) : (window.niveauForceCourant || 0);
-		const aUnPanneauEffet = Boolean(panneauEffet) || window.outilTraceActif === 'effetBlanche' || outilActif === 'effetBlanche';
-
-		const estCoule = [1, 5, 6].includes(pointEffetActif);
-		const estRetro = [2, 7, 8].includes(pointEffetActif);
-
-				// 1. Tracé de la ligne tangente neutre des DEUX CÔTÉS du point de contact (Ligne continue fine)
+		// Tracé de la ligne tangente depuis le milieu du ghost
 		if (afficherTangente) {
-			const longueurDemiTangente = 30; // Longueur de chaque côté (ajustable)
-			const finTangenteAvant = limiterAuTapis(contactX, contactY, angleTangente, longueurDemiTangente);
-			const finTangenteArriere = limiterAuTapis(contactX, contactY, angleTangente + Math.PI, longueurDemiTangente);
+			const longueurTangente = 55;
+			const finTangenteAvant = limiterAuTapis(ghostX, ghostY, angleTangente, longueurTangente);
 
-			if (finTangenteAvant.longueur > 6 || finTangenteArriere.longueur > 6) {
+			if (finTangenteAvant.longueur > 6) {
 				ctx.save();
 				ctx.beginPath();
-				ctx.setLineDash([]); // Ligne continue pleine et fine
-				ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
+				ctx.setLineDash([]);
+				ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
 				ctx.lineWidth = 2;
-				ctx.moveTo(finTangenteArriere.x, finTangenteArriere.y);
+				ctx.moveTo(ghostX, ghostY);
 				ctx.lineTo(finTangenteAvant.x, finTangenteAvant.y);
 				ctx.stroke();
 				ctx.restore();
@@ -1008,66 +1009,6 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 		}
 
 
-
-		// 2. Ligne de trajectoire selon l'effet (Haut / Bas / Milieu)
-if (!estCoupImpossible && aUnPanneauEffet) {
-	// Utilisation directe du pourcentage d'impact réel (0 à 1)
-	const pctNorm = (pctCalcule !== null) ? (pctCalcule / 100) : 1;
-
-	// Courbe adoucie entre 20% et 75% (exposant 2.6 sur le pourcentage réel)
-	// Exemples :
-	// - à 25% d'impact -> facteur ~ 0.03 (reste quasi sur la tangente)
-	// - à 50% d'impact -> facteur ~ 0.16 (déviation légère et réaliste)
-	// - à 75% d'impact -> facteur ~ 0.47 (déviation modérée)
-	// - à 95% d'impact -> facteur ~ 0.87 (fort coulé / rétro)
-	const facteurImpact = Math.pow(pctNorm, 2.6);
-	const multiplicateurGlobal = (forceEffetActif > 0 ? (0.50 + forceEffetActif * 0.20) : 0.78) * facteurImpact;
-
-	let angleSortieBlanche = angleTangente;
-	let couleurTrajectoire = "#ffffff";
-
-	if (estCoule) {
-		couleurTrajectoire = "#2ecc71";
-		const deviationCoule = Math.min(Math.PI * 0.46, (Math.PI / 2) * multiplicateurGlobal);
-		angleSortieBlanche = !afficherTangente
-			? angleImpact
-			: angleTangente - (sensRotation * deviationCoule);
-	} else if (estRetro) {
-		couleurTrajectoire = "#e74c3c";
-		const deviationRetro = Math.min(Math.PI * 0.46, (Math.PI / 2) * multiplicateurGlobal);
-		angleSortieBlanche = !afficherTangente
-			? angleImpact + Math.PI
-			: angleTangente + (sensRotation * deviationRetro);
-	} else {
-		couleurTrajectoire = "#38bdf8";
-		if (!afficherTangente) angleSortieBlanche = null;
-	}
-
-
-
-						if (angleSortieBlanche !== null) {
-				// 1. Calcul de la fin de trajectoire depuis le centre du Ghost (ghostX, ghostY)
-				const finEffet = limiterAuTapis(ghostX, ghostY, angleSortieBlanche, 95);
-
-				if (finEffet.longueur > 6) {
-					ctx.save();
-					ctx.beginPath();
-					ctx.setLineDash([2, 5]);
-					ctx.globalAlpha = 0.65;
-					ctx.strokeStyle = couleurTrajectoire;
-					ctx.lineWidth = 2;
-					// 2. Départ du tracé au centre exact du Ghost
-					ctx.moveTo(ghostX, ghostY);
-					ctx.lineTo(finEffet.x, finEffet.y);
-					ctx.stroke();
-					ctx.restore();
-				}
-			}
-
-
-
-
-		}
 	}
 
 	// 4. Dessin de la Bille Fantôme
