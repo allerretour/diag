@@ -1161,33 +1161,141 @@ const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
 		}
 	}
 
-	// Écouteur d'importation de fichier .diag
-	if (importTriggerBtn && fileImportInput) {
-		importTriggerBtn.addEventListener('click', () => fileImportInput.click());
+// ====================================================================
+// IMPORT MULTI-FICHIERS .DIAG & GLISSER-DÉPOSER (PLAYLIST DE SÉANCE)
+// ====================================================================
+window.playlistDiag = [];
+window.indexPlaylistCourant = 0;
 
-		fileImportInput.addEventListener('change', (event) => {
-			const file = event.target.files[0]; // <-- CORRECTION : ajout de [0]
-			if (!file) return;
+// 1. Fonction centrale pour lire une liste de fichiers (via bouton ou glisser-déposer)
+async function traiterFichiersDiag(fileList) {
+	const fichiersValides = Array.from(fileList).filter(f => f.name.toLowerCase().endsWith('.diag'));
 
-			if (!file.name.endsWith('.diag')) {
-				alert("Format refusé : Seuls les fichiers avec l'extension .diag sont acceptés.");
-				fileImportInput.value = "";
-				return;
-			}
+	if (fichiersValides.length === 0) {
+		alert("Format refusé : Veuillez sélectionner ou glisser des fichiers .diag.");
+		return;
+	}
 
+	// Lecture parallèle de tous les fichiers sélectionnés
+	const lectures = fichiersValides.map(file => {
+		return new Promise((resolve) => {
 			const reader = new FileReader();
 			reader.onload = (e) => {
 				try {
-					const donneesImportees = JSON.parse(e.target.result);
-					appliquerDonneesConfiguration(donneesImportees);
-				} catch (error) {
-					alert("Erreur lors de la lecture du fichier DIAG. Vérifiez sa structure.");
+					const json = JSON.parse(e.target.result);
+					resolve({ nomFichier: file.name, donnees: json });
+				} catch (err) {
+					console.error("Fichier corrompu ignoré :", file.name);
+					resolve(null);
 				}
-				fileImportInput.value = "";
 			};
 			reader.readAsText(file);
 		});
+	});
+
+	const resultats = (await Promise.all(lectures)).filter(item => item !== null);
+	if (resultats.length === 0) return;
+
+	// Tri alphabétique naturel (ex: exercice_1, exercice_2, exercice_10)
+	resultats.sort((a, b) => a.nomFichier.localeCompare(b.nomFichier, undefined, { numeric: true }));
+
+	window.playlistDiag = resultats;
+	window.indexPlaylistCourant = 0;
+
+	chargerDiagrammePlaylist(0);
+	majBarreNavigationPlaylist();
+}
+
+// 2. Chargement d'un élément précis de la liste
+function chargerDiagrammePlaylist(index) {
+	if (!window.playlistDiag[index]) return;
+	window.indexPlaylistCourant = index;
+	appliquerDonneesConfiguration(window.playlistDiag[index].donnees);
+	majBarreNavigationPlaylist();
+}
+
+// 3. Création / Mise à jour de la mini-barre flottante (si > 1 fichier chargé)
+function majBarreNavigationPlaylist() {
+	let barre = document.getElementById('playlist-nav-bar');
+
+	// Si un seul fichier est chargé, on masque la barre de navigation
+	if (window.playlistDiag.length <= 1) {
+		if (barre) barre.style.display = 'none';
+		return;
 	}
+
+	if (!barre) {
+		barre = document.createElement('div');
+		barre.id = 'playlist-nav-bar';
+		barre.style.cssText = `
+			position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+			background: rgba(11, 15, 23, 0.95); color: #fff; padding: 6px 14px;
+			border-radius: 30px; border: 1px solid rgba(255,255,255,0.2);
+			display: flex; align-items: center; gap: 12px; z-index: 9999;
+			box-shadow: 0 4px 15px rgba(0,0,0,0.5); font-family: system-ui, sans-serif; font-size: 13px;
+		`;
+		document.body.appendChild(barre);
+	}
+
+	const total = window.playlistDiag.length;
+	const actuel = window.indexPlaylistCourant;
+	const titreActuel = window.playlistDiag[actuel].donnees.titre || window.playlistDiag[actuel].nomFichier;
+
+	barre.style.display = 'flex';
+	barre.innerHTML = `
+		<button id="btn-diag-prev" style="background:none; border:none; color:#fff; font-size:16px; cursor:pointer; padding:2px 6px;" title="Précédent">◀</button>
+		<span style="font-weight:600; max-width:260px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+			${actuel + 1}/${total} · ${titreActuel}
+		</span>
+		<button id="btn-diag-next" style="background:none; border:none; color:#fff; font-size:16px; cursor:pointer; padding:2px 6px;" title="Suivant">▶</button>
+		<button id="btn-diag-close" style="background:none; border:none; color:#94a3b8; font-size:14px; cursor:pointer; margin-left:4px;" title="Fermer la série">✕</button>
+	`;
+
+	document.getElementById('btn-diag-prev').onclick = () => {
+		const prev = (actuel - 1 + total) % total;
+		chargerDiagrammePlaylist(prev);
+	};
+	document.getElementById('btn-diag-next').onclick = () => {
+		const next = (actuel + 1) % total;
+		chargerDiagrammePlaylist(next);
+	};
+	document.getElementById('btn-diag-close').onclick = () => {
+		window.playlistDiag = [];
+		barre.style.display = 'none';
+	};
+}
+
+// 4. Écouteur sur le bouton 📂 existant
+if (importTriggerBtn && fileImportInput) {
+	importTriggerBtn.addEventListener('click', () => fileImportInput.click());
+
+	fileImportInput.addEventListener('change', (event) => {
+		if (event.target.files.length > 0) {
+			traiterFichiersDiag(event.target.files);
+			fileImportInput.value = "";
+		}
+	});
+}
+
+// 5. Glisser-Déposer (Drag & Drop) n'importe où sur la page ou la table
+document.addEventListener('dragover', (e) => {
+	e.preventDefault(); // Obligatoire pour autoriser le dépôt
+	if (poolTable) poolTable.style.outline = "3px dashed #2ecc71";
+});
+
+document.addEventListener('dragleave', (e) => {
+	if (e.relatedTarget === null && poolTable) {
+		poolTable.style.outline = "none";
+	}
+});
+
+document.addEventListener('drop', (e) => {
+	e.preventDefault();
+	if (poolTable) poolTable.style.outline = "none";
+	if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+		traiterFichiersDiag(e.dataTransfer.files);
+	}
+});
 
 
 		// ====================================================================
