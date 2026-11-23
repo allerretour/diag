@@ -385,63 +385,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
-// ====================================================================
-// CAPTURE D'ÉCRAN IDENTIQUE EN PNG (VIA HTML2CANVAS)
-// ====================================================================
-const btnExportPng = document.getElementById('btn-export-png');
-
-if (btnExportPng) {
-	btnExportPng.addEventListener('click', async () => {
-		// On cible le conteneur global de la table (cadre en bois inclus)
-		const zoneACapturer = document.getElementById('table-frame') || document.getElementById('pool-table');
-		if (!zoneACapturer || typeof html2canvas === 'undefined') return;
-
-		// 1. Nettoyage visuel temporaire avant la photo (retire les cadres de sélection actifs)
-		const formeTemp = window.formeTactiqueSelectionnee;
-		const billeTemp = window.billeSelectionneeCourante;
-		const badgeTemp = document.getElementById('ball-drag-live-badge');
-
-		window.formeTactiqueSelectionnee = null;
-		if (typeof window.redessinerToutesLesLignes === "function") window.redessinerToutesLesLignes();
-		if (billeTemp) billeTemp.style.outline = 'none';
-		if (badgeTemp) badgeTemp.style.display = 'none';
-
-		try {
-			// 2. Capture exacte du rendu HTML/CSS + Canvas en haute définition (scale: 2)
-			const canvasCapture = await html2canvas(zoneACapturer, {
-				scale: 2,                  // Qualité Retina / HD
-				backgroundColor: null,     // Conserve les coins arrondis transparents
-				useCORS: true,             // Autorise le logo personnalisé
-				logging: false
-			});
-
-			// 3. Téléchargement automatique du PNG
-			const titreVal = titleInput ? titleInput.value.trim() : "";
-			const nomFichier = (titreVal || "diagramme_billard").replace(/[/\\?%*:|"<>]/g, '-').substring(0, 80);
-
-			canvasCapture.toBlob((blob) => {
-				const url = URL.createObjectURL(blob);
-				const a = document.createElement('a');
-				a.href = url;
-				a.download = `${nomFichier}.png`;
-				document.body.appendChild(a);
-				a.click();
-				document.body.removeChild(a);
-				URL.revokeObjectURL(url);
-			}, 'image/png');
-
-		} finally {
-			// 4. Restauration immédiate de l'état de l'interface
-			window.formeTactiqueSelectionnee = formeTemp;
-			if (typeof window.redessinerToutesLesLignes === "function") window.redessinerToutesLesLignes();
-			if (billeTemp) {
-				billeTemp.style.outline = '2px solid #ffffff';
-				billeTemp.style.outlineOffset = '2px';
-			}
-			if (badgeTemp) badgeTemp.style.display = '';
-		}
-	});
-}
 
 
 
@@ -2167,4 +2110,90 @@ const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
 		btn.addEventListener('click', majCurseurOutil);
 		btn.addEventListener('touchstart', majCurseurOutil, { passive: true });
 	});
+
+
+// ====================================================================
+// CAPTURE D'ÉCRAN IDENTIQUE EN PNG (COMPATIBLE PC, IPAD & MODE LOCAL)
+// ====================================================================
+async function lancerCapturePng(e) {
+	if (e && e.cancelable) e.preventDefault();
+	if (e && e.stopPropagation) e.stopPropagation();
+
+	// 1. Vérification de la librairie html2canvas
+	if (typeof html2canvas === 'undefined') {
+		alert("Erreur : La librairie html2canvas n'est pas chargée. Vérifiez la balise <script> dans le <head> ou votre connexion internet.");
+		return;
+	}
+
+	const zoneACapturer = document.getElementById('table-frame') || document.getElementById('pool-table');
+	if (!zoneACapturer) {
+		alert("Erreur : Impossible de trouver la table (#table-frame ou #pool-table).");
+		return;
+	}
+
+	const btn = document.getElementById('btn-export-png');
+	const texteOriginal = btn ? btn.innerText : "📷 Image";
+	if (btn) btn.innerText = "⏳ Capture...";
+
+	// 2. Sauvegarde et masquage des éléments de sélection actifs
+	const formeTemp = window.formeTactiqueSelectionnee;
+	const billeTemp = window.billeSelectionneeCourante;
+	const badgeTemp = document.getElementById('ball-drag-live-badge');
+
+	window.formeTactiqueSelectionnee = null;
+	if (typeof window.redessinerToutesLesLignes === "function") window.redessinerToutesLesLignes();
+	if (billeTemp) billeTemp.style.outline = 'none';
+	if (badgeTemp) badgeTemp.style.display = 'none';
+
+	try {
+		const canvasCapture = await html2canvas(zoneACapturer, {
+			scale: 2,
+			backgroundColor: null,
+			useCORS: true,
+			allowTaint: true, // Évite le blocage si logo.png est chargé en local (file://)
+			logging: false
+		});
+
+		const titleInput = document.getElementById('input-title');
+		const titreVal = titleInput ? titleInput.value.trim() : "";
+		const nomFichier = (titreVal || "diagramme_billard").replace(/[/\\?%*:|"<>]/g, '-').substring(0, 80);
+
+		// Fallback universel via toDataURL (fonctionne même sur Safari iOS et en file://)
+		const dataUrl = canvasCapture.toDataURL('image/png');
+		const a = document.createElement('a');
+		a.href = dataUrl;
+		a.download = `${nomFichier}.png`;
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+
+	} catch (err) {
+		console.error("Erreur capture PNG :", err);
+		alert("Impossible de générer l'image : " + err.message);
+	} finally {
+		// 3. Restauration de l'interface
+		if (btn) btn.innerText = texteOriginal;
+		window.formeTactiqueSelectionnee = formeTemp;
+		if (typeof window.redessinerToutesLesLignes === "function") window.redessinerToutesLesLignes();
+		if (billeTemp) {
+			billeTemp.style.outline = '2px solid #ffffff';
+			billeTemp.style.outlineOffset = '2px';
+		}
+		if (badgeTemp) badgeTemp.style.display = '';
+	}
+}
+
+// Délégation globale : fonctionne même si le bouton est dans une modale ou chargé tardivement
+document.addEventListener('click', (e) => {
+	const btn = e.target.closest('#btn-export-png');
+	if (!btn) return;
+	if (e.pointerType === 'touch' || (e.clientX === 0 && e.clientY === 0)) return;
+	lancerCapturePng(e);
+});
+
+document.addEventListener('touchstart', (e) => {
+	const btn = e.target.closest('#btn-export-png');
+	if (!btn) return;
+	lancerCapturePng(e);
+}, { passive: false });
 
