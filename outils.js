@@ -1162,63 +1162,154 @@ const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
 	}
 
 // ====================================================================
-// IMPORT MULTI-FICHIERS .DIAG & GLISSER-DÉPOSER (PLAYLIST DE SÉANCE)
+// IMPORT MULTI-FICHIERS (.DIAG / .ZIP) & EXPORT DE SÉRIE MODIFIÉE
 // ====================================================================
 window.playlistDiag = [];
 window.indexPlaylistCourant = 0;
 
-// 1. Fonction centrale pour lire une liste de fichiers (via bouton ou glisser-déposer)
+// 1. Lecture unifiée des fichiers (.diag individuels OU archives .zip)
 async function traiterFichiersDiag(fileList) {
-	const fichiersValides = Array.from(fileList).filter(f => f.name.toLowerCase().endsWith('.diag'));
+	const resultats = [];
 
-	if (fichiersValides.length === 0) {
-		alert("Format refusé : Veuillez sélectionner ou glisser des fichiers .diag.");
+	for (const file of Array.from(fileList)) {
+		const nomLower = file.name.toLowerCase();
+
+		// CAS A : Fichier .diag classique
+		if (nomLower.endsWith('.diag')) {
+			try {
+				const texte = await file.text();
+				resultats.push({ nomFichier: file.name, donnees: JSON.parse(texte) });
+			} catch (err) {
+				console.error("Fichier .diag invalide ignoré :", file.name);
+			}
+		}
+		// CAS B : Archive .zip (extrait automatiquement tous les .diag à l'intérieur)
+		else if (nomLower.endsWith('.zip') && typeof JSZip !== "undefined") {
+			try {
+				const zip = await JSZip.loadAsync(file);
+				const promessesZip = [];
+
+				zip.forEach((cheminRelatif, zipEntry) => {
+					// Ignore les dossiers et fichiers cachés macOS (__MACOSX)
+					if (!zipEntry.dir && cheminRelatif.toLowerCase().endsWith('.diag') && !cheminRelatif.includes('__MACOSX')) {
+						promessesZip.push(
+							zipEntry.async("string").then(contenu => {
+								try {
+									const nomPropre = cheminRelatif.split('/').pop();
+									return { nomFichier: nomPropre, donnees: JSON.parse(contenu) };
+								} catch (e) {
+									return null;
+								}
+							})
+						);
+					}
+				});
+
+				const extraits = (await Promise.all(promessesZip)).filter(item => item !== null);
+				resultats.push(...extraits);
+			} catch (err) {
+				alert("Erreur lors de la lecture de l'archive ZIP.");
+			}
+		}
+	}
+
+	if (resultats.length === 0) {
+		alert("Aucun diagramme valide (.diag ou .zip) trouvé.");
 		return;
 	}
 
-	// Lecture parallèle de tous les fichiers sélectionnés
-	const lectures = fichiersValides.map(file => {
-		return new Promise((resolve) => {
-			const reader = new FileReader();
-			reader.onload = (e) => {
-				try {
-					const json = JSON.parse(e.target.result);
-					resolve({ nomFichier: file.name, donnees: json });
-				} catch (err) {
-					console.error("Fichier corrompu ignoré :", file.name);
-					resolve(null);
-				}
-			};
-			reader.readAsText(file);
-		});
-	});
-
-	const resultats = (await Promise.all(lectures)).filter(item => item !== null);
-	if (resultats.length === 0) return;
-
-	// Tri alphabétique naturel (ex: exercice_1, exercice_2, exercice_10)
+	// Tri alphabétique naturel (manche_01, manche_02... manche_10)
 	resultats.sort((a, b) => a.nomFichier.localeCompare(b.nomFichier, undefined, { numeric: true }));
 
 	window.playlistDiag = resultats;
 	window.indexPlaylistCourant = 0;
 
-	chargerDiagrammePlaylist(0);
+	appliquerDonneesConfiguration(window.playlistDiag[0].donnees);
 	majBarreNavigationPlaylist();
 }
 
-// 2. Chargement d'un élément précis de la liste
+// 2. Sauvegarde en mémoire vive des modifications du diagramme affiché
+function sauvegarderEtatPlaylistCourant() {
+	const itemActuel = window.playlistDiag[window.indexPlaylistCourant];
+	if (!itemActuel) return;
+
+	const listBilles = activeBalls.map(ball => {
+		const ballId = ball.getAttribute('data-id');
+		return {
+			id: ballId,
+			x: ball.style.left,
+			y: ball.style.top,
+			visible: ball.style.display !== 'none',
+			verrouillee: window.billesVerrouillees ? window.billesVerrouillees.has(ballId) : false
+		};
+	});
+
+	const etatPoches = Array.from(document.querySelectorAll('.pocket')).map(p => ({
+		id: p.getAttribute('data-pocket-id') || p.className.split(' ')[1],
+		color: p.style.getPropertyValue('--pocket-color').trim() || "#000000"
+	}));
+
+	itemActuel.donnees = {
+		...itemActuel.donnees,
+		titre: titleInput ? titleInput.value.trim() : itemActuel.donnees.titre,
+		description: descInput ? descInput.value : itemActuel.donnees.description,
+		nombreBillesVisibles: ballsCountSelect ? ballsCountSelect.value : itemActuel.donnees.nombreBillesVisibles,
+		logoImageRaw: window.logoBase64Courant,
+		billes: listBilles,
+		lignesDessinees: JSON.parse(JSON.stringify(window.dessinsSauvegardes || [])),
+		pochesColoriees: etatPoches,
+		optionsVisuelles: {
+			grille: document.getElementById('chk-toggle-grid')?.checked ?? false,
+			hd: document.getElementById('chk-high-density-grid')?.checked ?? false,
+			magnetisme: document.getElementById('chk-magnetism')?.checked ?? true,
+			logo: document.getElementById('chk-show-logo')?.checked ?? false,
+			titreVisible: document.getElementById('chk-show-title')?.checked ?? false,
+			couleurTapis: document.querySelector('input[name="felt-color"]:checked')?.value || "vert",
+			listeBillesVisible: document.getElementById('chk-toggle-balls-list')?.checked ?? true
+		}
+	};
+}
+
+// 3. Changement de diagramme dans la série
 function chargerDiagrammePlaylist(index) {
 	if (!window.playlistDiag[index]) return;
+	if (index !== window.indexPlaylistCourant) {
+		sauvegarderEtatPlaylistCourant();
+	}
 	window.indexPlaylistCourant = index;
 	appliquerDonneesConfiguration(window.playlistDiag[index].donnees);
 	majBarreNavigationPlaylist();
 }
 
-// 3. Création / Mise à jour de la mini-barre flottante (si > 1 fichier chargé)
+// 4. Exportation de toute la playlist modifiée dans un fichier .zip
+async function exporterPlaylistEnZip() {
+	if (window.playlistDiag.length === 0 || typeof JSZip === "undefined") return;
+
+	// S'assure que les modifications du diagramme actuellement affiché sont bien incluses
+	sauvegarderEtatPlaylistCourant();
+
+	const zip = new JSZip();
+	window.playlistDiag.forEach((item, idx) => {
+		const titreBase = (item.donnees.titre || item.nomFichier.replace(/\.diag$/i, '') || `diagramme_${idx + 1}`)
+			.replace(/[/\\?%*:|"<>]/g, '-')
+			.substring(0, 80);
+		zip.file(`${titreBase}.diag`, JSON.stringify(item.donnees, null, 4));
+	});
+
+	const contenuBlob = await zip.generateAsync({ type: "blob" });
+	const a = document.createElement('a');
+	a.href = URL.createObjectURL(contenuBlob);
+	a.download = `Collection_Billard_${window.playlistDiag.length}_diagrammes.zip`;
+	document.body.appendChild(a);
+	a.click();
+	document.body.removeChild(a);
+	URL.revokeObjectURL(a.href);
+}
+
+// 5. Barre de navigation flottante avec bouton d'export ZIP
 function majBarreNavigationPlaylist() {
 	let barre = document.getElementById('playlist-nav-bar');
 
-	// Si un seul fichier est chargé, on masque la barre de navigation
 	if (window.playlistDiag.length <= 1) {
 		if (barre) barre.style.display = 'none';
 		return;
@@ -1231,7 +1322,7 @@ function majBarreNavigationPlaylist() {
 			position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
 			background: rgba(11, 15, 23, 0.95); color: #fff; padding: 6px 14px;
 			border-radius: 30px; border: 1px solid rgba(255,255,255,0.2);
-			display: flex; align-items: center; gap: 12px; z-index: 9999;
+			display: flex; align-items: center; gap: 10px; z-index: 9999;
 			box-shadow: 0 4px 15px rgba(0,0,0,0.5); font-family: system-ui, sans-serif; font-size: 13px;
 		`;
 		document.body.appendChild(barre);
@@ -1243,32 +1334,27 @@ function majBarreNavigationPlaylist() {
 
 	barre.style.display = 'flex';
 	barre.innerHTML = `
-		<button id="btn-diag-prev" style="background:none; border:none; color:#fff; font-size:16px; cursor:pointer; padding:2px 6px;" title="Précédent">◀</button>
-		<span style="font-weight:600; max-width:260px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+		<button id="btn-diag-prev" style="background:none; border:none; color:#fff; font-size:15px; cursor:pointer; padding:2px 6px;" title="Précédent">◀</button>
+		<span style="font-weight:600; max-width:240px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
 			${actuel + 1}/${total} · ${titreActuel}
 		</span>
-		<button id="btn-diag-next" style="background:none; border:none; color:#fff; font-size:16px; cursor:pointer; padding:2px 6px;" title="Suivant">▶</button>
-		<button id="btn-diag-close" style="background:none; border:none; color:#94a3b8; font-size:14px; cursor:pointer; margin-left:4px;" title="Fermer la série">✕</button>
+		<button id="btn-diag-next" style="background:none; border:none; color:#fff; font-size:15px; cursor:pointer; padding:2px 6px;" title="Suivant">▶</button>
+		<button id="btn-diag-zip" style="background:#27ae60; border:none; color:#fff; font-size:12px; font-weight:600; border-radius:14px; padding:4px 10px; cursor:pointer; margin-left:4px;" title="Télécharger toute la série modifiée en ZIP">📦 ZIP</button>
+		<button id="btn-diag-close" style="background:none; border:none; color:#94a3b8; font-size:14px; cursor:pointer; padding:2px 4px;" title="Fermer la série">✕</button>
 	`;
 
-	document.getElementById('btn-diag-prev').onclick = () => {
-		const prev = (actuel - 1 + total) % total;
-		chargerDiagrammePlaylist(prev);
-	};
-	document.getElementById('btn-diag-next').onclick = () => {
-		const next = (actuel + 1) % total;
-		chargerDiagrammePlaylist(next);
-	};
+	document.getElementById('btn-diag-prev').onclick = () => chargerDiagrammePlaylist((actuel - 1 + total) % total);
+	document.getElementById('btn-diag-next').onclick = () => chargerDiagrammePlaylist((actuel + 1) % total);
+	document.getElementById('btn-diag-zip').onclick = exporterPlaylistEnZip;
 	document.getElementById('btn-diag-close').onclick = () => {
 		window.playlistDiag = [];
 		barre.style.display = 'none';
 	};
 }
 
-// 4. Écouteur sur le bouton 📂 existant
+// 6. Écouteurs bouton 📂 et Glisser-Déposer
 if (importTriggerBtn && fileImportInput) {
 	importTriggerBtn.addEventListener('click', () => fileImportInput.click());
-
 	fileImportInput.addEventListener('change', (event) => {
 		if (event.target.files.length > 0) {
 			traiterFichiersDiag(event.target.files);
@@ -1277,16 +1363,13 @@ if (importTriggerBtn && fileImportInput) {
 	});
 }
 
-// 5. Glisser-Déposer (Drag & Drop) n'importe où sur la page ou la table
 document.addEventListener('dragover', (e) => {
-	e.preventDefault(); // Obligatoire pour autoriser le dépôt
+	e.preventDefault();
 	if (poolTable) poolTable.style.outline = "3px dashed #2ecc71";
 });
 
 document.addEventListener('dragleave', (e) => {
-	if (e.relatedTarget === null && poolTable) {
-		poolTable.style.outline = "none";
-	}
+	if (e.relatedTarget === null && poolTable) poolTable.style.outline = "none";
 });
 
 document.addEventListener('drop', (e) => {

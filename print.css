@@ -47,9 +47,12 @@
 	/* Masquer spécifiquement les boutons et éléments de contrôle sur le papier */
 	#btn-toggle-notes,
 	#btn-toggle-balls-sidebar,
-	#chk-toggle-balls-list {
+	#chk-toggle-balls-list,
+	#playlist-nav-bar {
 		display: none !important;
+		visibility: hidden !important;
 	}
+
 
 	#balls-sidebar h3 {
 		display: none !important;
