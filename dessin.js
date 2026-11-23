@@ -624,10 +624,10 @@ document.addEventListener("DOMContentLoaded", () => {
 	const cote = (coteFige !== undefined) ? coteFige : window.coteContactCourant;
 	const couleurMarqueur = couleur || (colorSelect ? colorSelect.value : '#ffffff');
 
-	// === DIMENSIONS RÉDUITES (OPTIMISATION DE L'ESPACE VISUEL) ===
-	const largeurCadre = 150; // Réduit de 185 à 150
-	const hauteurCadre = 115; // Réduit de 140 à 115
-	
+	// === DIMENSIONS IDENTIQUES AU PANNEAU EFFET (150 x 125) ===
+	const largeurCadre = 150;
+	const hauteurCadre = 125;
+
 	// Calage géométrique sur la grille de pixels pour un rendu de contour parfait
 	const adj = (ctx.lineWidth % 2 === 1) ? 0.5 : 0;
 	const cadreX = Math.floor(x - (largeurCadre / 2)) + adj;
@@ -642,17 +642,17 @@ document.addEventListener("DOMContentLoaded", () => {
 	ctx.lineWidth = 1;
 	ctx.stroke();
 
-	// === BILLES PROPORTIONNELLEMENT RÉDUITES ===
+	// === BILLES AJUSTÉES À L'ESPACE DISPONIBLE (Rayon 21px) ===
 	const centreCadreX = Math.floor(x) + adj;
-	const centreCadreY = Math.floor(y - 6) + adj; // Réajusté pour recentrage vertical
-	const rayonBille = 18; // Réduit de 22 à 18
+	const centreCadreY = Math.floor(y) + adj; // Centrage vertical strict
+	const rayonBille = 21;
 	const diametreBille = rayonBille * 2;
 	const decalageX = diametreBille * (1 - (pct / 100));
 
 	// --- LIGNE D'AXE HORIZONTALE DE RÉFÉRENCE ---
 	ctx.beginPath();
-	ctx.moveTo(cadreX + 12, centreCadreY);
-	ctx.lineTo(cadreX + largeurCadre - 12, centreCadreY);
+	ctx.moveTo(cadreX + 14, centreCadreY);
+	ctx.lineTo(cadreX + largeurCadre - 14, centreCadreY);
 	ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
 	ctx.lineWidth = 1;
 	ctx.stroke();
@@ -703,25 +703,26 @@ document.addEventListener("DOMContentLoaded", () => {
 	ctx.restore();
 
 	// --- 3. LABELS ET TEXTES EXPLICATIFS ÉCHELONNÉS ---
-	ctx.fillStyle = "rgba(150, 165, 185, 0.80)";
+	ctx.fillStyle = "rgba(150, 165, 185, 0.85)";
 	ctx.font = "600 10px system-ui, -apple-system, sans-serif";
 	ctx.textAlign = "center";
-	ctx.textBaseline = "top";
-	ctx.fillText("QUANTITÉ D'IMPACT", centreCadreX, cadreY + 10);
+	ctx.textBaseline = "bottom";
+	ctx.fillText("QUANTITÉ D'IMPACT", centreCadreX, centreCadreY - rayonBille - 16);
 
 	ctx.font = "bold 11px system-ui, -apple-system, sans-serif";
-	ctx.textBaseline = "bottom";
+	ctx.textBaseline = "top";
+	ctx.fillStyle = "#ffffff";
 	if (pct === 100) {
-		ctx.fillStyle = "#ffffff";
-		ctx.fillText("IMPACT PLEIN", centreCadreX, cadreY + hauteurCadre - 10);
+		ctx.fillText("IMPACT PLEIN", centreCadreX, centreCadreY + rayonBille + 16);
 	} else {
-		ctx.fillStyle = "#ffffff";
 		const coteTexte = cote === 1 ? "GAUCHE" : "DROITE";
-		ctx.fillText(`${pct}% - ${coteTexte}`, centreCadreX, cadreY + hauteurCadre - 10);
+		ctx.fillText(`${pct}% - ${coteTexte}`, centreCadreX, centreCadreY + rayonBille + 16);
 	}
+
 
 	ctx.restore();
 }
+
 
 
 function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
@@ -1987,11 +1988,12 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 				ctx.stroke();
 			} 
 			else if (f.estPointContact) {
-				// Épouse le panneau Contact (150x115)
+				// Épouse le panneau Contact (150x125 + 6px de marge)
 				ctx.beginPath();
-				ctx.roundRect(pt.x - 78, pt.y - 60.5, 156, 121, 14);
+				ctx.roundRect(pt.x - 78, pt.y - 65.5, 156, 131, 14);
 				ctx.stroke();
-			} 
+			}
+
 			else if (f.estEffetBlanche) {
 				// Épouse le panneau Effets selon la présence de la jauge (150x125 ou 110x125)
 				const largeur = (f.force > 0 ? 150 : 110) + 6;
@@ -2882,12 +2884,12 @@ function commencerDessin(e) {
 	x = posClampee.x;
 	y = posClampee.y;
 
-	// --- [NOUVEAU] : AIMANTATION AU CENTRE SI PROCHE DU BORD DE LA BILLE (Seuil : 5px) ---
+	// --- [NOUVEAU] : AIMANTATION AU CENTRE SI PROCHE DU BORD DE LA BILLE (Seuil : 8px) OU D'UN GHOST ---
 	const forceLigneDroite = (window.outilTraceActif === "line" || window.outilTraceActif === "arrow") || (window.outilTraceActif === "select" && (e.ctrlKey || e.metaKey || isCtrlPressed));
 	
 	if (forceLigneDroite) {
 		let billeProche = null;
-		let distanceMinBord = 8; // Tolérance de 5 pixels par rapport au contour
+		let distanceMinBord = 8; // Tolérance de 8 pixels par rapport au contour
 
 		activeBalls.forEach(ball => {
 			if (ball.style.display !== 'none') {
@@ -2908,42 +2910,63 @@ function commencerDessin(e) {
 			}
 		});
 
-		// Si le clic est à moins de 5px du bord d'une bille, on commence au centre de celle-ci
+		// 1. Si le clic est proche du bord d'une bille réelle, on commence au centre de celle-ci
 		if (billeProche) {
 			x = billeProche.x;
 			y = billeProche.y;
 		} 
-		// SINON, repli sur les anciennes logiques (extrémités de lignes ou snapping de grille)
+		// 2. SINON, vérification de la proximité avec une bille fantôme (Ghost)
 		else {
-			let pointExtremiteProche = null;
-			let distanceMinimale = 8; 
+			let ghostProche = null;
+			let distMinGhost = 18; // Rayon d'attraction autour du centre du ghost
 
 			window.dessinsSauvegardes.forEach(dessin => {
-				if (dessin.points && dessin.points.length >= 2 && (dessin.estDroite || dessin.avecFleche)) {
-					const ptDepart = dessin.points[0];
-					const ptArrivee = dessin.points[dessin.points.length - 1];
-
-					const distDepart = Math.sqrt(Math.pow(x - ptDepart.x, 2) + Math.pow(y - ptDepart.y, 2));
-					if (distDepart < distanceMinimale) {
-						distanceMinimale = distDepart;
-						pointExtremiteProche = ptDepart;
-					}
-
-					const distArrivee = Math.sqrt(Math.pow(x - ptArrivee.x, 2) + Math.pow(y - ptArrivee.y, 2));
-					if (distArrivee < distanceMinimale) {
-						distanceMinimale = distArrivee;
-						pointExtremiteProche = ptArrivee;
+				if (dessin.estGhostBall && dessin.points && dessin.points.length > 0) {
+					const ptGhost = dessin.points[0];
+					const dist = Math.hypot(x - ptGhost.x, y - ptGhost.y);
+					if (dist < distMinGhost) {
+						distMinGhost = dist;
+						ghostProche = ptGhost;
 					}
 				}
 			});
 
-			if (pointExtremiteProche) {
-				x = pointExtremiteProche.x;
-				y = pointExtremiteProche.y;
-			} else if (typeof calculerSnapGrille === "function") {
-				const pointAimante = calculerSnapGrille(x - 12, y - 12, null, true);
-				x = pointAimante.x + 12;
-				y = pointAimante.y + 12;
+			if (ghostProche) {
+				x = ghostProche.x;
+				y = ghostProche.y;
+			} 
+			// 3. SINON, repli sur les anciennes logiques (extrémités de lignes ou snapping de grille)
+			else {
+				let pointExtremiteProche = null;
+				let distanceMinimale = 8; 
+
+				window.dessinsSauvegardes.forEach(dessin => {
+					if (dessin.points && dessin.points.length >= 2 && (dessin.estDroite || dessin.avecFleche)) {
+						const ptDepart = dessin.points[0];
+						const ptArrivee = dessin.points[dessin.points.length - 1];
+
+						const distDepart = Math.sqrt(Math.pow(x - ptDepart.x, 2) + Math.pow(y - ptDepart.y, 2));
+						if (distDepart < distanceMinimale) {
+							distanceMinimale = distDepart;
+							pointExtremiteProche = ptDepart;
+						}
+
+						const distArrivee = Math.sqrt(Math.pow(x - ptArrivee.x, 2) + Math.pow(y - ptArrivee.y, 2));
+						if (distArrivee < distanceMinimale) {
+							distanceMinimale = distArrivee;
+							pointExtremiteProche = ptArrivee;
+						}
+					}
+				});
+
+				if (pointExtremiteProche) {
+					x = pointExtremiteProche.x;
+					y = pointExtremiteProche.y;
+				} else if (typeof calculerSnapGrille === "function") {
+					const pointAimante = calculerSnapGrille(x - 12, y - 12, null, true);
+					x = pointAimante.x + 12;
+					y = pointAimante.y + 12;
+				}
 			}
 		}
 	}
