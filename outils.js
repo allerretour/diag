@@ -1383,6 +1383,7 @@ function majBarreNavigationPlaylist() {
 			border-radius: 30px; border: 1px solid rgba(255,255,255,0.2);
 			display: flex; align-items: center; gap: 8px; z-index: 9999;
 			box-shadow: 0 4px 15px rgba(0,0,0,0.5); font-family: system-ui, sans-serif; font-size: 13px;
+			touch-action: manipulation;
 		`;
 		document.body.appendChild(barre);
 	}
@@ -1464,7 +1465,7 @@ document.addEventListener('drop', (e) => {
 
 const btnStartPlaylist = document.getElementById('btn-start-playlist');
 if (btnStartPlaylist) {
-	btnStartPlaylist.addEventListener('click', () => {
+	function executerDemarrageSerie() {
 		if (window.playlistDiag.length === 0) {
 			ajouterDiagrammeActuelAPlaylist(); // Crée le 1/1 et affiche la barre du bas
 		}
@@ -1479,9 +1480,22 @@ if (btnStartPlaylist) {
 			}
 		}
 		btnStartPlaylist.blur();
+	}
+
+	// ÉVÉNEMENT TACTILE : Spécifique pour iPad / iPhone (réaction instantanée sans délai)
+	btnStartPlaylist.addEventListener('touchstart', (e) => {
+		if (e.cancelable) e.preventDefault();
+		e.stopPropagation();
+		executerDemarrageSerie();
+	}, { passive: false });
+
+	// ÉVÉNEMENT SOURIS : Pour PC / Mac (ignore l'émulation tactile)
+	btnStartPlaylist.addEventListener('click', (e) => {
+		if (e.pointerType === 'touch' || (e.clientX === 0 && e.clientY === 0)) return;
+		e.stopPropagation();
+		executerDemarrageSerie();
 	});
 }
-
 
 
 		// ====================================================================

@@ -4,7 +4,8 @@ const boutonsOutils = document.querySelectorAll('.tool-btn');
 function gererLogiquePalette(btn, e) {
 
 	// SÉCURITÉ : Si c'est le bouton couleur, on stoppe la logique d'outil de tracé
-	if (btn.id === 'indicateur-couleur-tactique') return;
+	if (btn.id === 'indicateur-couleur-tactique' || btn.id === 'btn-start-playlist') return;
+	
 	
 	// NOUVEAU : Si c'est le bouton annuler ou effacer, on ne change pas l'outil actif de la palette
 	if (btn.id === 'btn-undo-lines' || btn.id === 'btn-clear-lines') return;
@@ -134,7 +135,7 @@ function gererLogiquePalette(btn, e) {
 
 boutonsOutils.forEach(btn => {
 	// ÉCHAPPE COMPLÈTEMENT LE BOUTON COULEUR POUR ÉVITER LES CONFLITS IOS
-	if (btn.id === 'indicateur-couleur-tactique') return;
+	if (btn.id === 'indicateur-couleur-tactique' || btn.id === 'btn-start-playlist') return;
 
 	// Pour l'iPad / iPhone
 	btn.addEventListener('touchstart', (e) => {
