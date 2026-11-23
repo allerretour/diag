@@ -236,8 +236,10 @@ const btnToggleNotes = document.getElementById('btn-toggle-notes'); // Le bouton
 const btnShowNotes = document.getElementById('btn-show-notes'); // Le bouton "👁️ Notes" en haut à droite
 
 function rafraichirZoneNotes() {
+	let txtTitre = ""; // Déclarée ici pour être accessible partout dans la fonction
+
 	if (inputTitle && displayTitle) {
-		const txtTitre = inputTitle.value.trim();
+		txtTitre = inputTitle.value.trim();
 		displayTitle.innerText = txtTitre !== "" ? txtTitre : "Configuration sans titre";
 		// --- CONFIGURATION DYNAMIQUE DU NOM DU FICHIER PDF ---
 		document.title = txtTitre !== "" ? txtTitre : "Configuration_Billard";
@@ -245,6 +247,11 @@ function rafraichirZoneNotes() {
 	if (inputDesc && displayDesc) {
 		const txtDesc = inputDesc.value.trim();
 		displayDesc.innerText = txtDesc !== "" ? txtDesc : "Aucune description ou note tactique saisie.";
+	}
+	if (window.playlistDiag && window.playlistDiag[window.indexPlaylistCourant]) {
+		window.playlistDiag[window.indexPlaylistCourant].donnees.titre = txtTitre || "Configuration sans titre";
+		const opt = document.querySelector(`#select-diag-playlist option[value="${window.indexPlaylistCourant}"]`);
+		if (opt) opt.textContent = `${window.indexPlaylistCourant + 1}/${window.playlistDiag.length} · ${txtTitre || "Configuration sans titre"}`;
 	}
 
 	// Si l'utilisateur tape du texte, on réaffiche automatiquement la zone
@@ -1324,40 +1331,44 @@ function chargerDiagrammePlaylist(index) {
 	majBarreNavigationPlaylist();
 }
 
-// 6. Exportation de toute la playlist modifiée dans un fichier .zip
+// 6. Exportation ZIP avec choix du nom de fichier
 async function exporterPlaylistEnZip() {
 	if (window.playlistDiag.length === 0 || typeof JSZip === "undefined") return;
 
-	// S'assure que les modifications du diagramme actuellement affiché sont bien incluses
 	sauvegarderEtatPlaylistCourant();
+
+	// Proposition de nom avec la date du jour par défaut
+	const dateJour = new Date().toISOString().slice(0, 10);
+	const nomChoisi = prompt("Nom de l'archive ZIP :", `${dateJour}_Serie_Billard`);
+	if (nomChoisi === null) return; // Annulation si l'utilisateur clique sur Annuler
+
+	const nomArchivePropre = (nomChoisi.trim() || `${dateJour}_Serie_Billard`)
+		.replace(/[/\\?%*:|"<>]/g, '-');
 
 	const zip = new JSZip();
 	window.playlistDiag.forEach((item, idx) => {
 		const prefixe = String(idx + 1).padStart(2, '0');
 		const titreBrut = (item.donnees.titre || item.nomFichier.replace(/\.diag$/i, '') || `diagramme`)
-			.replace(/^\d+[_-]\s*/, ''); // Retire l'ancien préfixe numérique s'il existe déjà
+			.replace(/^\d+[_-]\s*/, '');
 		const titreBase = titreBrut.replace(/[/\\?%*:|"<>]/g, '-').substring(0, 75);
 
-
-		// Le préfixe "01_", "02_" empêche l'écrasement si deux diagrammes ont le même titre
 		zip.file(`${prefixe}_${titreBase}.diag`, JSON.stringify(item.donnees, null, 4));
 	});
 
 	const contenuBlob = await zip.generateAsync({ type: "blob" });
 	const a = document.createElement('a');
 	a.href = URL.createObjectURL(contenuBlob);
-	a.download = `Collection_Billard_${window.playlistDiag.length}_diagrammes.zip`;
+	a.download = `${nomArchivePropre}.zip`;
 	document.body.appendChild(a);
 	a.click();
 	document.body.removeChild(a);
 	URL.revokeObjectURL(a.href);
 }
 
-// 7. Barre de navigation flottante complète
+// 7. Barre de navigation flottante avec menu déroulant direct et partage rapide
 function majBarreNavigationPlaylist() {
 	let barre = document.getElementById('playlist-nav-bar');
 
-	// Masquée uniquement si la mémoire est complètement vide (0 élément)
 	if (window.playlistDiag.length === 0) {
 		if (barre) barre.style.display = 'none';
 		return;
@@ -1378,27 +1389,45 @@ function majBarreNavigationPlaylist() {
 
 	const total = window.playlistDiag.length;
 	const actuel = window.indexPlaylistCourant;
-	const titreActuel = window.playlistDiag[actuel].donnees.titre || window.playlistDiag[actuel].nomFichier;
+
+	// Génération des options du menu déroulant
+	const optionsHtml = window.playlistDiag.map((item, idx) => {
+		const titre = item.donnees.titre || item.nomFichier.replace(/\.diag$/i, '');
+		const selected = (idx === actuel) ? 'selected' : '';
+		return `<option value="${idx}" ${selected} style="background:#0b0f17; color:#fff;">${idx + 1}/${total} · ${titre}</option>`;
+	}).join('');
 
 	barre.style.display = 'flex';
 	barre.innerHTML = `
 		<button id="btn-diag-prev" style="background:none; border:none; color:#fff; font-size:15px; cursor:pointer; padding:2px 6px;" title="Précédent">◀</button>
-		<span style="font-weight:600; max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-			${actuel + 1}/${total} · ${titreActuel}
-		</span>
+		<select id="select-diag-playlist" style="background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:3px 8px; font-weight:600; max-width:230px; cursor:pointer; outline:none;">
+			${optionsHtml}
+		</select>
 		<button id="btn-diag-next" style="background:none; border:none; color:#fff; font-size:15px; cursor:pointer; padding:2px 6px;" title="Suivant">▶</button>
 		<span style="color:rgba(255,255,255,0.2);">|</span>
 		<button id="btn-diag-add" style="background:#2980b9; border:none; color:#fff; font-size:12px; font-weight:600; border-radius:14px; padding:4px 9px; cursor:pointer;" title="Ajouter la table actuelle comme nouveau diagramme">+ Ajouter</button>
-		<button id="btn-diag-del" style="background:#c0392b; border:none; color:#fff; font-size:12px; border-radius:14px; padding:4px 8px; cursor:pointer;" title="Retirer ce diagramme de la série">🗑</button>
+		<button id="btn-diag-del" style="background:#c0392b; border:none; color:#fff; font-size:12px; border-radius:14px; padding:4px 8px; cursor:pointer;" title="Retirer ce diagramme">🗑</button>
+		<button id="btn-diag-share-one" style="background:#8e44ad; border:none; color:#fff; font-size:12px; border-radius:14px; padding:4px 8px; cursor:pointer;" title="Copier le lien de partage de ce diagramme">🔗</button>
 		<button id="btn-diag-zip" style="background:#27ae60; border:none; color:#fff; font-size:12px; font-weight:600; border-radius:14px; padding:4px 10px; cursor:pointer;" title="Télécharger toute la série en ZIP">📦 ZIP</button>
 		<button id="btn-diag-close" style="background:none; border:none; color:#94a3b8; font-size:14px; cursor:pointer; padding:2px 4px;" title="Fermer la série">✕</button>
 	`;
 
 	document.getElementById('btn-diag-prev').onclick = () => chargerDiagrammePlaylist((actuel - 1 + total) % total);
 	document.getElementById('btn-diag-next').onclick = () => chargerDiagrammePlaylist((actuel + 1) % total);
+	document.getElementById('select-diag-playlist').onchange = (e) => chargerDiagrammePlaylist(parseInt(e.target.value, 10));
 	document.getElementById('btn-diag-add').onclick = ajouterDiagrammeActuelAPlaylist;
 	document.getElementById('btn-diag-del').onclick = supprimerDiagrammePlaylistCourant;
 	document.getElementById('btn-diag-zip').onclick = exporterPlaylistEnZip;
+
+	// Partage rapide du diagramme affiché
+	document.getElementById('btn-diag-share-one').onclick = async () => {
+		const btn = document.getElementById('btn-diag-share-one');
+		const lien = await genererLienPartage(true);
+		await navigator.clipboard.writeText(lien);
+		btn.innerText = "✅";
+		setTimeout(() => { btn.innerText = "🔗"; }, 2000);
+	};
+
 	document.getElementById('btn-diag-close').onclick = () => {
 		window.playlistDiag = [];
 		barre.style.display = 'none';
@@ -1432,6 +1461,27 @@ document.addEventListener('drop', (e) => {
 		traiterFichiersDiag(e.dataTransfer.files);
 	}
 });
+
+const btnStartPlaylist = document.getElementById('btn-start-playlist');
+if (btnStartPlaylist) {
+	btnStartPlaylist.addEventListener('click', () => {
+		if (window.playlistDiag.length === 0) {
+			ajouterDiagrammeActuelAPlaylist(); // Crée le 1/1 et affiche la barre du bas
+		}
+
+		// Force le retour à l'outil Sélection
+		const btnSelect = document.querySelector('.tool-btn[data-tool="select"]');
+		if (btnSelect) {
+			if (typeof gererLogiquePalette === "function") {
+				gererLogiquePalette(btnSelect, { preventDefault: () => {}, cancelable: false });
+			} else {
+				btnSelect.click();
+			}
+		}
+		btnStartPlaylist.blur();
+	});
+}
+
 
 
 		// ====================================================================
