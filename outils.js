@@ -1162,12 +1162,12 @@ const blob = new Blob([JSON.stringify(donneesExport, null, 4)], {
 	}
 
 // ====================================================================
-// IMPORT MULTI-FICHIERS (.DIAG / .ZIP) & EXPORT DE SÉRIE MODIFIÉE
+// IMPORT MULTI-FICHIERS (.DIAG / .ZIP), GESTION DE SÉRIE & EXPORT ZIP
 // ====================================================================
 window.playlistDiag = [];
 window.indexPlaylistCourant = 0;
 
-// 1. Lecture unifiée des fichiers (.diag individuels OU archives .zip)
+// 1. Lecture unifiée et cumul des fichiers (.diag individuels OU archives .zip)
 async function traiterFichiersDiag(fileList) {
 	const resultats = [];
 
@@ -1190,7 +1190,6 @@ async function traiterFichiersDiag(fileList) {
 				const promessesZip = [];
 
 				zip.forEach((cheminRelatif, zipEntry) => {
-					// Ignore les dossiers et fichiers cachés macOS (__MACOSX)
 					if (!zipEntry.dir && cheminRelatif.toLowerCase().endsWith('.diag') && !cheminRelatif.includes('__MACOSX')) {
 						promessesZip.push(
 							zipEntry.async("string").then(contenu => {
@@ -1218,13 +1217,21 @@ async function traiterFichiersDiag(fileList) {
 		return;
 	}
 
-	// Tri alphabétique naturel (manche_01, manche_02... manche_10)
+	// Tri alphabétique naturel des nouveaux fichiers importés
 	resultats.sort((a, b) => a.nomFichier.localeCompare(b.nomFichier, undefined, { numeric: true }));
 
-	window.playlistDiag = resultats;
-	window.indexPlaylistCourant = 0;
+	// Cumule à la suite si une série est déjà en mémoire, sinon initialise la liste
+	if (window.playlistDiag.length > 0) {
+		sauvegarderEtatPlaylistCourant();
+		const indexDepart = window.playlistDiag.length;
+		window.playlistDiag.push(...resultats);
+		window.indexPlaylistCourant = indexDepart;
+	} else {
+		window.playlistDiag = resultats;
+		window.indexPlaylistCourant = 0;
+	}
 
-	appliquerDonneesConfiguration(window.playlistDiag[0].donnees);
+	appliquerDonneesConfiguration(window.playlistDiag[window.indexPlaylistCourant].donnees);
 	majBarreNavigationPlaylist();
 }
 
@@ -1270,7 +1277,43 @@ function sauvegarderEtatPlaylistCourant() {
 	};
 }
 
-// 3. Changement de diagramme dans la série
+// 3. Ajouter la table actuelle comme NOUVEAU diagramme (sans écraser le précédent)
+function ajouterDiagrammeActuelAPlaylist() {
+	const titreActuel = (titleInput && titleInput.value.trim()) 
+		? titleInput.value.trim() 
+		: `Diagramme ${window.playlistDiag.length + 1}`;
+	
+	window.playlistDiag.push({
+		nomFichier: `${titreActuel}.diag`,
+		donnees: {}
+	});
+
+	window.indexPlaylistCourant = window.playlistDiag.length - 1;
+	sauvegarderEtatPlaylistCourant();
+	majBarreNavigationPlaylist();
+}
+
+// 4. Supprimer le diagramme affiché de la série en mémoire
+function supprimerDiagrammePlaylistCourant() {
+	if (window.playlistDiag.length === 0) return;
+
+	window.playlistDiag.splice(window.indexPlaylistCourant, 1);
+
+	if (window.playlistDiag.length === 0) {
+		window.indexPlaylistCourant = 0;
+		majBarreNavigationPlaylist();
+		return;
+	}
+
+	if (window.indexPlaylistCourant >= window.playlistDiag.length) {
+		window.indexPlaylistCourant = window.playlistDiag.length - 1;
+	}
+
+	appliquerDonneesConfiguration(window.playlistDiag[window.indexPlaylistCourant].donnees);
+	majBarreNavigationPlaylist();
+}
+
+// 5. Changement de diagramme dans la série
 function chargerDiagrammePlaylist(index) {
 	if (!window.playlistDiag[index]) return;
 	if (index !== window.indexPlaylistCourant) {
@@ -1281,7 +1324,7 @@ function chargerDiagrammePlaylist(index) {
 	majBarreNavigationPlaylist();
 }
 
-// 4. Exportation de toute la playlist modifiée dans un fichier .zip
+// 6. Exportation de toute la playlist modifiée dans un fichier .zip
 async function exporterPlaylistEnZip() {
 	if (window.playlistDiag.length === 0 || typeof JSZip === "undefined") return;
 
@@ -1290,10 +1333,14 @@ async function exporterPlaylistEnZip() {
 
 	const zip = new JSZip();
 	window.playlistDiag.forEach((item, idx) => {
-		const titreBase = (item.donnees.titre || item.nomFichier.replace(/\.diag$/i, '') || `diagramme_${idx + 1}`)
-			.replace(/[/\\?%*:|"<>]/g, '-')
-			.substring(0, 80);
-		zip.file(`${titreBase}.diag`, JSON.stringify(item.donnees, null, 4));
+		const prefixe = String(idx + 1).padStart(2, '0');
+		const titreBrut = (item.donnees.titre || item.nomFichier.replace(/\.diag$/i, '') || `diagramme`)
+			.replace(/^\d+[_-]\s*/, ''); // Retire l'ancien préfixe numérique s'il existe déjà
+		const titreBase = titreBrut.replace(/[/\\?%*:|"<>]/g, '-').substring(0, 75);
+
+
+		// Le préfixe "01_", "02_" empêche l'écrasement si deux diagrammes ont le même titre
+		zip.file(`${prefixe}_${titreBase}.diag`, JSON.stringify(item.donnees, null, 4));
 	});
 
 	const contenuBlob = await zip.generateAsync({ type: "blob" });
@@ -1306,11 +1353,12 @@ async function exporterPlaylistEnZip() {
 	URL.revokeObjectURL(a.href);
 }
 
-// 5. Barre de navigation flottante avec bouton d'export ZIP
+// 7. Barre de navigation flottante complète
 function majBarreNavigationPlaylist() {
 	let barre = document.getElementById('playlist-nav-bar');
 
-	if (window.playlistDiag.length <= 1) {
+	// Masquée uniquement si la mémoire est complètement vide (0 élément)
+	if (window.playlistDiag.length === 0) {
 		if (barre) barre.style.display = 'none';
 		return;
 	}
@@ -1322,7 +1370,7 @@ function majBarreNavigationPlaylist() {
 			position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
 			background: rgba(11, 15, 23, 0.95); color: #fff; padding: 6px 14px;
 			border-radius: 30px; border: 1px solid rgba(255,255,255,0.2);
-			display: flex; align-items: center; gap: 10px; z-index: 9999;
+			display: flex; align-items: center; gap: 8px; z-index: 9999;
 			box-shadow: 0 4px 15px rgba(0,0,0,0.5); font-family: system-ui, sans-serif; font-size: 13px;
 		`;
 		document.body.appendChild(barre);
@@ -1335,16 +1383,21 @@ function majBarreNavigationPlaylist() {
 	barre.style.display = 'flex';
 	barre.innerHTML = `
 		<button id="btn-diag-prev" style="background:none; border:none; color:#fff; font-size:15px; cursor:pointer; padding:2px 6px;" title="Précédent">◀</button>
-		<span style="font-weight:600; max-width:240px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+		<span style="font-weight:600; max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
 			${actuel + 1}/${total} · ${titreActuel}
 		</span>
 		<button id="btn-diag-next" style="background:none; border:none; color:#fff; font-size:15px; cursor:pointer; padding:2px 6px;" title="Suivant">▶</button>
-		<button id="btn-diag-zip" style="background:#27ae60; border:none; color:#fff; font-size:12px; font-weight:600; border-radius:14px; padding:4px 10px; cursor:pointer; margin-left:4px;" title="Télécharger toute la série modifiée en ZIP">📦 ZIP</button>
+		<span style="color:rgba(255,255,255,0.2);">|</span>
+		<button id="btn-diag-add" style="background:#2980b9; border:none; color:#fff; font-size:12px; font-weight:600; border-radius:14px; padding:4px 9px; cursor:pointer;" title="Ajouter la table actuelle comme nouveau diagramme">+ Ajouter</button>
+		<button id="btn-diag-del" style="background:#c0392b; border:none; color:#fff; font-size:12px; border-radius:14px; padding:4px 8px; cursor:pointer;" title="Retirer ce diagramme de la série">🗑</button>
+		<button id="btn-diag-zip" style="background:#27ae60; border:none; color:#fff; font-size:12px; font-weight:600; border-radius:14px; padding:4px 10px; cursor:pointer;" title="Télécharger toute la série en ZIP">📦 ZIP</button>
 		<button id="btn-diag-close" style="background:none; border:none; color:#94a3b8; font-size:14px; cursor:pointer; padding:2px 4px;" title="Fermer la série">✕</button>
 	`;
 
 	document.getElementById('btn-diag-prev').onclick = () => chargerDiagrammePlaylist((actuel - 1 + total) % total);
 	document.getElementById('btn-diag-next').onclick = () => chargerDiagrammePlaylist((actuel + 1) % total);
+	document.getElementById('btn-diag-add').onclick = ajouterDiagrammeActuelAPlaylist;
+	document.getElementById('btn-diag-del').onclick = supprimerDiagrammePlaylistCourant;
 	document.getElementById('btn-diag-zip').onclick = exporterPlaylistEnZip;
 	document.getElementById('btn-diag-close').onclick = () => {
 		window.playlistDiag = [];
