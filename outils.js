@@ -385,6 +385,63 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
+// ====================================================================
+// CAPTURE D'ÉCRAN IDENTIQUE EN PNG (VIA HTML2CANVAS)
+// ====================================================================
+const btnExportPng = document.getElementById('btn-export-png');
+
+if (btnExportPng) {
+	btnExportPng.addEventListener('click', async () => {
+		// On cible le conteneur global de la table (cadre en bois inclus)
+		const zoneACapturer = document.getElementById('table-frame') || document.getElementById('pool-table');
+		if (!zoneACapturer || typeof html2canvas === 'undefined') return;
+
+		// 1. Nettoyage visuel temporaire avant la photo (retire les cadres de sélection actifs)
+		const formeTemp = window.formeTactiqueSelectionnee;
+		const billeTemp = window.billeSelectionneeCourante;
+		const badgeTemp = document.getElementById('ball-drag-live-badge');
+
+		window.formeTactiqueSelectionnee = null;
+		if (typeof window.redessinerToutesLesLignes === "function") window.redessinerToutesLesLignes();
+		if (billeTemp) billeTemp.style.outline = 'none';
+		if (badgeTemp) badgeTemp.style.display = 'none';
+
+		try {
+			// 2. Capture exacte du rendu HTML/CSS + Canvas en haute définition (scale: 2)
+			const canvasCapture = await html2canvas(zoneACapturer, {
+				scale: 2,                  // Qualité Retina / HD
+				backgroundColor: null,     // Conserve les coins arrondis transparents
+				useCORS: true,             // Autorise le logo personnalisé
+				logging: false
+			});
+
+			// 3. Téléchargement automatique du PNG
+			const titreVal = titleInput ? titleInput.value.trim() : "";
+			const nomFichier = (titreVal || "diagramme_billard").replace(/[/\\?%*:|"<>]/g, '-').substring(0, 80);
+
+			canvasCapture.toBlob((blob) => {
+				const url = URL.createObjectURL(blob);
+				const a = document.createElement('a');
+				a.href = url;
+				a.download = `${nomFichier}.png`;
+				document.body.appendChild(a);
+				a.click();
+				document.body.removeChild(a);
+				URL.revokeObjectURL(url);
+			}, 'image/png');
+
+		} finally {
+			// 4. Restauration immédiate de l'état de l'interface
+			window.formeTactiqueSelectionnee = formeTemp;
+			if (typeof window.redessinerToutesLesLignes === "function") window.redessinerToutesLesLignes();
+			if (billeTemp) {
+				billeTemp.style.outline = '2px solid #ffffff';
+				billeTemp.style.outlineOffset = '2px';
+			}
+			if (badgeTemp) badgeTemp.style.display = '';
+		}
+	});
+}
 
 
 
