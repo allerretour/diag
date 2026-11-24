@@ -865,7 +865,7 @@ window.detecterEtEffacerDessin = function(clicX, clicY) {
 		const dessin = window.dessinsSauvegardes[i];
 
 		// 1. Cas des formes ponctuelles standards
-		if (dessin.estCible || dessin.estCarre || dessin.estEffetBlanche || dessin.estRepereX || dessin.estGhostBall) {
+		if (dessin.estCible || dessin.estCarre || dessin.estEffetBlanche || dessin.estRepereX || dessin.estGhostBall || dessin.estPostIt) {
 			if (dessin.points) {
 				const pt = Array.isArray(dessin.points) ? dessin.points[0] : dessin.points;
 				if (pt && estProchePoint(clicX, clicY, pt.x, pt.y, 30)) {
@@ -913,11 +913,12 @@ window.trouverFormeTactiqueProche = function(clicX, clicY) {
 	// Parcours inversé pour attraper l'élément situé au premier plan
 	for (let i = window.dessinsSauvegardes.length - 1; i >= 0; i--) {
 		const dessin = window.dessinsSauvegardes[i];
-		const estFormeDeplacable = dessin.estCible || dessin.estCarre || dessin.estEffetBlanche || dessin.estRepereX || dessin.estPointContact || dessin.estGhostBall;
+		const estFormeDeplacable = dessin.estCible || dessin.estCarre || dessin.estEffetBlanche || dessin.estRepereX || dessin.estPointContact || dessin.estGhostBall || dessin.estPostIt;
 
 		if (estFormeDeplacable && dessin.points && dessin.points.length > 0) {
 			const pt = dessin.points[0];
 			let tolerance = 25;
+			if (dessin.estPostIt) tolerance = 55;
 			if (dessin.estCible || dessin.estCarre) tolerance = 55;
 			if (dessin.estPointContact || dessin.estEffetBlanche) tolerance = 60;
 

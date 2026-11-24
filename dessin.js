@@ -334,7 +334,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		mouseY = Math.round(e.clientY - rect.top);
 
 		// Modifié pour réagir si la palette OU le clavier est utilisé
-		const aUnOutilActif = outilActif || ['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact', 'ghostBall'].includes(window.outilTraceActif);
+		const aUnOutilActif = outilActif || ['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact', 'ghostBall', 'postit'].includes(window.outilTraceActif);
 		if (!aUnOutilActif) return;
 		if (animationFrameId) return;
 
@@ -919,6 +919,112 @@ function dessinerPointContact(x, y, couleur, pctFige, coteFige) {
 
 	ctx.restore();
 }
+
+
+// Fonction utilitaire pour découper le texte automatiquement selon la largeur max
+function decouperLignesPostIt(ctx, texte, largeurUtileMax) {
+	const paragraphes = (texte || "Note tactile...").split('\n');
+	const lignesFinales = [];
+
+	paragraphes.forEach(paragraphe => {
+		if (paragraphe.trim() === "") {
+			lignesFinales.push("");
+			return;
+		}
+		const mots = paragraphe.split(' ');
+		let ligneCourante = "";
+
+		mots.forEach(mot => {
+			const testLigne = ligneCourante ? `${ligneCourante} ${mot}` : mot;
+			if (ctx.measureText(testLigne).width <= largeurUtileMax) {
+				ligneCourante = testLigne;
+			} else {
+				if (ligneCourante) lignesFinales.push(ligneCourante);
+				// Si un mot seul dépasse la largeur max, on le coupe caractère par caractère
+				if (ctx.measureText(mot).width > largeurUtileMax) {
+					let morceau = "";
+					for (const char of mot) {
+						if (ctx.measureText(morceau + char).width <= largeurUtileMax) {
+							morceau += char;
+						} else {
+							lignesFinales.push(morceau);
+							morceau = char;
+						}
+					}
+					ligneCourante = morceau;
+				} else {
+					ligneCourante = mot;
+				}
+			}
+		});
+		if (ligneCourante) lignesFinales.push(ligneCourante);
+	});
+
+	return lignesFinales;
+}
+
+function dessinerPostIt(x, y, texte, couleurFond = "#fef08a") {
+	ctx.save();
+	ctx.setLineDash([]);
+	ctx.imageSmoothingEnabled = true;
+
+	// === CONFIGURATION DES DIMENSIONS ===
+	const LARGEUR_MIN = 110;
+	const LARGEUR_MAX = 165; // <-- Ajustez cette valeur selon la largeur maximale souhaitée
+	const PADDING_X = 12;
+	const HAUTEUR_LIGNE = 16;
+
+	ctx.font = "600 12px system-ui, -apple-system, sans-serif";
+
+	// 1. Découpage automatique du texte avec retour à la ligne
+	const lignes = decouperLignesPostIt(ctx, texte, LARGEUR_MAX - (PADDING_X * 2));
+
+	// 2. Calcul de la largeur (bornée entre MIN et MAX) et de la hauteur dynamique
+	const largeurMaxTexte = Math.max(...lignes.map(l => ctx.measureText(l).width), 0);
+	const largeur = Math.max(LARGEUR_MIN, Math.min(LARGEUR_MAX, Math.ceil(largeurMaxTexte) + (PADDING_X * 2)));
+	const hauteur = Math.max(46, (lignes.length * HAUTEUR_LIGNE) + 22);
+
+	const cadreX = Math.floor(x - largeur / 2);
+	const cadreY = Math.floor(y - hauteur / 2);
+
+	// 3. Ombre portée et fond papier
+	ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
+	ctx.shadowBlur = 8;
+	ctx.shadowOffsetX = 2;
+	ctx.shadowOffsetY = 4;
+
+	ctx.beginPath();
+	ctx.roundRect(cadreX, cadreY, largeur, hauteur, 6);
+	ctx.fillStyle = couleurFond;
+	ctx.fill();
+
+	// 4. Bordure et bande adhésive supérieure
+	ctx.shadowColor = "transparent";
+	ctx.strokeStyle = "rgba(0, 0, 0, 0.18)";
+	ctx.lineWidth = 1;
+	ctx.stroke();
+
+	ctx.fillStyle = "rgba(0, 0, 0, 0.06)";
+	ctx.fillRect(cadreX, cadreY, largeur, 8);
+
+	// 5. Rendu des lignes vers le bas
+	ctx.fillStyle = "#1e293b";
+	ctx.textAlign = "left";
+	ctx.textBaseline = "top";
+
+	lignes.forEach((ligne, idx) => {
+		ctx.fillText(ligne, cadreX + PADDING_X, cadreY + 13 + (idx * HAUTEUR_LIGNE));
+	});
+
+	ctx.restore();
+
+	// Retourne les dimensions calculées pour la bordure de sélection
+	return { largeur, hauteur };
+}
+
+
+
+
 
 
 function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angleForce = null) {
@@ -2285,6 +2391,13 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 				dessinerZoneGrille(dessin.zoneId, dessin.couleur, dessin.mode);
 				return;
 			}
+			
+			if (dessin.estPostIt) {
+				if (dessin.points && dessin.points.length > 0) {
+					dessinerPostIt(dessin.points[0].x, dessin.points[0].y, dessin.texte);
+				}
+				return;
+			}
 
 			// Gestion des tracés standards et lignes droites
 			if (dessin.points.length < 2) return;
@@ -2334,7 +2447,20 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 				ctx.beginPath();
 				ctx.roundRect(pt.x - demi, pt.y - demi, taille, taille, 17);
 				ctx.stroke();
-			} 
+			}
+			else if (f.estPostIt) {
+				ctx.font = "600 12px system-ui, -apple-system, sans-serif";
+				const lignes = decouperLignesPostIt(ctx, f.texte, 165 - 24);
+				const largeurMaxTexte = Math.max(...lignes.map(l => ctx.measureText(l).width), 0);
+				const l = Math.max(110, Math.min(165, Math.ceil(largeurMaxTexte) + 24)) + 6;
+				const h = Math.max(46, (lignes.length * 16) + 22) + 6;
+
+				ctx.beginPath();
+				ctx.roundRect(pt.x - (l / 2), pt.y - (h / 2), l, h, 8);
+				ctx.stroke();
+			}
+
+
 			else if (f.estPointContact) {
 				// Épouse le panneau Contact (150x125 + 6px de marge)
 				ctx.beginPath();
@@ -2390,7 +2516,7 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 		// === RENDU EN DIRECT DE L'APERÇU FANTÔME (SOUS LE CURSEUR) ===
 		// CORRECTION : On détermine l'outil actif qu'il vienne de la palette OU du clavier
 		const formeActive = (window.outilTraceActif !== "select") ? window.outilTraceActif : outilActif;
-		const listeFormesTactiques = ['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact', 'ghostBall'];
+		const listeFormesTactiques = ['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact', 'ghostBall', 'postit'];
 
 		if (listeFormesTactiques.includes(formeActive)) {
 			ctx.save();
@@ -2402,6 +2528,7 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 			}
 			
 			if (formeActive === 'ghostBall') dessinerBilleFantome(mouseX, mouseY, couleurActive);
+			if (formeActive === 'postit') dessinerPostIt(mouseX, mouseY, "Nouvelle note...");
 
 			if (formeActive === 'cible') dessinerCible(mouseX, mouseY, window.COULEUR_CIBLE_TACTIQUE || '#cbd5e1');
 			if (formeActive === 'carre') dessinerCarre(mouseX, mouseY, window.COULEUR_CARRE_TACTIQUE || '#cbd5e1');
@@ -3029,7 +3156,7 @@ document.addEventListener('keydown', (e) => {
 
 	// === 3. MODE FORMES TACTIQUES (Aperçus fantômes : Cible, Carré, Effet, Contact, Repère X) ===
 	const outilTactiqueActif = (window.outilTraceActif !== "select") ? window.outilTraceActif : outilActif;
-	if (['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact', 'ghostBall'].includes(outilTactiqueActif)) {
+	if (['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact', 'ghostBall', 'postit'].includes(outilTactiqueActif)) {
 		isDrawing = true;
 
 		// APPLICATION DU BRIDAGE DÈS LE PREMIER CLIC DE DÉPÔT
@@ -3079,7 +3206,7 @@ function clampPositionDessin(x, y) {
     let y = coords.y;
 
     // === EN DIRECT SUR IPAD - RAFRAÎCHIT L'APERÇU FANTÔME AU GLISSEMENT ===
-    const listeFormesTactiques = ['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact', 'ghostBall'];
+    const listeFormesTactiques = ['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact', 'ghostBall', 'postit'];
     if (listeFormesTactiques.includes(window.outilTraceActif) || outilActif) {
         if (e.cancelable) e.preventDefault();
 
@@ -3136,7 +3263,7 @@ function clampPositionDessin(x, y) {
 	function declencherFinTrace(e) {
 		// === VALIDATION DU DÉPÔT AU RELÂCHEMENT SUR LA TABLE UNIQUEMENT ===
 		const outilTactiqueActif = (window.outilTraceActif !== "select") ? window.outilTraceActif : outilActif;
-		const listeFormesTactiques = ['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact', 'ghostBall'];
+		const listeFormesTactiques = ['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact', 'ghostBall', 'postit'];
 
 		if (listeFormesTactiques.includes(outilTactiqueActif)) {
 			// Sécurité : si isDrawing est faux (ex: clic sur un bouton de la palette pour faire tourner), on ne fait rien !
@@ -3244,6 +3371,18 @@ if (outilTactiqueActif === 'ghostBall') {
 					nouvelElement.pourcentage = window.pourcentageContactCourant;
 					nouvelElement.cote = window.coteContactCourant;
 				}
+				if (outilTactiqueActif === 'postit') {
+					const texteSaisi = prompt("Texte de la note (utilisez \\n pour un retour à la ligne) :", "");
+					if (!texteSaisi || texteSaisi.trim() === "") {
+					isDrawing = false;
+					outilActif = null;
+					window.redessinerToutesLesLignes();
+					return;
+				}
+    nouvelElement.estPostIt = true;
+    nouvelElement.texte = texteSaisi.replace(/\\n/g, '\n');
+}
+
 
 				window.dessinsSauvegardes.push(nouvelElement);
 			// Nettoyage des états
@@ -3333,6 +3472,8 @@ function commencerDessin(e) {
 						ghostProche = ptGhost;
 					}
 				}
+				
+
 			});
 
 			if (ghostProche) {
@@ -3486,6 +3627,21 @@ function commencerDessin(e) {
 
 	table.addEventListener('contextmenu', e => e.preventDefault());
 	canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+	
+	table.addEventListener('dblclick', (e) => {
+    if (window.isViewMode || window.outilTraceActif !== "select") return;
+    const coords = obtenirCoordonneesEvenement(e, table);
+    const forme = window.trouverFormeTactiqueProche(coords.x, coords.y);
+
+    if (forme && forme.estPostIt) {
+        const nouveauTexte = prompt("Modifier la note :", forme.texte.replace(/\n/g, '\\n'));
+        if (nouveauTexte !== null && nouveauTexte.trim() !== "") {
+            forme.texte = nouveauTexte.replace(/\\n/g, '\n');
+            window.redessinerToutesLesLignes();
+        }
+    }
+	});
 
 	setTimeout(resizeCanvas, 100);
 });
