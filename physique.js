@@ -908,26 +908,48 @@ window.detecterEtEffacerDessin = function(clicX, clicY) {
 
 
 // --- DÉTECTION D'UNE FORME TACTIQUE POUR DÉPLACEMENT ---
+// --- DÉTECTION D'UNE FORME TACTIQUE OU LIGNE POUR DÉPLACEMENT / ÉDITION ---
 window.trouverFormeTactiqueProche = function(clicX, clicY) {
-	// Parcours inversé pour attraper la forme située au premier plan
+	// Parcours inversé pour attraper l'élément situé au premier plan
 	for (let i = window.dessinsSauvegardes.length - 1; i >= 0; i--) {
 		const dessin = window.dessinsSauvegardes[i];
 		const estFormeDeplacable = dessin.estCible || dessin.estCarre || dessin.estEffetBlanche || dessin.estRepereX || dessin.estPointContact || dessin.estGhostBall;
 
 		if (estFormeDeplacable && dessin.points && dessin.points.length > 0) {
 			const pt = dessin.points[0];
-			// Rayon de tolérance adapté à la taille de la forme
 			let tolerance = 25;
 			if (dessin.estCible || dessin.estCarre) tolerance = 55;
 			if (dessin.estPointContact || dessin.estEffetBlanche) tolerance = 60;
 
 			if (estProchePoint(clicX, clicY, pt.x, pt.y, tolerance)) {
+				dessin._modeEditionLigne = null;
+				return dessin;
+			}
+		}
+		// Détection des lignes droites et des flèches
+		else if ((dessin.estDroite || dessin.avecFleche) && dessin.points && dessin.points.length >= 2) {
+			const p1 = dessin.points[0];
+			const p2 = dessin.points[dessin.points.length - 1];
+
+			// 1. Priorité aux poignées de départ (start) et d'arrivée (end)
+			if (estProchePoint(clicX, clicY, p1.x, p1.y, 16)) {
+				dessin._modeEditionLigne = 'start';
+				return dessin;
+			}
+			if (estProchePoint(clicX, clicY, p2.x, p2.y, 16)) {
+				dessin._modeEditionLigne = 'end';
+				return dessin;
+			}
+			// 2. Sinon, clic sur le corps de la ligne pour la déplacer en bloc
+			if (estProcheLigne(clicX, clicY, p1, p2, 12)) {
+				dessin._modeEditionLigne = 'move';
 				return dessin;
 			}
 		}
 	}
 	return null;
 };
+
 
 
 

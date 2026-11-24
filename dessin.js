@@ -345,15 +345,38 @@ document.addEventListener("DOMContentLoaded", () => {
 	});
 
 		// === BARRE DE RÉGLAGE TACTILE POUR L'ANGLE DU GHOST ===
-	function pivoterGhostSelectionne(deltaDegres) {
+	function pivoterGhostSelectionne(deltaDegres, reinitialiserPlein = false) {
 		const formeGhost = window.formeTactiqueSelectionnee;
 		if (!formeGhost || !formeGhost.estGhostBall || !formeGhost.cibleCentre || !formeGhost.points || !formeGhost.points.length) return;
 
-		const ptActuel = formeGhost.points[0];
-		let angleActuel = Math.atan2(ptActuel.y - formeGhost.cibleCentre.y, ptActuel.x - formeGhost.cibleCentre.x);
-		angleActuel += (deltaDegres * Math.PI) / 180;
+		let angleCible;
 
-		const resultatGhost = dessinerBilleFantome(0, 0, formeGhost.couleur, formeGhost, angleActuel);
+		if (reinitialiserPlein) {
+			// Récupère la position actuelle de la bille blanche sur le tapis
+			let blanchePos = formeGhost.blancheCentre;
+			if (Array.isArray(activeBalls)) {
+				const cueBall = activeBalls.find(b => b.getAttribute('data-id') === '0');
+				if (cueBall && cueBall.style.display !== 'none') {
+					blanchePos = {
+						x: (parseFloat(cueBall.style.left) || 0) + 12,
+						y: (parseFloat(cueBall.style.top) || 0) + 12
+					};
+				}
+			}
+
+			if (!blanchePos) return;
+			// Calcule l'angle exact de l'impact plein (100%)
+			angleCible = Math.atan2(blanchePos.y - formeGhost.cibleCentre.y, blanchePos.x - formeGhost.cibleCentre.x);
+			formeGhost.blancheCentre = blanchePos;
+		} else {
+			// CORRECTION : Accès au premier point du tableau avec [0]
+			const ptActuel = formeGhost.points[0];
+			angleCible = Math.atan2(ptActuel.y - formeGhost.cibleCentre.y, ptActuel.x - formeGhost.cibleCentre.x);
+			// Soustraction (-=) pour aligner le sens des flèches avec le côté de coupe (Gauche / Droite)
+			angleCible -= (deltaDegres * Math.PI) / 180;
+		}
+
+		const resultatGhost = dessinerBilleFantome(0, 0, formeGhost.couleur, formeGhost, angleCible);
 		formeGhost.points = [{ x: resultatGhost.x, y: resultatGhost.y }];
 		formeGhost.expireBadgeLe = Date.now() + 2500;
 
@@ -368,6 +391,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		}
 		window.redessinerToutesLesLignes();
 	}
+
 
 	function majBarreReglageGhost() {
 		let barre = document.getElementById('ghost-angle-tuner');
@@ -389,34 +413,72 @@ document.addEventListener("DOMContentLoaded", () => {
 			`;
 
 			const pasBoutons = [
-				{ label: '⏪ -1°', delta: -1.0 },
-				{ label: '◀ -0.2°', delta: -0.2 },
-				{ label: '+0.2° ▶', delta: 0.2 },
-				{ label: '+1° ⏩', delta: 1.0 }
+				{ label: '⏪ G (-1°)', delta: -1.0 },
+				{ label: '◀ G (-0.2°)', delta: -0.2 },
+				{ label: '🎯 100%', delta: 0, reset: true },
+				{ label: 'D (+0.2°) ▶', delta: 0.2 },
+				{ label: 'D (+1°) ⏩', delta: 1.0 }
 			];
 
 			pasBoutons.forEach(item => {
 				const btn = document.createElement('button');
 				btn.type = 'button';
 				btn.innerText = item.label;
+				
+				const bgStyle = item.reset ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255, 255, 255, 0.14)';
+				const borderStyle = item.reset ? '1px solid rgba(56, 189, 248, 0.5)' : 'none';
+
 				btn.style.cssText = `
-					background: rgba(255, 255, 255, 0.14); color: #fff; border: none;
+					background: ${bgStyle}; color: #fff; border: ${borderStyle};
 					border-radius: 14px; padding: 7px 12px; font-size: 13px; font-weight: 700;
 					cursor: pointer; font-family: system-ui, -apple-system, sans-serif;
-					user-select: none; -webkit-user-select: none;
+					user-select: none; -webkit-user-select: none; white-space: nowrap;
 				`;
-				const action = (e) => {
+
+				let timerDelai = null;
+				let intervalleRepetition = null;
+
+				const arreterRepetition = () => {
+					if (timerDelai) {
+						clearTimeout(timerDelai);
+						timerDelai = null;
+					}
+					if (intervalleRepetition) {
+						clearInterval(intervalleRepetition);
+						intervalleRepetition = null;
+					}
+				};
+
+				const demarrerAction = (e) => {
 					e.preventDefault();
 					e.stopPropagation();
-					pivoterGhostSelectionne(item.delta);
+					arreterRepetition();
+
+					// Exécution immédiate au premier contact
+					pivoterGhostSelectionne(item.delta, Boolean(item.reset));
+
+					// Active la répétition continue uniquement sur les boutons d'angle (pas sur le reset 100%)
+					if (!item.reset) {
+						timerDelai = setTimeout(() => {
+							intervalleRepetition = setInterval(() => {
+								pivoterGhostSelectionne(item.delta, false);
+							}, 55); // Vitesse de défilement continu (~18 pas/seconde)
+						}, 300); // Délai de 300ms avant de lancer la répétition
+					}
 				};
-				btn.addEventListener('touchstart', action, { passive: false });
+
+				btn.addEventListener('touchstart', demarrerAction, { passive: false });
+				btn.addEventListener('touchend', arreterRepetition);
+				btn.addEventListener('touchcancel', arreterRepetition);
+
 				btn.addEventListener('mousedown', (e) => {
-					if (e.button === 0) action(e);
+					if (e.button === 0) demarrerAction(e);
 				});
+				btn.addEventListener('mouseup', arreterRepetition);
+				btn.addEventListener('mouseleave', arreterRepetition);
+
 				barre.appendChild(btn);
 			});
-
 
 			table.appendChild(barre);
 		}
@@ -426,103 +488,129 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
-		// 1. DÉBUT DU DÉPLACEMENT D'UNE FORME (Souris & Tactile)
+
+		// Aimantation intelligente pour les extrémités de lignes/flèches (Billes, Ghosts, Grille)
+	function calculerAimantationExtremiteLigne(rawX, rawY, ignorerSnapping = false) {
+		const posClampee = clampPositionDessin(rawX, rawY);
+		let x = posClampee.x;
+		let y = posClampee.y;
+
+		if (ignorerSnapping) return { x, y };
+
+		// 1. Aimantation au centre d'une bille visible (seuil 16px autour du centre)
+		let billeProche = null;
+		let distMinBille = 16;
+		if (Array.isArray(activeBalls)) {
+			activeBalls.forEach(ball => {
+				if (ball.style.display !== 'none') {
+					const bx = (parseFloat(ball.style.left) || 0) + 12;
+					const by = (parseFloat(ball.style.top) || 0) + 12;
+					const dist = Math.hypot(x - bx, y - by);
+					if (dist < distMinBille) {
+						distMinBille = dist;
+						billeProche = { x: bx, y: by };
+					}
+				}
+			});
+		}
+		if (billeProche) return billeProche;
+
+		// 2. Aimantation sur une bille fantôme (Ghost)
+		let ghostProche = null;
+		let distMinGhost = 18;
+		window.dessinsSauvegardes.forEach(d => {
+			if (d.estGhostBall && d.points && d.points.length > 0) {
+				const dist = Math.hypot(x - d.points[0].x, y - d.points[0].y);
+				if (dist < distMinGhost) {
+					distMinGhost = dist;
+					ghostProche = { x: d.points[0].x, y: d.points[0].y };
+				}
+			}
+		});
+		if (ghostProche) return ghostProche;
+
+		// 3. Repli sur le magnétisme de la grille (si activé)
+		if (typeof calculerSnapGrille === "function") {
+			const snap = calculerSnapGrille(x - 12, y - 12, null, true);
+			return { x: snap.x + 12, y: snap.y + 12 };
+		}
+
+		return { x, y };
+	}
+
+		// 1. DÉBUT DU DÉPLACEMENT D'UNE FORME OU LIGNE (Souris & Tactile)
 	function gererDebutDeplacementForme(e) {
 		if (window.isViewMode || window.outilTraceActif !== "select") return;
 		if (e.type === 'mousedown' && e.button !== 0) return;
 
-		// Si l'utilisateur clique sur une bille, on laisse la bille gérer son propre drag
 		if (e.target.closest('.ball')) {
 			window.formeTactiqueSelectionnee = null;
 			window.redessinerToutesLesLignes();
 			return;
 		}
-		// Si l'utilisateur appuie sur la barre de réglage d'angle du Ghost, on ne désélectionne pas
 		if (e.target.closest('#ghost-angle-tuner')) {
 			return;
 		}
 
-
 		const coords = obtenirCoordonneesEvenement(e, table);
 		const formeTrouvee = window.trouverFormeTactiqueProche(coords.x, coords.y);
 
-				if (formeTrouvee) {
+		if (formeTrouvee) {
 			if (e.cancelable) e.preventDefault();
 
-			// --- DÉTECTION D'UN CLIC SUR LES 9 POINTS D'EFFET OU SUR LA JAUGE DE FORCE ---
+			// --- DÉTECTION CLIC PANNEAU EFFET BLANCHE (Inchangé) ---
 			if (formeTrouvee.estEffetBlanche && formeTrouvee.points && formeTrouvee.points.length > 0) {
 				const centreForme = formeTrouvee.points[0];
 				const jaugeActive = (formeTrouvee.force || 0) > 0;
 				const demiLargeur = (jaugeActive ? 150 : 110) / 2;
 				const cadreX = centreForme.x - demiLargeur;
-				
-				// Calcul exact du centre de la bille blanche à l'intérieur du cadre
 				const billeX = jaugeActive ? (cadreX + 48) : centreForme.x;
 				const billeY = centreForme.y;
 				const rayonBille = 36;
 
-				// 1. Vérification du clic sur la zone de la jauge FORCE (à droite de la bille)
 				if (jaugeActive) {
 					const jaugeCentreX = cadreX + 122;
-					// Zone cliquable autour de la jauge (largeur +/- 18px, hauteur de la bille + marge)
 					if (Math.abs(coords.x - jaugeCentreX) <= 18 && Math.abs(coords.y - billeY) <= rayonBille + 18) {
 						const basJaugeY = billeY + rayonBille;
-						const hautJaugeY = billeY - rayonBille;
-
 						if (coords.y > basJaugeY + 4) {
-							// Clic sur le pourcentage en bas : désactive la jauge (0%)
 							formeTrouvee.force = 0;
 						} else {
-							// Calcul du niveau de 1 (25%) à 4 (100%) selon la hauteur cliquée
 							const ratio = Math.max(0, Math.min(1, (basJaugeY - coords.y) / (rayonBille * 2)));
 							formeTrouvee.force = Math.max(1, Math.min(4, Math.ceil(ratio * 4)));
 						}
-
 						window.niveauForceCourant = formeTrouvee.force;
 						window.formeTactiqueSelectionnee = formeTrouvee;
-
 						if (window.billeSelectionneeCourante) {
 							window.billeSelectionneeCourante.style.outline = 'none';
 							window.billeSelectionneeCourante = null;
 							if (typeof rafraichirListeLateraleBilles === "function") rafraichirListeLateraleBilles();
 						}
-
 						if (typeof rafraichirTexteBoutonsPalette === "function") rafraichirTexteBoutonsPalette();
 						window.redessinerToutesLesLignes();
-						return; // Stoppe ici pour modifier la force sans déplacer le panneau
+						return;
 					}
 				} else {
-					// Si la jauge est masquée (0%), un clic sur la bordure droite du cadre l'active à 25%
 					if (coords.x >= billeX + rayonBille - 2 && coords.x <= cadreX + 110 && Math.abs(coords.y - billeY) <= rayonBille + 12) {
 						formeTrouvee.force = 1;
 						window.niveauForceCourant = 1;
 						window.formeTactiqueSelectionnee = formeTrouvee;
-
 						if (window.billeSelectionneeCourante) {
 							window.billeSelectionneeCourante.style.outline = 'none';
 							window.billeSelectionneeCourante = null;
 							if (typeof rafraichirListeLateraleBilles === "function") rafraichirListeLateraleBilles();
 						}
-
 						if (typeof rafraichirTexteBoutonsPalette === "function") rafraichirTexteBoutonsPalette();
 						window.redessinerToutesLesLignes();
 						return;
 					}
 				}
 
-				// 2. Vérification du clic sur l'un des 9 points d'effet
 				const d = 24;
 				const diag = d * Math.cos(Math.PI / 4);
 				const offsets = [
-					{ dx: 0, dy: 0 },                   // 0 : Centre
-					{ dx: 0, dy: -d },                  // 1 : Haut (Coulé)
-					{ dx: 0, dy: d },                   // 2 : Bas (Rétro)
-					{ dx: -d, dy: 0 },                  // 3 : Gauche
-					{ dx: d, dy: 0 },                   // 4 : Droite
-					{ dx: -diag, dy: -diag },           // 5 : Haut-Gauche
-					{ dx: diag, dy: -diag },            // 6 : Haut-Droite
-					{ dx: -diag, dy: diag },            // 7 : Bas-Gauche
-					{ dx: diag, dy: diag }              // 8 : Bas-Droite
+					{ dx: 0, dy: 0 }, { dx: 0, dy: -d }, { dx: 0, dy: d },
+					{ dx: -d, dy: 0 }, { dx: d, dy: 0 }, { dx: -diag, dy: -diag },
+					{ dx: diag, dy: -diag }, { dx: -diag, dy: diag }, { dx: diag, dy: diag }
 				];
 
 				for (let i = 0; i < offsets.length; i++) {
@@ -532,59 +620,88 @@ document.addEventListener("DOMContentLoaded", () => {
 						formeTrouvee.pointEffet = i;
 						window.indexPointEffetCourant = i;
 						window.formeTactiqueSelectionnee = formeTrouvee;
-
 						if (window.billeSelectionneeCourante) {
 							window.billeSelectionneeCourante.style.outline = 'none';
 							window.billeSelectionneeCourante = null;
 							if (typeof rafraichirListeLateraleBilles === "function") rafraichirListeLateraleBilles();
 						}
-
 						window.redessinerToutesLesLignes();
-						return; // Stoppe ici pour changer le point sans déplacer le panneau
+						return;
 					}
 				}
 			}
 
-
 			window.formeTactiqueSelectionnee = formeTrouvee;
 			isDraggingForme = true;
 
-			// Désélectionne la bille active s'il y en avait une
 			if (window.billeSelectionneeCourante) {
 				window.billeSelectionneeCourante.style.outline = 'none';
 				window.billeSelectionneeCourante = null;
 				if (typeof rafraichirListeLateraleBilles === "function") rafraichirListeLateraleBilles();
 			}
 
-			// Mémorise le décalage entre le curseur et le centre de la forme pour éviter tout saut
-			dragOffsetFormeX = coords.x - formeTrouvee.points[0].x;
-			dragOffsetFormeY = coords.y - formeTrouvee.points[0].y;
+			// NOUVEAU : Initialisation du glisser-déposer pour ligne/flèche
+			if (formeTrouvee.estDroite || formeTrouvee.avecFleche) {
+				const p1 = formeTrouvee.points[0];
+				const p2 = formeTrouvee.points[formeTrouvee.points.length - 1];
+				formeTrouvee._dragOrigin = {
+					clicX: coords.x,
+					clicY: coords.y,
+					p1: { x: p1.x, y: p1.y },
+					p2: { x: p2.x, y: p2.y }
+				};
+			} else {
+				dragOffsetFormeX = coords.x - formeTrouvee.points[0].x;
+				dragOffsetFormeY = coords.y - formeTrouvee.points[0].y;
+			}
 
 			window.redessinerToutesLesLignes();
 		} else if (window.formeTactiqueSelectionnee) {
-			// Clic dans le vide : désélectionne la forme
 			window.formeTactiqueSelectionnee = null;
 			window.redessinerToutesLesLignes();
 		}
-
 	}
-		// 2. MOUVEMENT DE LA FORME
+
+		// 2. MOUVEMENT DE LA FORME OU LIGNE
 	function gererMouvementDeplacementForme(e) {
 		if (!isDraggingForme || !window.formeTactiqueSelectionnee) return;
 		if (e.cancelable) e.preventDefault();
 
 		const coords = obtenirCoordonneesEvenement(e, table);
+
+		// --- NOUVEAU : ÉDITION D'UNE LIGNE DROITE OU D'UNE FLÈCHE ---
+		if (window.formeTactiqueSelectionnee.estDroite || window.formeTactiqueSelectionnee.avecFleche) {
+			const f = window.formeTactiqueSelectionnee;
+			const mode = f._modeEditionLigne || 'move';
+			const orig = f._dragOrigin;
+
+			if (mode === 'start') {
+				const nouveauDepart = calculerAimantationExtremiteLigne(coords.x, coords.y, e.shiftKey);
+				f.points = [nouveauDepart, { x: orig.p2.x, y: orig.p2.y }];
+			} else if (mode === 'end') {
+				const nouvelleArrivee = calculerAimantationExtremiteLigne(coords.x, coords.y, e.shiftKey);
+				f.points = [{ x: orig.p1.x, y: orig.p1.y }, nouvelleArrivee];
+			} else if (mode === 'move' && orig) {
+				const dx = coords.x - orig.clicX;
+				const dy = coords.y - orig.clicY;
+				const p1Clampe = clampPositionDessin(orig.p1.x + dx, orig.p1.y + dy);
+				const p2Clampe = clampPositionDessin(orig.p2.x + dx, orig.p2.y + dy);
+				f.points = [p1Clampe, p2Clampe];
+			}
+
+			window.redessinerToutesLesLignes();
+			return;
+		}
+
 		let newX = coords.x - dragOffsetFormeX;
 		let newY = coords.y - dragOffsetFormeY;
 
-		// Applique les limites de la table
 		const posClampee = clampPositionDessin(newX, newY);
 		newX = posClampee.x;
 		newY = posClampee.y;
 
-			// --- SI C'EST UNE BILLE FANTÔME EN DÉPLACEMENT (BRAS DE LEVIER) ---
+		// --- SI C'EST UNE BILLE FANTÔME EN DÉPLACEMENT ---
 		if (window.formeTactiqueSelectionnee.estGhostBall) {
-			// On passe directement coords.x / coords.y (sans offset ni clamp) pour permettre d'éloigner le doigt/curseur
 			const resultatGhost = dessinerBilleFantome(coords.x, coords.y, window.formeTactiqueSelectionnee.couleur);
 
 			window.formeTactiqueSelectionnee.points = [{ x: resultatGhost.x, y: resultatGhost.y }];
@@ -594,17 +711,14 @@ document.addEventListener("DOMContentLoaded", () => {
 			window.formeTactiqueSelectionnee.enDeplacement = true;
 			window.formeTactiqueSelectionnee.curseurLevier = { x: coords.x, y: coords.y };
 
-			// --- SYNCHRONISATION DU PANNEAU QUANTITÉ D'IMPACT ---
 			if (resultatGhost.pctImpact !== null) {
 				let panneauImpact = window.dessinsSauvegardes.find(
 					d => d.estPointContact && d.lieAGhostId === window.formeTactiqueSelectionnee.ghostId
 				);
-
 				if (!panneauImpact) {
 					const panneaux = window.dessinsSauvegardes.filter(d => d.estPointContact);
 					if (panneaux.length > 0) panneauImpact = panneaux[panneaux.length - 1];
 				}
-
 				if (panneauImpact) {
 					panneauImpact.pourcentage = resultatGhost.pctImpact;
 					panneauImpact.cote = resultatGhost.coteImpact;
@@ -618,9 +732,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			return;
 		}
 
-
-
-		// Magnétisme sur la grille pour les autres formes (Cible, Carré, Repère...)
+		// Magnétisme sur la grille pour les autres formes
 		if (typeof calculerSnapGrille === "function" && !e.shiftKey) {
 			const snap = calculerSnapGrille(newX - 12, newY - 12, null, true);
 			newX = snap.x + 12;
@@ -2167,12 +2279,29 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 				ctx.arc(pt.x, pt.y, 17, 0, 2 * Math.PI);
 				ctx.stroke();
 			}
-			else if (f.estGhostBall) {
-				// Cercle ajusté autour de la bille fantôme (rayon bille 12px + marge 4px)
+						else if (f.estGhostBall) {
 				ctx.beginPath();
 				ctx.arc(pt.x, pt.y, 16, 0, 2 * Math.PI);
 				ctx.stroke();
 			}
+			// NOUVEAU : Poignées visuelles aux extrémités de la ligne ou flèche sélectionnée
+			else if ((f.estDroite || f.avecFleche) && f.points.length >= 2) {
+				const p1 = f.points[0];
+				const p2 = f.points[f.points.length - 1];
+
+				ctx.setLineDash([]);
+				[p1, p2].forEach((extremite, idx) => {
+					ctx.beginPath();
+					ctx.arc(extremite.x, extremite.y, 6, 0, 2 * Math.PI);
+					// Vert pour le point de départ, bleu clair pour l'arrivée
+					ctx.fillStyle = idx === 0 ? "#2ecc71" : "#38bdf8";
+					ctx.fill();
+					ctx.lineWidth = 2;
+					ctx.strokeStyle = "#ffffff";
+					ctx.stroke();
+				});
+			}
+
 
 			ctx.restore();
 		}
@@ -2462,8 +2591,9 @@ document.addEventListener('keydown', (e) => {
 
 
 			const pasDegres = e.shiftKey ? 1.0 : 0.2;
-			const direction = (e.key === 'ArrowRight') ? 1 : -1;
+			const direction = (e.key === 'ArrowRight') ? -1 : 1; // Inversé pour correspondre au côté de coupe
 			angleActuel += direction * ((pasDegres * Math.PI) / 180);
+
 
 			const resultatGhost = dessinerBilleFantome(0, 0, formeGhost.couleur, formeGhost, angleActuel);
 			formeGhost.points = [{ x: resultatGhost.x, y: resultatGhost.y }];
