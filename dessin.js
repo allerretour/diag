@@ -793,16 +793,16 @@ function dessinerPointContact(x, y, couleur, pctFige, coteFige) {
 	ctx.font = "600 10px system-ui, -apple-system, sans-serif";
 	ctx.textAlign = "center";
 	ctx.textBaseline = "bottom";
-	ctx.fillText("QUANTITÉ D'IMPACT", centreCadreX, centreCadreY - rayonBille - 14);
+	ctx.fillText("QUANTITÉ D'IMPACT", centreCadreX, centreCadreY - rayonBille - 21);
 
 	ctx.font = "bold 11px system-ui, -apple-system, sans-serif";
 	ctx.textBaseline = "top";
 	ctx.fillStyle = "#ffffff";
 	if (pct === 100) {
-		ctx.fillText("IMPACT PLEIN", centreCadreX, centreCadreY + rayonBille + 14);
+		ctx.fillText("IMPACT PLEIN", centreCadreX, centreCadreY + rayonBille + 18);
 	} else {
 		const coteTexte = cote === 1 ? "GAUCHE" : "DROITE";
-		ctx.fillText(`${pct}% - ${coteTexte}`, centreCadreX, centreCadreY + rayonBille + 14);
+		ctx.fillText(`${pct}% - ${coteTexte}`, centreCadreX, centreCadreY + rayonBille + 18);
 	}
 
 	ctx.restore();
@@ -1395,18 +1395,40 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 
 
 
-	// --- LABELS ET TYPOGRAPHIE SYSTEM-UI ---
+		// --- LABELS ET TYPOGRAPHIE SYSTEM-UI ---
 	ctx.fillStyle = "rgba(150, 165, 185, 0.85)";
 	ctx.font = "600 10px system-ui, -apple-system, sans-serif";
 	ctx.textAlign = "center";
 	ctx.textBaseline = "bottom";
-	ctx.fillText("CONTACT", billeX, billeY - rayonBille - 8);
+	ctx.fillText("EFFET", billeX, billeY - rayonBille - 8);
+
+	// --- NOUVEAU : LIBELLÉ DE L'EFFET SOUS LA BILLE BLANCHE ---
+	const nomsEffets = [
+		"AUCUN",       // 0
+		"COULÉ",        // 1
+		"RÉTRO",        // 2
+		"GAUCHE",       // 3
+		"DROITE",       // 4
+		"COULÉ G.",     // 5
+		"COULÉ D.",     // 6
+		"RÉTRO G.",     // 7
+		"RÉTRO D."      // 8
+	];
+	const texteEffet = nomsEffets[pointActif] || "CENTRE";
+
+	ctx.fillStyle = couleurPointActif;
+	ctx.font = "bold 10px system-ui, -apple-system, sans-serif";
+	ctx.textAlign = "center";
+	ctx.textBaseline = "top";
+	ctx.fillText(texteEffet, billeX, billeY + rayonBille + 8);
+
 
 	// --- JAUGE DE PUISSANCE COMPACTE ET CENTRÉE VERTICALEMENT ---
 	if (jaugeActive) {
 		const jaugeHeight = rayonBille * 2;
 
 		ctx.fillStyle = "rgba(150, 165, 185, 0.85)";
+		ctx.textBaseline = "bottom";
 		ctx.fillText("FORCE", jaugeX + (jaugeWidth / 2), billeY - rayonBille - 8);
 
 		const grad = ctx.createLinearGradient(jaugeX, billeY + rayonBille, jaugeX, billeY - rayonBille);
@@ -1445,7 +1467,7 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 		ctx.fillStyle = couleursForce[forceActuelle];
 		ctx.font = "bold 10px system-ui, -apple-system, sans-serif";
 		ctx.textBaseline = "top";
-		ctx.fillText(`${forceActuelle * 25}%`, jaugeX + (jaugeWidth / 2), billeY + rayonBille + 5);
+		ctx.fillText(`${forceActuelle * 25}%`, jaugeX + (jaugeWidth / 2), billeY + rayonBille + 8);
 	}
 
 	ctx.restore();
