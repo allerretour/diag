@@ -1015,7 +1015,7 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 			if (finTangenteAvant.longueur > 6) {
 				ctx.save();
 				ctx.beginPath();
-				ctx.setLineDash([]);
+				ctx.setLineDash([3, 3]);
 				ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
 				ctx.lineWidth = 2;
 				ctx.moveTo(ghostX, ghostY);
