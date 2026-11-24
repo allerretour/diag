@@ -1284,21 +1284,83 @@ function sauvegarderEtatPlaylistCourant() {
 	};
 }
 
-// 3. Ajouter la table actuelle comme NOUVEAU diagramme (sans écraser le précédent)
+// 3. Insérer un NOUVEAU diagramme vierge juste après celui affiché
 function ajouterDiagrammeActuelAPlaylist() {
-	const titreActuel = (titleInput && titleInput.value.trim()) 
-		? titleInput.value.trim() 
-		: `Diagramme ${window.playlistDiag.length + 1}`;
-	
-	window.playlistDiag.push({
-		nomFichier: `${titreActuel}.diag`,
-		donnees: {}
-	});
+	// 1. Si une série est déjà en cours, on sauvegarde l'état du diagramme actuel
+	if (window.playlistDiag.length > 0) {
+		sauvegarderEtatPlaylistCourant();
+	} else {
+		// Premier clic sur "+ Série" : on enregistre d'abord la table actuelle comme 1er diagramme
+		const titrePremier = (titleInput && titleInput.value.trim()) 
+			? titleInput.value.trim() 
+			: "Diagramme 1";
+		window.playlistDiag.push({
+			nomFichier: `${titrePremier}.diag`,
+			donnees: {}
+		});
+		window.indexPlaylistCourant = 0;
+		sauvegarderEtatPlaylistCourant();
+	}
 
-	window.indexPlaylistCourant = window.playlistDiag.length - 1;
-	sauvegarderEtatPlaylistCourant();
+	// 2. Calcul de la position d'insertion (juste après le diagramme actuel)
+	const nouvelIndex = window.indexPlaylistCourant + 1;
+	const nouveauTitre = `Diagramme ${window.playlistDiag.length + 1}`;
+
+	// 3. Réinitialisation de la table (billes rangées par défaut sur 2 lignes, tracés effacés)
+	const gridLeft = 19, gridTop = 17, gridWidth = 754, gridHeight = 364;
+	const pasX = gridWidth / 16, pasY = gridHeight / 8, rayon = 12;
+
+	const billesVierges = [];
+	let idxPos = 0;
+	for (let y = 1; y <= 2; y++) {
+		for (let x = 1; x <= 8; x++) {
+			billesVierges.push({
+				id: String(idxPos),
+				x: `${gridLeft + (x * pasX) - rayon}px`,
+				y: `${gridTop + ((8 - y) * pasY) - rayon}px`,
+				visible: true,
+				verrouillee: false
+			});
+			idxPos++;
+		}
+	}
+
+	const pochesVierges = Array.from(document.querySelectorAll('.pocket')).map(p => ({
+		id: p.getAttribute('data-pocket-id') || p.className.split(' ')[1],
+		color: "#000000"
+	}));
+
+	// 4. Création des données vierges (conserve votre tapis, grille et logo actuels)
+	const nouveauDiagramme = {
+		nomFichier: `${nouveauTitre}.diag`,
+		donnees: {
+			titre: nouveauTitre,
+			description: "",
+			nombreBillesVisibles: "15",
+			logoImageRaw: window.logoBase64Courant,
+			billes: billesVierges,
+			lignesDessinees: [],
+			pochesColoriees: pochesVierges,
+			optionsVisuelles: {
+				grille: document.getElementById('chk-toggle-grid')?.checked ?? false,
+				hd: document.getElementById('chk-high-density-grid')?.checked ?? false,
+				magnetisme: document.getElementById('chk-magnetism')?.checked ?? true,
+				logo: document.getElementById('chk-show-logo')?.checked ?? false,
+				titreVisible: document.getElementById('chk-show-title')?.checked ?? false,
+				couleurTapis: document.querySelector('input[name="felt-color"]:checked')?.value || "vert",
+				listeBillesVisible: document.getElementById('chk-toggle-balls-list')?.checked ?? true
+			}
+		}
+	};
+
+	// 5. Insertion juste après le diagramme actuel et affichage immédiat
+	window.playlistDiag.splice(nouvelIndex, 0, nouveauDiagramme);
+	window.indexPlaylistCourant = nouvelIndex;
+
+	appliquerDonneesConfiguration(nouveauDiagramme.donnees);
 	majBarreNavigationPlaylist();
 }
+
 
 // 4. Supprimer le diagramme affiché de la série en mémoire
 function supprimerDiagrammePlaylistCourant() {
@@ -1319,6 +1381,8 @@ function supprimerDiagrammePlaylistCourant() {
 	appliquerDonneesConfiguration(window.playlistDiag[window.indexPlaylistCourant].donnees);
 	majBarreNavigationPlaylist();
 }
+
+
 
 // 5. Changement de diagramme dans la série
 function chargerDiagrammePlaylist(index) {
@@ -1365,7 +1429,28 @@ async function exporterPlaylistEnZip() {
 	URL.revokeObjectURL(a.href);
 }
 
-// 7. Barre de navigation flottante avec menu déroulant direct et partage rapide
+// 1. Fonction pour déplacer le diagramme actuel vers le haut (-1) ou vers le bas (+1)
+function deplacerDiagrammePlaylist(direction) {
+	const total = window.playlistDiag.length;
+	if (total < 2) return;
+
+	sauvegarderEtatPlaylistCourant();
+
+	const ancienIndex = window.indexPlaylistCourant;
+	const nouvelIndex = ancienIndex + direction;
+
+	if (nouvelIndex < 0 || nouvelIndex >= total) return;
+
+	// Échange des deux diagrammes dans la liste
+	const temp = window.playlistDiag[ancienIndex];
+	window.playlistDiag[ancienIndex] = window.playlistDiag[nouvelIndex];
+	window.playlistDiag[nouvelIndex] = temp;
+
+	window.indexPlaylistCourant = nouvelIndex;
+	majBarreNavigationPlaylist();
+}
+
+// 2. Votre fonction mise à jour avec les boutons d'ordre
 function majBarreNavigationPlaylist() {
 	let barre = document.getElementById('playlist-nav-bar');
 
@@ -1391,6 +1476,10 @@ function majBarreNavigationPlaylist() {
 	const total = window.playlistDiag.length;
 	const actuel = window.indexPlaylistCourant;
 
+	// Désactive visuellement les flèches de tri si on est déjà tout en haut ou tout en bas
+	const styleUp = actuel === 0 ? "opacity: 0.3; cursor: default;" : "cursor: pointer;";
+	const styleDown = actuel === total - 1 ? "opacity: 0.3; cursor: default;" : "cursor: pointer;";
+
 	// Génération des options du menu déroulant
 	const optionsHtml = window.playlistDiag.map((item, idx) => {
 		const titre = item.donnees.titre || item.nomFichier.replace(/\.diag$/i, '');
@@ -1401,10 +1490,12 @@ function majBarreNavigationPlaylist() {
 	barre.style.display = 'flex';
 	barre.innerHTML = `
 		<button id="btn-diag-prev" style="background:none; border:none; color:#fff; font-size:15px; cursor:pointer; padding:2px 6px;" title="Précédent">◀</button>
-		<select id="select-diag-playlist" style="background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:3px 8px; font-weight:600; max-width:230px; cursor:pointer; outline:none;">
+		<select id="select-diag-playlist" style="background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:3px 8px; font-weight:600; max-width:210px; cursor:pointer; outline:none;">
 			${optionsHtml}
 		</select>
 		<button id="btn-diag-next" style="background:none; border:none; color:#fff; font-size:15px; cursor:pointer; padding:2px 6px;" title="Suivant">▶</button>
+		<button id="btn-diag-move-up" style="background:rgba(255,255,255,0.12); border:none; color:#fff; font-size:12px; border-radius:10px; padding:4px 7px; ${styleUp}" title="Avancer ce diagramme dans la série">⬆</button>
+		<button id="btn-diag-move-down" style="background:rgba(255,255,255,0.12); border:none; color:#fff; font-size:12px; border-radius:10px; padding:4px 7px; ${styleDown}" title="Reculer ce diagramme dans la série">⬇</button>
 		<span style="color:rgba(255,255,255,0.2);">|</span>
 		<button id="btn-diag-add" style="background:#2980b9; border:none; color:#fff; font-size:12px; font-weight:600; border-radius:14px; padding:4px 9px; cursor:pointer;" title="Ajouter la table actuelle comme nouveau diagramme">+ Ajouter</button>
 		<button id="btn-diag-del" style="background:#c0392b; border:none; color:#fff; font-size:12px; border-radius:14px; padding:4px 8px; cursor:pointer;" title="Retirer ce diagramme">🗑</button>
@@ -1416,6 +1507,8 @@ function majBarreNavigationPlaylist() {
 	document.getElementById('btn-diag-prev').onclick = () => chargerDiagrammePlaylist((actuel - 1 + total) % total);
 	document.getElementById('btn-diag-next').onclick = () => chargerDiagrammePlaylist((actuel + 1) % total);
 	document.getElementById('select-diag-playlist').onchange = (e) => chargerDiagrammePlaylist(parseInt(e.target.value, 10));
+	document.getElementById('btn-diag-move-up').onclick = () => deplacerDiagrammePlaylist(-1);
+	document.getElementById('btn-diag-move-down').onclick = () => deplacerDiagrammePlaylist(1);
 	document.getElementById('btn-diag-add').onclick = ajouterDiagrammeActuelAPlaylist;
 	document.getElementById('btn-diag-del').onclick = supprimerDiagrammePlaylistCourant;
 	document.getElementById('btn-diag-zip').onclick = exporterPlaylistEnZip;
@@ -1434,6 +1527,7 @@ function majBarreNavigationPlaylist() {
 		barre.style.display = 'none';
 	};
 }
+
 
 // 6. Écouteurs bouton 📂 et Glisser-Déposer
 if (importTriggerBtn && fileImportInput) {
