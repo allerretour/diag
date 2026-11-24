@@ -3629,19 +3629,51 @@ function commencerDessin(e) {
 	canvas.addEventListener('contextmenu', e => e.preventDefault());
 
 	
-	table.addEventListener('dblclick', (e) => {
-    if (window.isViewMode || window.outilTraceActif !== "select") return;
-    const coords = obtenirCoordonneesEvenement(e, table);
-    const forme = window.trouverFormeTactiqueProche(coords.x, coords.y);
+	// Fonction unique pour éditer un Post-it (PC et iPad)
+	function editerPostIt(forme) {
+		if (!forme || !forme.estPostIt) return;
+		const nouveauTexte = prompt("Modifier la note :", forme.texte.replace(/\n/g, '\\n'));
+		if (nouveauTexte !== null && nouveauTexte.trim() !== "") {
+			forme.texte = nouveauTexte.replace(/\\n/g, '\n');
+			window.redessinerToutesLesLignes();
+		}
+	}
 
-    if (forme && forme.estPostIt) {
-        const nouveauTexte = prompt("Modifier la note :", forme.texte.replace(/\n/g, '\\n'));
-        if (nouveauTexte !== null && nouveauTexte.trim() !== "") {
-            forme.texte = nouveauTexte.replace(/\\n/g, '\n');
-            window.redessinerToutesLesLignes();
-        }
-    }
+	// Détection du double-tap tactile sur iPad / iPhone
+	let dernierTapPostIt = 0;
+	table.addEventListener('touchstart', (e) => {
+		if (window.isViewMode || window.outilTraceActif !== "select") return;
+		if (e.touches.length > 1) return; // Ignore le pincement à 2 doigts
+
+		const coords = obtenirCoordonneesEvenement(e, table);
+		const forme = window.trouverFormeTactiqueProche(coords.x, coords.y);
+
+		if (forme && forme.estPostIt) {
+			const maintenant = Date.now();
+			const delai = maintenant - dernierTapPostIt;
+
+			if (delai > 40 && delai < 320) {
+				if (e.cancelable) e.preventDefault();
+				isDraggingForme = false; // Annule le glisser-déposer déclenché au 1er tap
+				dernierTapPostIt = 0;
+				setTimeout(() => editerPostIt(forme), 10);
+			} else {
+				dernierTapPostIt = maintenant;
+			}
+		}
+	}, { passive: false });
+
+	// Écouteur PC (remplace votre ancien bloc dblclick)
+	table.addEventListener('dblclick', (e) => {
+		if (window.isViewMode || window.outilTraceActif !== "select") return;
+		const coords = obtenirCoordonneesEvenement(e, table);
+		const forme = window.trouverFormeTactiqueProche(coords.x, coords.y);
+
+		if (forme && forme.estPostIt) {
+			editerPostIt(forme);
+		}
 	});
+
 
 	setTimeout(resizeCanvas, 100);
 });
