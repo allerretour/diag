@@ -1383,6 +1383,37 @@ function supprimerDiagrammePlaylistCourant() {
 }
 
 
+// Dupliquer le diagramme affiché et l'insérer juste après
+function dupliquerDiagrammePlaylistCourant() {
+	if (window.playlistDiag.length === 0) return;
+
+	// 1. Sauvegarde l'état actuel à l'écran avant de le copier
+	sauvegarderEtatPlaylistCourant();
+
+	const source = window.playlistDiag[window.indexPlaylistCourant];
+	// 2. Copie profonde (JSON) pour que les modifications futures ne touchent pas l'original
+	const copieDonnees = JSON.parse(JSON.stringify(source.donnees));
+
+	const titreBase = (copieDonnees.titre || source.nomFichier.replace(/\.diag$/i, '') || "Diagramme");
+	const nouveauTitre = `${titreBase} (copie)`;
+	copieDonnees.titre = nouveauTitre;
+
+	const nouveauDiagramme = {
+		nomFichier: `${nouveauTitre}.diag`,
+		donnees: copieDonnees
+	};
+
+	// 3. Insertion juste après le diagramme actuel et affichage immédiat
+	const nouvelIndex = window.indexPlaylistCourant + 1;
+	window.playlistDiag.splice(nouvelIndex, 0, nouveauDiagramme);
+	window.indexPlaylistCourant = nouvelIndex;
+
+	appliquerDonneesConfiguration(nouveauDiagramme.donnees);
+	majBarreNavigationPlaylist();
+}
+
+
+
 
 // 5. Changement de diagramme dans la série
 function chargerDiagrammePlaylist(index) {
@@ -1476,10 +1507,6 @@ function majBarreNavigationPlaylist() {
 	const total = window.playlistDiag.length;
 	const actuel = window.indexPlaylistCourant;
 
-	// Désactive visuellement les flèches de tri si on est déjà tout en haut ou tout en bas
-	const styleUp = actuel === 0 ? "opacity: 0.3; cursor: default;" : "cursor: pointer;";
-	const styleDown = actuel === total - 1 ? "opacity: 0.3; cursor: default;" : "cursor: pointer;";
-
 	// Génération des options du menu déroulant
 	const optionsHtml = window.playlistDiag.map((item, idx) => {
 		const titre = item.donnees.titre || item.nomFichier.replace(/\.diag$/i, '');
@@ -1488,6 +1515,27 @@ function majBarreNavigationPlaylist() {
 	}).join('');
 
 	barre.style.display = 'flex';
+
+	// --- AFFICHAGE ÉPURÉ EN MODE VIEW (LECTURE SEULE) ---
+	if (window.isViewMode) {
+		barre.innerHTML = `
+			<button id="btn-diag-prev" style="background:none; border:none; color:#fff; font-size:15px; cursor:pointer; padding:2px 6px;" title="Précédent">◀</button>
+			<select id="select-diag-playlist" style="background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:3px 8px; font-weight:600; max-width:240px; cursor:pointer; outline:none;">
+				${optionsHtml}
+			</select>
+			<button id="btn-diag-next" style="background:none; border:none; color:#fff; font-size:15px; cursor:pointer; padding:2px 6px;" title="Suivant">▶</button>
+		`;
+
+		document.getElementById('btn-diag-prev').onclick = () => chargerDiagrammePlaylist((actuel - 1 + total) % total);
+		document.getElementById('btn-diag-next').onclick = () => chargerDiagrammePlaylist((actuel + 1) % total);
+		document.getElementById('select-diag-playlist').onchange = (e) => chargerDiagrammePlaylist(parseInt(e.target.value, 10));
+		return;
+	}
+
+	// --- AFFICHAGE COMPLET EN MODE ÉDITION ---
+	const styleUp = actuel === 0 ? "opacity: 0.3; cursor: default;" : "cursor: pointer;";
+	const styleDown = actuel === total - 1 ? "opacity: 0.3; cursor: default;" : "cursor: pointer;";
+
 	barre.innerHTML = `
 		<button id="btn-diag-prev" style="background:none; border:none; color:#fff; font-size:15px; cursor:pointer; padding:2px 6px;" title="Précédent">◀</button>
 		<select id="select-diag-playlist" style="background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:3px 8px; font-weight:600; max-width:210px; cursor:pointer; outline:none;">
@@ -1497,7 +1545,8 @@ function majBarreNavigationPlaylist() {
 		<button id="btn-diag-move-up" style="background:rgba(255,255,255,0.12); border:none; color:#fff; font-size:12px; border-radius:10px; padding:4px 7px; ${styleUp}" title="Avancer ce diagramme dans la série">⬆</button>
 		<button id="btn-diag-move-down" style="background:rgba(255,255,255,0.12); border:none; color:#fff; font-size:12px; border-radius:10px; padding:4px 7px; ${styleDown}" title="Reculer ce diagramme dans la série">⬇</button>
 		<span style="color:rgba(255,255,255,0.2);">|</span>
-		<button id="btn-diag-add" style="background:#2980b9; border:none; color:#fff; font-size:12px; font-weight:600; border-radius:14px; padding:4px 9px; cursor:pointer;" title="Ajouter la table actuelle comme nouveau diagramme">+ Ajouter</button>
+		<button id="btn-diag-add" style="background:#2980b9; border:none; color:#fff; font-size:12px; font-weight:600; border-radius:14px; padding:4px 9px; cursor:pointer;" title="Ajouter un diagramme vierge">+ Ajouter</button>
+		<button id="btn-diag-dup" style="background:#16a085; border:none; color:#fff; font-size:12px; font-weight:600; border-radius:14px; padding:4px 8px; cursor:pointer;" title="Dupliquer ce diagramme">📋</button>
 		<button id="btn-diag-del" style="background:#c0392b; border:none; color:#fff; font-size:12px; border-radius:14px; padding:4px 8px; cursor:pointer;" title="Retirer ce diagramme">🗑</button>
 		<button id="btn-diag-share-one" style="background:#8e44ad; border:none; color:#fff; font-size:12px; border-radius:14px; padding:4px 8px; cursor:pointer;" title="Copier le lien de partage de ce diagramme">🔗</button>
 		<button id="btn-diag-zip" style="background:#27ae60; border:none; color:#fff; font-size:12px; font-weight:600; border-radius:14px; padding:4px 10px; cursor:pointer;" title="Télécharger toute la série en ZIP">📦 ZIP</button>
@@ -1510,10 +1559,11 @@ function majBarreNavigationPlaylist() {
 	document.getElementById('btn-diag-move-up').onclick = () => deplacerDiagrammePlaylist(-1);
 	document.getElementById('btn-diag-move-down').onclick = () => deplacerDiagrammePlaylist(1);
 	document.getElementById('btn-diag-add').onclick = ajouterDiagrammeActuelAPlaylist;
+	document.getElementById('btn-diag-dup').onclick = dupliquerDiagrammePlaylistCourant;
 	document.getElementById('btn-diag-del').onclick = supprimerDiagrammePlaylistCourant;
 	document.getElementById('btn-diag-zip').onclick = exporterPlaylistEnZip;
 
-	// Partage rapide du diagramme affiché
+
 	document.getElementById('btn-diag-share-one').onclick = async () => {
 		const btn = document.getElementById('btn-diag-share-one');
 		const lien = await genererLienPartage(true);
