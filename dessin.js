@@ -344,6 +344,85 @@ document.addEventListener("DOMContentLoaded", () => {
 		});
 	});
 
+		// === BARRE DE RÉGLAGE TACTILE POUR L'ANGLE DU GHOST ===
+	function pivoterGhostSelectionne(deltaDegres) {
+		const formeGhost = window.formeTactiqueSelectionnee;
+		if (!formeGhost || !formeGhost.estGhostBall || !formeGhost.cibleCentre || !formeGhost.points || !formeGhost.points.length) return;
+
+		const ptActuel = formeGhost.points[0];
+		let angleActuel = Math.atan2(ptActuel.y - formeGhost.cibleCentre.y, ptActuel.x - formeGhost.cibleCentre.x);
+		angleActuel += (deltaDegres * Math.PI) / 180;
+
+		const resultatGhost = dessinerBilleFantome(0, 0, formeGhost.couleur, formeGhost, angleActuel);
+		formeGhost.points = [{ x: resultatGhost.x, y: resultatGhost.y }];
+		formeGhost.expireBadgeLe = Date.now() + 2500;
+
+		if (resultatGhost.pctImpact !== null) {
+			const panneauImpact = window.dessinsSauvegardes.find(
+				d => d.estPointContact && d.lieAGhostId === formeGhost.ghostId
+			);
+			if (panneauImpact) {
+				panneauImpact.pourcentage = resultatGhost.pctImpact;
+				panneauImpact.cote = resultatGhost.coteImpact;
+			}
+		}
+		window.redessinerToutesLesLignes();
+	}
+
+	function majBarreReglageGhost() {
+		let barre = document.getElementById('ghost-angle-tuner');
+		const f = window.formeTactiqueSelectionnee;
+
+		if (!f || !f.estGhostBall || !f.cibleCentre || window.isViewMode) {
+			if (barre) barre.style.display = 'none';
+			return;
+		}
+
+		if (!barre) {
+			barre = document.createElement('div');
+			barre.id = 'ghost-angle-tuner';
+			barre.style.cssText = `
+				position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+				background: rgba(11, 15, 23, 0.94); border: 1px solid rgba(255, 255, 255, 0.25);
+				border-radius: 24px; padding: 6px 12px; display: flex; align-items: center; gap: 8px;
+				z-index: 1005; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5); touch-action: manipulation;
+			`;
+
+			const pasBoutons = [
+				{ label: '⏪ -1°', delta: -1.0 },
+				{ label: '◀ -0.2°', delta: -0.2 },
+				{ label: '+0.2° ▶', delta: 0.2 },
+				{ label: '+1° ⏩', delta: 1.0 }
+			];
+
+			pasBoutons.forEach(item => {
+				const btn = document.createElement('button');
+				btn.type = 'button';
+				btn.innerText = item.label;
+				btn.style.cssText = `
+					background: rgba(255, 255, 255, 0.14); color: #fff; border: none;
+					border-radius: 14px; padding: 7px 12px; font-size: 13px; font-weight: 700;
+					cursor: pointer; font-family: system-ui, -apple-system, sans-serif;
+					user-select: none; -webkit-user-select: none;
+				`;
+				const action = (e) => {
+					e.preventDefault();
+					e.stopPropagation();
+					pivoterGhostSelectionne(item.delta);
+				};
+				btn.addEventListener('touchstart', action, { passive: false });
+				btn.addEventListener('mousedown', (e) => {
+					if (e.button === 0) action(e);
+				});
+				barre.appendChild(btn);
+			});
+
+
+			table.appendChild(barre);
+		}
+
+		barre.style.display = 'flex';
+	}
 
 
 
@@ -358,6 +437,11 @@ document.addEventListener("DOMContentLoaded", () => {
 			window.redessinerToutesLesLignes();
 			return;
 		}
+		// Si l'utilisateur appuie sur la barre de réglage d'angle du Ghost, on ne désélectionne pas
+		if (e.target.closest('#ghost-angle-tuner')) {
+			return;
+		}
+
 
 		const coords = obtenirCoordonneesEvenement(e, table);
 		const formeTrouvee = window.trouverFormeTactiqueProche(coords.x, coords.y);
@@ -725,7 +809,7 @@ function dessinerPointContact(x, y, couleur, pctFige, coteFige) {
 }
 
 
-function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
+function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angleForce = null) {
 	ctx.save();
 	ctx.imageSmoothingEnabled = true;
 	ctx.imageSmoothingQuality = 'high';
@@ -734,10 +818,12 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 	const distanceContact = rayon * 2; // 24px entre les deux centres
 	const couleurRepli = couleur || (colorSelect ? colorSelect.value : '#ffffff');
 
-	// === PARAMÈTRES D'AIMANTATION (EN DEGRÉS) ===
+		// === PARAMÈTRES D'AIMANTATION ===
 	const TOLERANCE_IMPACT_PLEIN_DEGRES = 0.8; // Aimant fin pour le 100%
-	const TOLERANCE_AIMANT_ZERO_DEGRES = 2.2;  // Aimant pour la coupe rasante à 0% (90°)
-	const TOLERANCE_AIMANT_POCHE_DEGRES = 4;   // Aimant pour l'empochage vers les 6 poches
+	const TOLERANCE_AIMANT_ZERO_DEGRES = 1.8;  // Aimant fin pour la coupe rasante à 0% (90°)
+	const TOLERANCE_AIMANT_POCHE_DEGRES = 4.0; // Aimantation franche vers les 6 poches
+
+
 
 	const seuilPleinRadian = Math.sin((TOLERANCE_IMPACT_PLEIN_DEGRES * Math.PI) / 180);
 	const seuilZeroRadian = (TOLERANCE_AIMANT_ZERO_DEGRES * Math.PI) / 180;
@@ -749,15 +835,16 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 	const minY = 18 + rayon;       // 30px
 	const maxY = 18 + 364 - rayon; // 370px
 
-	// --- COORDONNÉES DES 6 POCHES DU TAPIS ---
+		// --- COORDONNÉES DES 6 POCHES DU TAPIS ---
 	const pochesTapis = [
-		{ x: 19, y: 18 },             // Haut-Gauche
-		{ x: 19 + 377, y: 18 },       // Milieu-Haut
-		{ x: 19 + 754, y: 18 },       // Haut-Droit
-		{ x: 19, y: 18 + 364 },       // Bas-Gauche
-		{ x: 19 + 377, y: 18 + 364 }, // Milieu-Bas
-		{ x: 19 + 754, y: 18 + 364 }  // Bas-Droit
+		{ x: 24, y: 23 },             // Haut-Gauche
+		{ x: 19 + 377, y: 16 },       // Milieu-Haut
+		{ x: 19 + 754 - 5, y: 23 },   // Haut-Droit
+		{ x: 24, y: 18 + 364 - 5 },   // Bas-Gauche
+		{ x: 19 + 377, y: 18 + 366 }, // Milieu-Bas
+		{ x: 19 + 754 - 5, y: 18 + 364 - 5 } // Bas-Droit
 	];
+
 
 	function limiterAuTapis(startX, startY, angle, longueurMax, ignorerBordures = false) {
 		const cos = Math.cos(angle);
@@ -800,90 +887,98 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 	let cibleCentre = null;
 	let couleurCible = couleurRepli;
 
-	// 2. Récupération ou détection de la bille cible la plus proche
-	if (donneeFigee && donneeFigee.cibleCentre && donneeFigee.points && donneeFigee.points.length > 0) {
+		// 2. Récupération ou détection de la bille cible la plus proche
+		if (donneeFigee && donneeFigee.cibleCentre && donneeFigee.points && donneeFigee.points.length > 0 && angleForce === null) {
 		ghostX = donneeFigee.points[0].x;
 		ghostY = donneeFigee.points[0].y;
 		cibleCentre = donneeFigee.cibleCentre;
 		couleurCible = donneeFigee.couleurCible || couleurRepli;
 	} else {
-		let distanceMin = 65;
-		if (Array.isArray(activeBalls)) {
-			activeBalls.forEach(ball => {
-				const ballId = ball.getAttribute('data-id');
-				if (ballId !== '0' && ball.style.display !== 'none') {
-					const bx = (parseFloat(ball.style.left) || 0) + rayon;
-					const by = (parseFloat(ball.style.top) || 0) + rayon;
-					const dist = Math.hypot(mouseX - bx, mouseY - by);
+		if (donneeFigee && donneeFigee.cibleCentre) {
+			cibleCentre = donneeFigee.cibleCentre;
+			couleurCible = donneeFigee.couleurCible || couleurRepli;
+		} else {
+			let distanceMin = 65;
+			if (Array.isArray(activeBalls)) {
+				activeBalls.forEach(ball => {
+					const ballId = ball.getAttribute('data-id');
+					if (ballId !== '0' && ball.style.display !== 'none') {
+						const bx = (parseFloat(ball.style.left) || 0) + rayon;
+						const by = (parseFloat(ball.style.top) || 0) + rayon;
+						const dist = Math.hypot(mouseX - bx, mouseY - by);
 
-					if (dist < distanceMin) {
-						distanceMin = dist;
-						cibleCentre = { x: bx, y: by };
-						couleurCible = ball.style.backgroundColor || couleurRepli;
-					}
-				}
-			});
-		}
-
-		if (cibleCentre) {
-			let angleDepuisCible = Math.atan2(mouseY - cibleCentre.y, mouseX - cibleCentre.x);
-			let estAimante = false;
-
-			if (blancheCentre) {
-				const distBlancheCible = Math.hypot(blancheCentre.x - cibleCentre.x, blancheCentre.y - cibleCentre.y);
-				const anglePleinContact = Math.atan2(blancheCentre.y - cibleCentre.y, blancheCentre.x - cibleCentre.x);
-
-				// A. Aimantation à 100% (Impact plein)
-				if (Math.cos(angleDepuisCible - anglePleinContact) > 0 && Math.abs(Math.sin(angleDepuisCible - anglePleinContact)) <= seuilPleinRadian) {
-					angleDepuisCible = anglePleinContact;
-					estAimante = true;
-				}
-
-				// B. Aimantation à 0% (Coupe rasante exacte à 90° à gauche ou à droite)
-				if (!estAimante && distBlancheCible > distanceContact) {
-					const ecartTangence = Math.acos(distanceContact / distBlancheCible);
-					const anglesTangence = [
-						anglePleinContact + ecartTangence,
-						anglePleinContact - ecartTangence
-					];
-
-					for (const angleZero of anglesTangence) {
-						const diffAngle = Math.atan2(Math.sin(angleDepuisCible - angleZero), Math.cos(angleDepuisCible - angleZero));
-						if (Math.abs(diffAngle) <= seuilZeroRadian) {
-							angleDepuisCible = angleZero;
-							estAimante = true;
-							break;
-						}
-					}
-				}
-			}
-
-			// C. Aimantation vers les 6 poches du tapis
-			if (!estAimante) {
-				const angleTirActuel = angleDepuisCible + Math.PI;
-				let ecartMinPoche = seuilPocheRadian;
-				let angleVersPocheRetenu = null;
-
-				pochesTapis.forEach(poche => {
-					const angleVersPoche = Math.atan2(poche.y - cibleCentre.y, poche.x - cibleCentre.x);
-					if (Math.cos(angleTirActuel - angleVersPoche) > 0) {
-						const ecart = Math.abs(Math.sin(angleTirActuel - angleVersPoche));
-						if (ecart < ecartMinPoche) {
-							ecartMinPoche = ecart;
-							angleVersPocheRetenu = angleVersPoche;
+						if (dist < distanceMin) {
+							distanceMin = dist;
+							cibleCentre = { x: bx, y: by };
+							couleurCible = ball.style.backgroundColor || couleurRepli;
 						}
 					}
 				});
-
-				if (angleVersPocheRetenu !== null) {
-					angleDepuisCible = angleVersPocheRetenu + Math.PI;
-				}
 			}
+		}
 
-			ghostX = cibleCentre.x + Math.cos(angleDepuisCible) * distanceContact;
-			ghostY = cibleCentre.y + Math.sin(angleDepuisCible) * distanceContact;
+		if (cibleCentre) {
+			if (angleForce !== null) {
+				ghostX = cibleCentre.x + Math.cos(angleForce) * distanceContact;
+				ghostY = cibleCentre.y + Math.sin(angleForce) * distanceContact;
+			} else {
+				let angleDepuisCible = Math.atan2(mouseY - cibleCentre.y, mouseX - cibleCentre.x);
+				let estAimante = false;
+
+				if (blancheCentre) {
+					const distBlancheCible = Math.hypot(blancheCentre.x - cibleCentre.x, blancheCentre.y - cibleCentre.y);
+					const anglePleinContact = Math.atan2(blancheCentre.y - cibleCentre.y, blancheCentre.x - cibleCentre.x);
+
+					// A. Aimantation à 100% (Impact plein)
+					if (Math.cos(angleDepuisCible - anglePleinContact) > 0 && Math.abs(Math.sin(angleDepuisCible - anglePleinContact)) <= seuilPleinRadian) {
+						angleDepuisCible = anglePleinContact;
+						estAimante = true;
+					}
+
+					// B. Aimantation à 0% (Coupe rasante exacte à 90°)
+					if (!estAimante && distBlancheCible > distanceContact) {
+						const ecartTangence = Math.acos(distanceContact / distBlancheCible);
+						const anglesTangence = [anglePleinContact + ecartTangence, anglePleinContact - ecartTangence];
+
+						for (const angleZero of anglesTangence) {
+							const diffAngle = Math.atan2(Math.sin(angleDepuisCible - angleZero), Math.cos(angleDepuisCible - angleZero));
+							if (Math.abs(diffAngle) <= seuilZeroRadian) {
+								angleDepuisCible = angleZero;
+								estAimante = true;
+								break;
+							}
+						}
+					}
+				}
+
+				// C. Aimantation douce vers les 6 poches du tapis
+				if (!estAimante) {
+					const angleTirActuel = angleDepuisCible + Math.PI;
+					let ecartMinPoche = seuilPocheRadian;
+					let angleVersPocheRetenu = null;
+
+					pochesTapis.forEach(poche => {
+						const angleVersPoche = Math.atan2(poche.y - cibleCentre.y, poche.x - cibleCentre.x);
+						if (Math.cos(angleTirActuel - angleVersPoche) > 0) {
+							const ecart = Math.abs(Math.sin(angleTirActuel - angleVersPoche));
+							if (ecart < ecartMinPoche) {
+								ecartMinPoche = ecart;
+								angleVersPocheRetenu = angleVersPoche;
+							}
+						}
+					});
+
+					if (angleVersPocheRetenu !== null) {
+						angleDepuisCible = angleVersPocheRetenu + Math.PI;
+					}
+				}
+
+				ghostX = cibleCentre.x + Math.cos(angleDepuisCible) * distanceContact;
+				ghostY = cibleCentre.y + Math.sin(angleDepuisCible) * distanceContact;
+			}
 		}
 	}
+
 
 	ghostX = Math.max(minX, Math.min(maxX, ghostX));
 	ghostY = Math.max(minY, Math.min(maxY, ghostY));
@@ -912,7 +1007,11 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 				const dirCentreX = (cibleCentre.x - blancheCentre.x) / distCentreACentre;
 				const dirCentreY = (cibleCentre.y - blancheCentre.y) / distCentreACentre;
 
-				const decalageLateral = vecCibleX * dirCentreY - vecCibleY * dirCentreX;
+								const decalageLateral = vecCibleX * dirCentreY - vecCibleY * dirCentreX;
+
+				// Calcul de l'angle de coupe en degrés
+				const cosAngleCoupe = Math.max(-1, Math.min(1, (dirTirX * (vecCibleX / distanceContact)) + (dirTirY * (vecCibleY / distanceContact))));
+				const angleCoupeDegres = (Math.acos(cosAngleCoupe) * 180 / Math.PI).toFixed(1);
 
 				if (projLongitudinale < -0.5) {
 					estCoupImpossible = true;
@@ -927,19 +1026,20 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 					coteCalcule = decalageLateral > 0 ? -1 : 1;
 
 					if (pctBrut >= 99) {
-						texteBadgeImpact = "100% (Plein)";
+						texteBadgeImpact = "100% (Plein) · 0.0°";
 						pctCalcule = 100;
 					} else if (pctBrut === 0) {
-						texteBadgeImpact = `0% · Finesse (${coteStr})`;
+						texteBadgeImpact = `0% · Finesse (${coteStr}) · ${angleCoupeDegres}°`;
 					} else {
 						let fraction = "";
 						if (Math.abs(pctBrut - 75) <= 3) fraction = " · 3/4";
 						else if (Math.abs(pctBrut - 50) <= 3) fraction = " · 1/2";
 						else if (Math.abs(pctBrut - 25) <= 3) fraction = " · 1/4";
 
-						texteBadgeImpact = `${pctBrut}%${fraction} (${coteStr})`;
+						texteBadgeImpact = `${pctBrut}%${fraction} (${coteStr}) · ${angleCoupeDegres}°`;
 					}
 				}
+
 			}
 
 			ctx.save();
@@ -2092,6 +2192,9 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null) {
 
 			ctx.restore();
 		}
+		
+		if (typeof majBarreReglageGhost === "function") majBarreReglageGhost();
+
 
 		const modeDashed = dashedCheck ? dashedCheck.checked : false;
 		configurerStyleDessin(null, modeDashed);
@@ -2326,6 +2429,41 @@ document.addEventListener('keydown', (e) => {
 		window.redessinerToutesLesLignes();
 	}
 
+		// ROTATION MICRO-MÉTRIQUE DE LA BILLE FANTÔME AUX FLÈCHES GAUCHE / DROITE
+	if (['ArrowLeft', 'ArrowRight'].includes(e.key) && window.formeTactiqueSelectionnee && window.formeTactiqueSelectionnee.estGhostBall) {
+		const formeGhost = window.formeTactiqueSelectionnee;
+				if (formeGhost.cibleCentre && formeGhost.points && formeGhost.points.length > 0) {
+			e.preventDefault();
+
+			const ptActuel = formeGhost.points[0];
+			let angleActuel = Math.atan2(ptActuel.y - formeGhost.cibleCentre.y, ptActuel.x - formeGhost.cibleCentre.x);
+
+
+			const pasDegres = e.shiftKey ? 1.0 : 0.2;
+			const direction = (e.key === 'ArrowRight') ? 1 : -1;
+			angleActuel += direction * ((pasDegres * Math.PI) / 180);
+
+			const resultatGhost = dessinerBilleFantome(0, 0, formeGhost.couleur, formeGhost, angleActuel);
+			formeGhost.points = [{ x: resultatGhost.x, y: resultatGhost.y }];
+			formeGhost.expireBadgeLe = Date.now() + 2500;
+
+			if (resultatGhost.pctImpact !== null) {
+				const panneauImpact = window.dessinsSauvegardes.find(
+					d => d.estPointContact && d.lieAGhostId === formeGhost.ghostId
+				);
+				if (panneauImpact) {
+					panneauImpact.pourcentage = resultatGhost.pctImpact;
+					panneauImpact.cote = resultatGhost.coteImpact;
+				}
+			}
+
+			window.redessinerToutesLesLignes();
+			return;
+		}
+	}
+
+	
+	
 	// DÉPLACEMENT MICRO-MÉTRIQUE DES BILLES AUX FLÈCHES DU CLAVIER
 	if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
 		if (!window.billeSelectionneeCourante || window.billeSelectionneeCourante.style.display === 'none') {
@@ -3031,6 +3169,9 @@ function commencerDessin(e) {
 		}
 	}
 
+	
+
+	
 	const modeDashed = dashedCheck ? dashedCheck.checked : false;
 	configurerStyleDessin(couleurActive, modeDashed);
 	ctx.beginPath();
