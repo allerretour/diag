@@ -692,12 +692,11 @@ if (window.formeTactiqueSelectionnee.estPostIt && window.formeTactiqueSelectionn
 
 		// Calcul des dimensions réelles après prise en compte du débordement de texte éventuel
 		const dimsReelles = dessinerPostIt(
-			0, 0,
-			f.texte,
-			f.couleurFond || "#fef08a",
-			f.largeurMax,
-			f.hauteurMin
-		);
+	0, 0, f.texte, f.couleurFond || "#fef08a", f.largeurMax, f.hauteurMin,
+	{ taillePolice: f.taillePolice, alignement: f.alignement, transparent: f.transparent, gras: f.gras }
+
+);
+
 
 		// Recalage du centre pour que le coin haut-gauche ne bouge pas d'un pixel
 		f.points[0] = {
@@ -982,9 +981,11 @@ function decouperLignesPostIt(ctx, texte, largeurUtileMax) {
 		const mots = paragraphe.split(' ');
 		let ligneCourante = "";
 
-		mots.forEach(mot => {
+				mots.forEach(mot => {
 			const testLigne = ligneCourante ? `${ligneCourante} ${mot}` : mot;
-			if (ctx.measureText(testLigne).width <= largeurUtileMax) {
+			const textePropre = testLigne.replace(/\*\*|\[\/?[SML]\]/g, '');
+			if (ctx.measureText(textePropre).width <= largeurUtileMax) {
+
 				ligneCourante = testLigne;
 			} else {
 				if (ligneCourante) lignesFinales.push(ligneCourante);
@@ -1011,54 +1012,67 @@ function decouperLignesPostIt(ctx, texte, largeurUtileMax) {
 	return lignesFinales;
 }
 
-// === MODALE PERSONNALISÉE POUR LES POST-ITS (PC & IPAD) ===
-function ouvrirModalePostIt(texteInitial = "", couleurInitiale = "#fef08a", estEdition = false) {
+function ouvrirModalePostIt(optionsInitiales = {}, estEdition = false) {
 	return new Promise((resolve) => {
 		let modale = document.getElementById('modal-postit-custom');
 		if (modale) modale.remove();
 
+		// Compatibilité avec les anciens post-its
+		const texteInit = typeof optionsInitiales === 'string' ? optionsInitiales : (optionsInitiales.texte || "");
+		let couleurChoisie = optionsInitiales.couleurFond || "#fef08a";
+		let tailleChoisie = optionsInitiales.taillePolice || 12; // 11 (S), 12 (M), 15 (L)
+		let alignementChoisi = optionsInitiales.alignement || "left"; // left, center, right
+		let estTransparent = Boolean(optionsInitiales.transparent);
+		
 		const couleursDisponibles = [
 			{ nom: "Jaune", hex: "#fef08a" },
 			{ nom: "Vert", hex: "#bbf7d0" },
 			{ nom: "Bleu", hex: "#bae6fd" },
 			{ nom: "Rose", hex: "#fbcfe8" },
-			{ nom: "Orange", hex: "#fed7aa" }
+			{ nom: "Orange", hex: "#fed7aa" },
+			{ nom: "Blanc", hex: "#f8fafc" }
 		];
-
-		let couleurChoisie = couleurInitiale || "#fef08a";
 
 		modale = document.createElement('dialog');
 		modale.id = 'modal-postit-custom';
 		modale.style.cssText = `
-			border: 1px solid rgba(255, 255, 255, 0.18);
-			border-radius: 12px;
-			background: #0b0f17;
-			color: #ffffff;
-			padding: 0;
-			width: 92%;
-			max-width: 380px;
-			box-shadow: 0 15px 35px rgba(0, 0, 0, 0.65);
-			font-family: system-ui, -apple-system, sans-serif;
-			position: fixed;
-			top: 50%;
-			left: 50%;
-			transform: translate(-50%, -50%);
-			margin: 0;
+			border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px;
+			background: #0b0f17; color: #ffffff; padding: 0; width: 92%; max-width: 420px;
+			box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7); font-family: system-ui, -apple-system, sans-serif;
+			position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); margin: 0;
 		`;
+
+		const btnStyle = `background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 5px; padding: 4px 9px; font-size: 12px; font-weight: 600; cursor: pointer;`;
 
 		modale.innerHTML = `
 			<div style="padding: 16px 18px; display: flex; flex-direction: column; gap: 12px;">
 				<div style="display: flex; justify-content: space-between; align-items: center;">
-					<strong style="font-size: 15px; letter-spacing: 0.3px;">
-						📝 ${estEdition ? "Modifier la note" : "Nouvelle note tactile"}
-					</strong>
-					<button type="button" id="postit-btn-close" style="background:none; border:none; color:#94a3b8; font-size:20px; cursor:pointer; line-height:1;">&times;</button>
+					<strong style="font-size: 15px;">📝 ${estEdition ? "Modifier la note" : "Nouvelle note tactique"}</strong>
+					<button type="button" id="postit-btn-close" style="background:none; border:none; color:#94a3b8; font-size:20px; cursor:pointer;">&times;</button>
 				</div>
 
-				<textarea id="postit-textarea" rows="4" placeholder="Saisissez votre note tactique..."
+				<!-- BARRE D'OUTILS DE MISE EN FORME -->
+				<div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center; background: rgba(255,255,255,0.05); padding: 6px 8px; border-radius: 8px;">
+					<button type="button" id="tool-bullet" style="${btnStyle}" title="Ajouter une puce">• Puce</button>
+					<button type="button" id="tool-bold" style="${btnStyle}; font-weight: 900;" title="Texte en gras">B</button>
+
+					<span style="color:rgba(255,255,255,0.2);">|</span>
+					<button type="button" class="btn-size" data-size="11" style="${btnStyle}">S</button>
+					<button type="button" class="btn-size" data-size="12" style="${btnStyle}">M</button>
+					<button type="button" class="btn-size" data-size="15" style="${btnStyle}">L</button>
+					<span style="color:rgba(255,255,255,0.2);">|</span>
+					<button type="button" class="btn-align" data-align="left" style="${btnStyle}" title="Aligner à gauche">⬅</button>
+					<button type="button" class="btn-align" data-align="center" style="${btnStyle}" title="Centrer">↔</button>
+					<button type="button" class="btn-align" data-align="right" style="${btnStyle}" title="Aligner à droite">➡</button>
+					<span style="color:rgba(255,255,255,0.2);">|</span>
+					<button type="button" id="tool-transp" style="${btnStyle}" title="Fond transparent">👻 Transp.</button>
+				</div>
+
+				<textarea id="postit-textarea" rows="5" placeholder="Saisissez votre note tactique..."
 					style="width: 100%; box-sizing: border-box; background: ${couleurChoisie}; color: #1e293b;
 					border: 2px solid rgba(0,0,0,0.2); border-radius: 8px; padding: 10px 12px;
-					font-family: inherit; font-size: 14px; font-weight: 600; resize: vertical; outline: none; line-height: 1.4;">${texteInitial}</textarea>
+					font-family: inherit; font-size: ${tailleChoisie}px; text-align: ${alignementChoisi};
+					font-weight: 600; resize: vertical; outline: none; line-height: 1.4;">${texteInit}</textarea>
 
 				<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
 					<span style="font-size: 12px; color: #94a3b8;">Couleur :</span>
@@ -1066,24 +1080,98 @@ function ouvrirModalePostIt(texteInitial = "", couleurInitiale = "#fef08a", estE
 				</div>
 
 				<div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px;">
-					<button type="button" id="postit-btn-cancel"
-						style="background: rgba(255,255,255,0.1); color: #cbd5e1; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer;">
-						Annuler
-					</button>
-					<button type="button" id="postit-btn-save"
-						style="background: #27ae60; color: #ffffff; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; font-weight: 700; cursor: pointer;">
-						Valider
-					</button>
+					<button type="button" id="postit-btn-cancel" style="background: rgba(255,255,255,0.1); color: #cbd5e1; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer;">Annuler</button>
+					<button type="button" id="postit-btn-save" style="background: #27ae60; color: #ffffff; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; font-weight: 700; cursor: pointer;">Valider</button>
 				</div>
 			</div>
 		`;
 
 		document.body.appendChild(modale);
-
 		const textarea = modale.querySelector('#postit-textarea');
 		const picker = modale.querySelector('#postit-color-picker');
 
-		// Génération des pastilles de couleur
+				// Mise à jour visuelle des boutons actifs
+		const majUIOutils = () => {
+			
+			modale.querySelectorAll('.btn-align').forEach(b => {
+				b.style.background = b.dataset.align === alignementChoisi ? '#38bdf8' : 'rgba(255,255,255,0.1)';
+			});
+			const btnTransp = modale.querySelector('#tool-transp');
+			btnTransp.style.background = estTransparent ? '#38bdf8' : 'rgba(255,255,255,0.1)';
+			textarea.style.opacity = estTransparent ? '0.75' : '1';
+			textarea.style.fontSize = `${tailleChoisie}px`;
+			textarea.style.textAlign = alignementChoisi;
+		};
+
+		majUIOutils();
+
+		// Événements barre d'outils
+		modale.querySelector('#tool-bullet').onclick = () => {
+			const start = textarea.selectionStart;
+			const prefixe = (start > 0 && textarea.value[start - 1] !== '\n') ? '\n• ' : '• ';
+			textarea.setRangeText(prefixe, start, textarea.selectionEnd, 'end');
+			textarea.focus();
+		};
+
+						modale.querySelectorAll('.btn-size').forEach(b => {
+			const appliquerTaille = (e) => {
+				e.preventDefault(); // Empêche iPad/PC de perdre la sélection bleue !
+				const start = textarea.selectionStart;
+				const end = textarea.selectionEnd;
+				const sel = textarea.value.substring(start, end);
+				const tag = b.textContent.trim(); // "S", "M" ou "L"
+				const openTag = `[${tag}]`;
+				const closeTag = `[/${tag}]`;
+
+				if (sel.length > 0) {
+					const nouveauTexte = (sel.startsWith(openTag) && sel.endsWith(closeTag))
+						? sel.slice(openTag.length, -closeTag.length)
+						: `${openTag}${sel}${closeTag}`;
+					textarea.setRangeText(nouveauTexte, start, end, 'select');
+				} else {
+					textarea.setRangeText(`${openTag}${closeTag}`, start, end, 'end');
+					textarea.setSelectionRange(start + openTag.length, start + openTag.length);
+				}
+				textarea.focus();
+			};
+
+			b.addEventListener('mousedown', appliquerTaille);
+			b.addEventListener('touchstart', appliquerTaille, { passive: false });
+		});
+
+
+
+		modale.querySelectorAll('.btn-align').forEach(b => {
+			b.onclick = () => { alignementChoisi = b.dataset.align; majUIOutils(); textarea.focus(); };
+		});
+
+		modale.querySelector('#tool-transp').onclick = () => {
+			estTransparent = !estTransparent;
+			majUIOutils();
+			textarea.focus();
+		};
+		modale.querySelector('#tool-bold').onclick = () => {
+	const start = textarea.selectionStart;
+	const end = textarea.selectionEnd;
+	const sel = textarea.value.substring(start, end);
+
+	if (sel.length > 0) {
+		// Si déjà entouré de **, on les retire, sinon on les ajoute
+		const nouveauTexte = (sel.startsWith('**') && sel.endsWith('**') && sel.length >= 4)
+			? sel.slice(2, -2)
+			: `**${sel}**`;
+		textarea.setRangeText(nouveauTexte, start, end, 'select');
+	} else {
+		// Si rien n'est sélectionné, insère **** et place le curseur au milieu
+		textarea.setRangeText('****', start, end, 'end');
+		textarea.setSelectionRange(start + 2, start + 2);
+	}
+	textarea.focus();
+};
+
+
+
+		// Pastilles de couleur
 		couleursDisponibles.forEach(c => {
 			const swatch = document.createElement('button');
 			swatch.type = 'button';
@@ -1091,8 +1179,7 @@ function ouvrirModalePostIt(texteInitial = "", couleurInitiale = "#fef08a", estE
 			swatch.style.cssText = `
 				width: 24px; height: 24px; border-radius: 50%; background: ${c.hex};
 				border: ${c.hex === couleurChoisie ? '2px solid #ffffff' : '1px solid rgba(255,255,255,0.3)'};
-				box-shadow: ${c.hex === couleurChoisie ? '0 0 0 2px #38bdf8' : 'none'};
-				cursor: pointer; padding: 0; transition: transform 0.15s;
+				box-shadow: ${c.hex === couleurChoisie ? '0 0 0 2px #38bdf8' : 'none'}; cursor: pointer;
 			`;
 			swatch.onclick = () => {
 				couleurChoisie = c.hex;
@@ -1107,32 +1194,27 @@ function ouvrirModalePostIt(texteInitial = "", couleurInitiale = "#fef08a", estE
 			picker.appendChild(swatch);
 		});
 
-		const fermerEtResoudre = (valeur) => {
-			modale.close();
-			modale.remove();
-			resolve(valeur);
-		};
+		const fermerEtResoudre = (val) => { modale.close(); modale.remove(); resolve(val); };
 
 		modale.querySelector('#postit-btn-save').onclick = () => {
-			fermerEtResoudre({ texte: textarea.value, couleur: couleurChoisie });
+			fermerEtResoudre({
+				texte: textarea.value,
+				couleur: couleurChoisie,
+				taillePolice: tailleChoisie,
+				alignement: alignementChoisi,
+				transparent: estTransparent
+				
+
+			});
 		};
 		modale.querySelector('#postit-btn-cancel').onclick = () => fermerEtResoudre(null);
 		modale.querySelector('#postit-btn-close').onclick = () => fermerEtResoudre(null);
 
-		// Fermeture au clic sur l'arrière-plan sombre
-		modale.addEventListener('click', (e) => {
-			const rect = modale.getBoundingClientRect();
-			if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
-				fermerEtResoudre(null);
-			}
-		});
-
-		// Raccourcis clavier dans la modale
 		textarea.addEventListener('keydown', (e) => {
-			e.stopPropagation(); // Évite de déclencher les raccourcis du tapis (T, Z, 9, etc.)
+			e.stopPropagation();
 			if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
 				e.preventDefault();
-				fermerEtResoudre({ texte: textarea.value, couleur: couleurChoisie });
+				modale.querySelector('#postit-btn-save').click();
 			} else if (e.key === 'Escape') {
 				e.preventDefault();
 				fermerEtResoudre(null);
@@ -1140,38 +1222,78 @@ function ouvrirModalePostIt(texteInitial = "", couleurInitiale = "#fef08a", estE
 		});
 
 		modale.showModal();
-		setTimeout(() => {
-			textarea.focus();
-			textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-		}, 30);
+		setTimeout(() => { textarea.focus(); textarea.setSelectionRange(textarea.value.length, textarea.value.length); }, 30);
 	});
 }
 
 
-function dessinerPostIt(x, y, texte, couleurFond = "#fef08a", largeurCustom = null, hauteurCustom = null) {
+
+function dessinerPostIt(x, y, texte, couleurFond = "#fef08a", largeurCustom = null, hauteurCustom = null, options = {}) {
 	ctx.save();
 	ctx.setLineDash([]);
 	ctx.imageSmoothingEnabled = true;
 
-	// === CONFIGURATION DES DIMENSIONS ===
+	const taillePolice = options.taillePolice || 12;
+	const alignement = options.alignement || "left";
+	const estTransparent = Boolean(options.transparent);
+
 	const LARGEUR_MIN = 110;
-	const LARGEUR_MAX = largeurCustom || 165;
+	const LARGEUR_MAX = largeurCustom || 175;
 	const HAUTEUR_MIN = 46;
 	const PADDING_X = 12;
-	const HAUTEUR_LIGNE = 16;
+	const HAUTEUR_LIGNE = Math.round(taillePolice * 1.35);
 
-	ctx.font = "600 12px system-ui, -apple-system, sans-serif";
+				const taillesMap = { S: 10, M: 13, L: 19 };
+	const getFont = (gras, tagTaille) => {
+		const t = tagTaille ? taillesMap[tagTaille] : taillePolice;
+		return `${gras ? 800 : 400} ${t}px system-ui, -apple-system, sans-serif`;
+	};
 
-	// 1. Découpage automatique du texte avec retour à la ligne
+	const analyserSegments = (ligne) => {
+		const regex = /(\*\*\[[SML]\].*?\[\/[SML]\]\*\*|\[[SML]\]\*\*.*?\*\*\[\/[SML]\]|\*\*.*?\*\*|\[[SML]\].*?\[\/[SML]\])/g;
+		return ligne.split(regex).filter(Boolean).map(m => {
+			let txt = m;
+			let gras = false;
+			let tagTaille = null;
+
+			if (txt.startsWith('**') && txt.endsWith('**') && txt.length > 4) {
+				gras = true;
+				txt = txt.slice(2, -2);
+			}
+			const matchTaille = txt.match(/^\[([SML])\]([\s\S]*)\[\/\1\]$/);
+			if (matchTaille) {
+				tagTaille = matchTaille[1];
+				txt = matchTaille[2];
+			}
+			if (txt.startsWith('**') && txt.endsWith('**') && txt.length > 4) {
+				gras = true;
+				txt = txt.slice(2, -2);
+			}
+			return { texte: txt, gras, tagTaille };
+		});
+	};
+
+
+
+	ctx.font = getFont(false, null);
 	const lignes = decouperLignesPostIt(ctx, texte, LARGEUR_MAX - (PADDING_X * 2));
 
-	// 2. Calcul de la largeur et de la hauteur (respecte la taille étirée + débordement texte)
-	const largeurMaxTexte = Math.max(...lignes.map(l => ctx.measureText(l).width), 0);
+	const largeurMaxTexte = Math.max(...lignes.map(l => {
+		let w = 0;
+		analyserSegments(l).forEach(seg => {
+			ctx.font = getFont(true, seg.tagTaille);
+			w += ctx.measureText(seg.texte).width;
+		});
+		return w;
+	}), 0);
+
+
+
 	const largeur = largeurCustom
 		? Math.max(LARGEUR_MIN, largeurCustom)
 		: Math.max(LARGEUR_MIN, Math.min(LARGEUR_MAX, Math.ceil(largeurMaxTexte) + (PADDING_X * 2)));
 
-	const hauteurTexte = (lignes.length * HAUTEUR_LIGNE) + 22;
+	const hauteurTexte = (lignes.length * HAUTEUR_LIGNE) + (estTransparent ? 16 : 22);
 	const hauteur = hauteurCustom
 		? Math.max(HAUTEUR_MIN, hauteurCustom, hauteurTexte)
 		: Math.max(HAUTEUR_MIN, hauteurTexte);
@@ -1179,40 +1301,77 @@ function dessinerPostIt(x, y, texte, couleurFond = "#fef08a", largeurCustom = nu
 	const cadreX = Math.floor(x - largeur / 2);
 	const cadreY = Math.floor(y - hauteur / 2);
 
-	// 3. Ombre portée et fond papier
-	ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
-	ctx.shadowBlur = 8;
-	ctx.shadowOffsetX = 2;
-	ctx.shadowOffsetY = 4;
+	// Fond : Papier opaque ou Étiquette sombre translucide
+	if (estTransparent) {
+		ctx.beginPath();
+		ctx.roundRect(cadreX, cadreY, largeur, hauteur, 6);
+		ctx.fillStyle = "rgba(11, 15, 23, 0.65)";
+		ctx.fill();
+		ctx.strokeStyle = couleurFond;
+		ctx.lineWidth = 1.5;
+		ctx.stroke();
+	} else {
+		ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
+		ctx.shadowBlur = 8;
+		ctx.shadowOffsetX = 2;
+		ctx.shadowOffsetY = 4;
 
-	ctx.beginPath();
-	ctx.roundRect(cadreX, cadreY, largeur, hauteur, 6);
-	ctx.fillStyle = couleurFond;
-	ctx.fill();
+		ctx.beginPath();
+		ctx.roundRect(cadreX, cadreY, largeur, hauteur, 6);
+		ctx.fillStyle = couleurFond;
+		ctx.fill();
 
-	// 4. Bordure et bande adhésive supérieure
-	ctx.shadowColor = "transparent";
-	ctx.strokeStyle = "rgba(0, 0, 0, 0.18)";
-	ctx.lineWidth = 1;
-	ctx.stroke();
+		ctx.shadowColor = "transparent";
+		ctx.strokeStyle = "rgba(0, 0, 0, 0.18)";
+		ctx.lineWidth = 1;
+		ctx.stroke();
 
-	ctx.fillStyle = "rgba(0, 0, 0, 0.06)";
-	ctx.fillRect(cadreX, cadreY, largeur, 8);
+		// Bande adhésive supérieure
+		ctx.fillStyle = "rgba(0, 0, 0, 0.06)";
+		ctx.fillRect(cadreX, cadreY, largeur, 8);
+	}
 
-	// 5. Rendu des lignes vers le bas
-	ctx.fillStyle = "#1e293b";
-	ctx.textAlign = "left";
+	// Rendu du texte aligné
+	ctx.fillStyle = estTransparent ? couleurFond : "#1e293b";
+	ctx.textAlign = alignement;
 	ctx.textBaseline = "top";
 
-	lignes.forEach((ligne, idx) => {
-		ctx.fillText(ligne, cadreX + PADDING_X, cadreY + 13 + (idx * HAUTEUR_LIGNE));
+	let posXTexte = cadreX + PADDING_X;
+	if (alignement === "center") posXTexte = cadreX + (largeur / 2);
+	else if (alignement === "right") posXTexte = cadreX + largeur - PADDING_X;
+
+	const departY = cadreY + (estTransparent ? 9 : 13);
+
+			lignes.forEach((ligne, idx) => {
+		const morceaux = analyserSegments(ligne);
+
+		let largeurLigne = 0;
+		morceaux.forEach(m => {
+			ctx.font = getFont(m.gras, m.tagTaille);
+			largeurLigne += ctx.measureText(m.texte).width;
+		});
+
+		let curseurX = cadreX + PADDING_X;
+		if (alignement === "center") curseurX = cadreX + (largeur - largeurLigne) / 2;
+		else if (alignement === "right") curseurX = cadreX + largeur - PADDING_X - largeurLigne;
+
+		ctx.textAlign = "left";
+		morceaux.forEach(m => {
+			ctx.font = getFont(m.gras, m.tagTaille);
+			// Léger décalage vertical pour aligner proprement la base des lettres S/M/L
+			const tActuelle = m.tagTaille ? taillesMap[m.tagTaille] : taillePolice;
+			const offsetBase = (taillePolice - tActuelle) * 0.4;
+
+			ctx.fillText(m.texte, curseurX, departY + (idx * HAUTEUR_LIGNE) + offsetBase);
+			curseurX += ctx.measureText(m.texte).width;
+		});
 	});
 
-	ctx.restore();
 
+
+	ctx.restore();
 	return { largeur, hauteur };
 }
-
 
 
 
@@ -2586,19 +2745,16 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 if (dessin.estPostIt) {
 	if (dessin.points && dessin.points.length > 0) {
 		const dims = dessinerPostIt(
-			dessin.points[0].x,
-			dessin.points[0].y,
-			dessin.texte,
-			dessin.couleurFond || "#fef08a",
-			dessin.largeurMax || null,
-			dessin.hauteurMin || null
+			dessin.points[0].x, dessin.points[0].y, dessin.texte,
+
+			dessin.couleurFond || "#fef08a", dessin.largeurMax || null, dessin.hauteurMin || null,
+			{ taillePolice: dessin.taillePolice, alignement: dessin.alignement, transparent: dessin.transparent, gras: dessin.gras }
 		);
 		dessin._largeurActuelle = dims.largeur;
 		dessin._hauteurActuelle = dims.hauteur;
 	}
 	return;
 }
-
 
 
 
@@ -3515,6 +3671,8 @@ if (outilTactiqueActif === 'ghostBall') {
 	nouvelElement.cibleCentre = resultatGhost.cibleCentre;
 	nouvelElement.blancheCentre = resultatGhost.blancheCentre;
 	nouvelElement.couleurCible = resultatGhost.couleurCible;
+	
+
 
 	// --- DÉPÔT AUTOMATIQUE DES PANNEAUX IMPACT ET EFFET LIÉS À CE GHOST ---
 	if (resultatGhost.pctImpact !== null) {
@@ -3589,20 +3747,23 @@ if (outilTactiqueActif === 'ghostBall') {
 					nouvelElement.pourcentage = window.pourcentageContactCourant;
 					nouvelElement.cote = window.coteContactCourant;
 				}
-				if (outilTactiqueActif === 'postit') {
+			if (outilTactiqueActif === 'postit') {
 	isDrawing = false;
 	outilActif = null;
-
-	const resultat = await ouvrirModalePostIt("", "#fef08a", false);
+	const resultat = await ouvrirModalePostIt({}, false);
 	if (!resultat || resultat.texte.trim() === "") {
 		window.redessinerToutesLesLignes();
 		return;
 	}
-
 	nouvelElement.estPostIt = true;
 	nouvelElement.texte = resultat.texte;
 	nouvelElement.couleurFond = resultat.couleur;
+	nouvelElement.taillePolice = resultat.taillePolice;
+	nouvelElement.alignement = resultat.alignement;
+	nouvelElement.transparent = resultat.transparent;
+	
 }
+
 
 
 
@@ -3851,13 +4012,17 @@ function commencerDessin(e) {
 	canvas.addEventListener('contextmenu', e => e.preventDefault());
 
 	
-	// Fonction unique pour éditer un Post-it (PC et iPad)
 async function editerPostIt(forme) {
 	if (!forme || !forme.estPostIt) return;
-	const resultat = await ouvrirModalePostIt(forme.texte, forme.couleurFond || "#fef08a", true);
+	const resultat = await ouvrirModalePostIt(forme, true);
 	if (resultat !== null && resultat.texte.trim() !== "") {
 		forme.texte = resultat.texte;
 		forme.couleurFond = resultat.couleur;
+		forme.taillePolice = resultat.taillePolice;
+		forme.alignement = resultat.alignement;
+		forme.transparent = resultat.transparent;
+		forme.gras = resultat.gras;
+
 		window.redessinerToutesLesLignes();
 	}
 }
