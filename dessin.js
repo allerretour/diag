@@ -640,8 +640,7 @@ document.addEventListener("DOMContentLoaded", () => {
 				if (typeof rafraichirListeLateraleBilles === "function") rafraichirListeLateraleBilles();
 			}
 
-			// NOUVEAU : Initialisation du glisser-déposer pour ligne/flèche
-			if (formeTrouvee.estDroite || formeTrouvee.avecFleche) {
+					if (formeTrouvee.estDroite || formeTrouvee.avecFleche) {
 				const p1 = formeTrouvee.points[0];
 				const p2 = formeTrouvee.points[formeTrouvee.points.length - 1];
 				formeTrouvee._dragOrigin = {
@@ -650,10 +649,19 @@ document.addEventListener("DOMContentLoaded", () => {
 					p1: { x: p1.x, y: p1.y },
 					p2: { x: p2.x, y: p2.y }
 				};
+			} else if (formeTrouvee.estPostIt && formeTrouvee._modeEditionLigne === 'resize-postit') {
+				// Mémorise le coin haut-gauche fixe avant l'étirement
+				const lActuelle = formeTrouvee._largeurActuelle || 165;
+				const hActuelle = formeTrouvee._hauteurActuelle || 46;
+				formeTrouvee._resizeOrigin = {
+					topLeftX: formeTrouvee.points[0].x - (lActuelle / 2),
+					topLeftY: formeTrouvee.points[0].y - (hActuelle / 2)
+				};
 			} else {
 				dragOffsetFormeX = coords.x - formeTrouvee.points[0].x;
 				dragOffsetFormeY = coords.y - formeTrouvee.points[0].y;
 			}
+
 
 			window.redessinerToutesLesLignes();
 		} else if (window.formeTactiqueSelectionnee) {
@@ -668,6 +676,42 @@ document.addEventListener("DOMContentLoaded", () => {
 		if (e.cancelable) e.preventDefault();
 
 		const coords = obtenirCoordonneesEvenement(e, table);
+
+
+// --- REDIMENSIONNEMENT D'UN POST-IT VERS LE BAS-DROIT (COIN HAUT-GAUCHE FIXE) ---
+if (window.formeTactiqueSelectionnee.estPostIt && window.formeTactiqueSelectionnee._modeEditionLigne === 'resize-postit') {
+	const f = window.formeTactiqueSelectionnee;
+	const orig = f._resizeOrigin;
+
+	if (orig) {
+		const largeurSouhaitee = coords.x - orig.topLeftX;
+		const hauteurSouhaitee = coords.y - orig.topLeftY;
+
+		f.largeurMax = Math.max(110, Math.min(380, Math.round(largeurSouhaitee)));
+		f.hauteurMin = Math.max(46, Math.min(260, Math.round(hauteurSouhaitee)));
+
+		// Calcul des dimensions réelles après prise en compte du débordement de texte éventuel
+		const dimsReelles = dessinerPostIt(
+			0, 0,
+			f.texte,
+			f.couleurFond || "#fef08a",
+			f.largeurMax,
+			f.hauteurMin
+		);
+
+		// Recalage du centre pour que le coin haut-gauche ne bouge pas d'un pixel
+		f.points[0] = {
+			x: Math.round(orig.topLeftX + (dimsReelles.largeur / 2)),
+			y: Math.round(orig.topLeftY + (dimsReelles.hauteur / 2))
+		};
+	}
+
+	window.redessinerToutesLesLignes();
+	return;
+}
+
+
+
 
 		// --- NOUVEAU : ÉDITION D'UNE LIGNE DROITE OU D'UNE FLÈCHE ---
 		if (window.formeTactiqueSelectionnee.estDroite || window.formeTactiqueSelectionnee.avecFleche) {
@@ -746,8 +790,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
 		// 3. FIN DU DÉPLACEMENT
 	function gererFinDeplacementForme() {
-		if (isDraggingForme) {
-			isDraggingForme = false;
+	if (isDraggingForme) {
+		isDraggingForme = false;
+		if (window.formeTactiqueSelectionnee) {
+			window.formeTactiqueSelectionnee._modeEditionLigne = null;
+		}
+
 
 			// --- NOUVEAU : RELANCE LE COMPTE À REBOURS DU BADGE POUR LA BILLE FANTÔME ---
 			if (window.formeTactiqueSelectionnee && window.formeTactiqueSelectionnee.estGhostBall) {
@@ -963,14 +1011,152 @@ function decouperLignesPostIt(ctx, texte, largeurUtileMax) {
 	return lignesFinales;
 }
 
-function dessinerPostIt(x, y, texte, couleurFond = "#fef08a") {
+// === MODALE PERSONNALISÉE POUR LES POST-ITS (PC & IPAD) ===
+function ouvrirModalePostIt(texteInitial = "", couleurInitiale = "#fef08a", estEdition = false) {
+	return new Promise((resolve) => {
+		let modale = document.getElementById('modal-postit-custom');
+		if (modale) modale.remove();
+
+		const couleursDisponibles = [
+			{ nom: "Jaune", hex: "#fef08a" },
+			{ nom: "Vert", hex: "#bbf7d0" },
+			{ nom: "Bleu", hex: "#bae6fd" },
+			{ nom: "Rose", hex: "#fbcfe8" },
+			{ nom: "Orange", hex: "#fed7aa" }
+		];
+
+		let couleurChoisie = couleurInitiale || "#fef08a";
+
+		modale = document.createElement('dialog');
+		modale.id = 'modal-postit-custom';
+		modale.style.cssText = `
+			border: 1px solid rgba(255, 255, 255, 0.18);
+			border-radius: 12px;
+			background: #0b0f17;
+			color: #ffffff;
+			padding: 0;
+			width: 92%;
+			max-width: 380px;
+			box-shadow: 0 15px 35px rgba(0, 0, 0, 0.65);
+			font-family: system-ui, -apple-system, sans-serif;
+			position: fixed;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			margin: 0;
+		`;
+
+		modale.innerHTML = `
+			<div style="padding: 16px 18px; display: flex; flex-direction: column; gap: 12px;">
+				<div style="display: flex; justify-content: space-between; align-items: center;">
+					<strong style="font-size: 15px; letter-spacing: 0.3px;">
+						📝 ${estEdition ? "Modifier la note" : "Nouvelle note tactile"}
+					</strong>
+					<button type="button" id="postit-btn-close" style="background:none; border:none; color:#94a3b8; font-size:20px; cursor:pointer; line-height:1;">&times;</button>
+				</div>
+
+				<textarea id="postit-textarea" rows="4" placeholder="Saisissez votre note tactique..."
+					style="width: 100%; box-sizing: border-box; background: ${couleurChoisie}; color: #1e293b;
+					border: 2px solid rgba(0,0,0,0.2); border-radius: 8px; padding: 10px 12px;
+					font-family: inherit; font-size: 14px; font-weight: 600; resize: vertical; outline: none; line-height: 1.4;">${texteInitial}</textarea>
+
+				<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+					<span style="font-size: 12px; color: #94a3b8;">Couleur :</span>
+					<div id="postit-color-picker" style="display: flex; gap: 8px;"></div>
+				</div>
+
+				<div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px;">
+					<button type="button" id="postit-btn-cancel"
+						style="background: rgba(255,255,255,0.1); color: #cbd5e1; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer;">
+						Annuler
+					</button>
+					<button type="button" id="postit-btn-save"
+						style="background: #27ae60; color: #ffffff; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; font-weight: 700; cursor: pointer;">
+						Valider
+					</button>
+				</div>
+			</div>
+		`;
+
+		document.body.appendChild(modale);
+
+		const textarea = modale.querySelector('#postit-textarea');
+		const picker = modale.querySelector('#postit-color-picker');
+
+		// Génération des pastilles de couleur
+		couleursDisponibles.forEach(c => {
+			const swatch = document.createElement('button');
+			swatch.type = 'button';
+			swatch.title = c.nom;
+			swatch.style.cssText = `
+				width: 24px; height: 24px; border-radius: 50%; background: ${c.hex};
+				border: ${c.hex === couleurChoisie ? '2px solid #ffffff' : '1px solid rgba(255,255,255,0.3)'};
+				box-shadow: ${c.hex === couleurChoisie ? '0 0 0 2px #38bdf8' : 'none'};
+				cursor: pointer; padding: 0; transition: transform 0.15s;
+			`;
+			swatch.onclick = () => {
+				couleurChoisie = c.hex;
+				textarea.style.background = couleurChoisie;
+				picker.querySelectorAll('button').forEach(b => {
+					b.style.border = '1px solid rgba(255,255,255,0.3)';
+					b.style.boxShadow = 'none';
+				});
+				swatch.style.border = '2px solid #ffffff';
+				swatch.style.boxShadow = '0 0 0 2px #38bdf8';
+			};
+			picker.appendChild(swatch);
+		});
+
+		const fermerEtResoudre = (valeur) => {
+			modale.close();
+			modale.remove();
+			resolve(valeur);
+		};
+
+		modale.querySelector('#postit-btn-save').onclick = () => {
+			fermerEtResoudre({ texte: textarea.value, couleur: couleurChoisie });
+		};
+		modale.querySelector('#postit-btn-cancel').onclick = () => fermerEtResoudre(null);
+		modale.querySelector('#postit-btn-close').onclick = () => fermerEtResoudre(null);
+
+		// Fermeture au clic sur l'arrière-plan sombre
+		modale.addEventListener('click', (e) => {
+			const rect = modale.getBoundingClientRect();
+			if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
+				fermerEtResoudre(null);
+			}
+		});
+
+		// Raccourcis clavier dans la modale
+		textarea.addEventListener('keydown', (e) => {
+			e.stopPropagation(); // Évite de déclencher les raccourcis du tapis (T, Z, 9, etc.)
+			if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+				e.preventDefault();
+				fermerEtResoudre({ texte: textarea.value, couleur: couleurChoisie });
+			} else if (e.key === 'Escape') {
+				e.preventDefault();
+				fermerEtResoudre(null);
+			}
+		});
+
+		modale.showModal();
+		setTimeout(() => {
+			textarea.focus();
+			textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+		}, 30);
+	});
+}
+
+
+function dessinerPostIt(x, y, texte, couleurFond = "#fef08a", largeurCustom = null, hauteurCustom = null) {
 	ctx.save();
 	ctx.setLineDash([]);
 	ctx.imageSmoothingEnabled = true;
 
 	// === CONFIGURATION DES DIMENSIONS ===
 	const LARGEUR_MIN = 110;
-	const LARGEUR_MAX = 165; // <-- Ajustez cette valeur selon la largeur maximale souhaitée
+	const LARGEUR_MAX = largeurCustom || 165;
+	const HAUTEUR_MIN = 46;
 	const PADDING_X = 12;
 	const HAUTEUR_LIGNE = 16;
 
@@ -979,10 +1165,16 @@ function dessinerPostIt(x, y, texte, couleurFond = "#fef08a") {
 	// 1. Découpage automatique du texte avec retour à la ligne
 	const lignes = decouperLignesPostIt(ctx, texte, LARGEUR_MAX - (PADDING_X * 2));
 
-	// 2. Calcul de la largeur (bornée entre MIN et MAX) et de la hauteur dynamique
+	// 2. Calcul de la largeur et de la hauteur (respecte la taille étirée + débordement texte)
 	const largeurMaxTexte = Math.max(...lignes.map(l => ctx.measureText(l).width), 0);
-	const largeur = Math.max(LARGEUR_MIN, Math.min(LARGEUR_MAX, Math.ceil(largeurMaxTexte) + (PADDING_X * 2)));
-	const hauteur = Math.max(46, (lignes.length * HAUTEUR_LIGNE) + 22);
+	const largeur = largeurCustom
+		? Math.max(LARGEUR_MIN, largeurCustom)
+		: Math.max(LARGEUR_MIN, Math.min(LARGEUR_MAX, Math.ceil(largeurMaxTexte) + (PADDING_X * 2)));
+
+	const hauteurTexte = (lignes.length * HAUTEUR_LIGNE) + 22;
+	const hauteur = hauteurCustom
+		? Math.max(HAUTEUR_MIN, hauteurCustom, hauteurTexte)
+		: Math.max(HAUTEUR_MIN, hauteurTexte);
 
 	const cadreX = Math.floor(x - largeur / 2);
 	const cadreY = Math.floor(y - hauteur / 2);
@@ -1018,7 +1210,6 @@ function dessinerPostIt(x, y, texte, couleurFond = "#fef08a") {
 
 	ctx.restore();
 
-	// Retourne les dimensions calculées pour la bordure de sélection
 	return { largeur, hauteur };
 }
 
@@ -2392,12 +2583,29 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 				return;
 			}
 			
-			if (dessin.estPostIt) {
-				if (dessin.points && dessin.points.length > 0) {
-					dessinerPostIt(dessin.points[0].x, dessin.points[0].y, dessin.texte);
-				}
-				return;
-			}
+if (dessin.estPostIt) {
+	if (dessin.points && dessin.points.length > 0) {
+		const dims = dessinerPostIt(
+			dessin.points[0].x,
+			dessin.points[0].y,
+			dessin.texte,
+			dessin.couleurFond || "#fef08a",
+			dessin.largeurMax || null,
+			dessin.hauteurMin || null
+		);
+		dessin._largeurActuelle = dims.largeur;
+		dessin._hauteurActuelle = dims.hauteur;
+	}
+	return;
+}
+
+
+
+
+
+
+
+
 
 			// Gestion des tracés standards et lignes droites
 			if (dessin.points.length < 2) return;
@@ -2449,16 +2657,26 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 				ctx.stroke();
 			}
 			else if (f.estPostIt) {
-				ctx.font = "600 12px system-ui, -apple-system, sans-serif";
-				const lignes = decouperLignesPostIt(ctx, f.texte, 165 - 24);
-				const largeurMaxTexte = Math.max(...lignes.map(l => ctx.measureText(l).width), 0);
-				const l = Math.max(110, Math.min(165, Math.ceil(largeurMaxTexte) + 24)) + 6;
-				const h = Math.max(46, (lignes.length * 16) + 22) + 6;
+	const l = (f._largeurActuelle || 165) + 6;
+	const h = (f._hauteurActuelle || 46) + 6;
 
-				ctx.beginPath();
-				ctx.roundRect(pt.x - (l / 2), pt.y - (h / 2), l, h, 8);
-				ctx.stroke();
-			}
+	ctx.beginPath();
+	ctx.roundRect(pt.x - (l / 2), pt.y - (h / 2), l, h, 8);
+	ctx.stroke();
+
+	// Poignée bleue de redimensionnement (coin bas-droit)
+	const handleX = pt.x + (l / 2);
+	const handleY = pt.y + (h / 2);
+	ctx.setLineDash([]);
+	ctx.beginPath();
+	ctx.arc(handleX, handleY, 6, 0, 2 * Math.PI);
+	ctx.fillStyle = "#38bdf8";
+	ctx.fill();
+	ctx.lineWidth = 2;
+	ctx.strokeStyle = "#ffffff";
+	ctx.stroke();
+}
+
 
 
 			else if (f.estPointContact) {
@@ -3260,7 +3478,7 @@ function clampPositionDessin(x, y) {
 }
 
 
-	function declencherFinTrace(e) {
+	async function declencherFinTrace(e) {
 		// === VALIDATION DU DÉPÔT AU RELÂCHEMENT SUR LA TABLE UNIQUEMENT ===
 		const outilTactiqueActif = (window.outilTraceActif !== "select") ? window.outilTraceActif : outilActif;
 		const listeFormesTactiques = ['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact', 'ghostBall', 'postit'];
@@ -3372,16 +3590,20 @@ if (outilTactiqueActif === 'ghostBall') {
 					nouvelElement.cote = window.coteContactCourant;
 				}
 				if (outilTactiqueActif === 'postit') {
-					const texteSaisi = prompt("Texte de la note (utilisez \\n pour un retour à la ligne) :", "");
-					if (!texteSaisi || texteSaisi.trim() === "") {
-					isDrawing = false;
-					outilActif = null;
-					window.redessinerToutesLesLignes();
-					return;
-				}
-    nouvelElement.estPostIt = true;
-    nouvelElement.texte = texteSaisi.replace(/\\n/g, '\n');
+	isDrawing = false;
+	outilActif = null;
+
+	const resultat = await ouvrirModalePostIt("", "#fef08a", false);
+	if (!resultat || resultat.texte.trim() === "") {
+		window.redessinerToutesLesLignes();
+		return;
+	}
+
+	nouvelElement.estPostIt = true;
+	nouvelElement.texte = resultat.texte;
+	nouvelElement.couleurFond = resultat.couleur;
 }
+
 
 
 				window.dessinsSauvegardes.push(nouvelElement);
@@ -3630,20 +3852,21 @@ function commencerDessin(e) {
 
 	
 	// Fonction unique pour éditer un Post-it (PC et iPad)
-	function editerPostIt(forme) {
-		if (!forme || !forme.estPostIt) return;
-		const nouveauTexte = prompt("Modifier la note :", forme.texte.replace(/\n/g, '\\n'));
-		if (nouveauTexte !== null && nouveauTexte.trim() !== "") {
-			forme.texte = nouveauTexte.replace(/\\n/g, '\n');
-			window.redessinerToutesLesLignes();
-		}
+async function editerPostIt(forme) {
+	if (!forme || !forme.estPostIt) return;
+	const resultat = await ouvrirModalePostIt(forme.texte, forme.couleurFond || "#fef08a", true);
+	if (resultat !== null && resultat.texte.trim() !== "") {
+		forme.texte = resultat.texte;
+		forme.couleurFond = resultat.couleur;
+		window.redessinerToutesLesLignes();
 	}
+}
 
 	// Détection du double-tap tactile sur iPad / iPhone
 	let dernierTapPostIt = 0;
 	table.addEventListener('touchstart', (e) => {
 		if (window.isViewMode || window.outilTraceActif !== "select") return;
-		if (e.touches.length > 1) return; // Ignore le pincement à 2 doigts
+		if (e.touches.length > 1) return;
 
 		const coords = obtenirCoordonneesEvenement(e, table);
 		const forme = window.trouverFormeTactiqueProche(coords.x, coords.y);
@@ -3654,7 +3877,7 @@ function commencerDessin(e) {
 
 			if (delai > 40 && delai < 320) {
 				if (e.cancelable) e.preventDefault();
-				isDraggingForme = false; // Annule le glisser-déposer déclenché au 1er tap
+				isDraggingForme = false;
 				dernierTapPostIt = 0;
 				setTimeout(() => editerPostIt(forme), 10);
 			} else {
@@ -3663,7 +3886,7 @@ function commencerDessin(e) {
 		}
 	}, { passive: false });
 
-	// Écouteur PC (remplace votre ancien bloc dblclick)
+	// Écouteur double-clic PC / Mac
 	table.addEventListener('dblclick', (e) => {
 		if (window.isViewMode || window.outilTraceActif !== "select") return;
 		const coords = obtenirCoordonneesEvenement(e, table);
@@ -3673,6 +3896,8 @@ function commencerDessin(e) {
 			editerPostIt(forme);
 		}
 	});
+
+
 
 
 	setTimeout(resizeCanvas, 100);

@@ -907,8 +907,6 @@ window.detecterEtEffacerDessin = function(clicX, clicY) {
 };
 
 
-// --- DÉTECTION D'UNE FORME TACTIQUE POUR DÉPLACEMENT ---
-// --- DÉTECTION D'UNE FORME TACTIQUE OU LIGNE POUR DÉPLACEMENT / ÉDITION ---
 window.trouverFormeTactiqueProche = function(clicX, clicY) {
 	// Parcours inversé pour attraper l'élément situé au premier plan
 	for (let i = window.dessinsSauvegardes.length - 1; i >= 0; i--) {
@@ -917,8 +915,27 @@ window.trouverFormeTactiqueProche = function(clicX, clicY) {
 
 		if (estFormeDeplacable && dessin.points && dessin.points.length > 0) {
 			const pt = dessin.points[0];
+
+			// Priorité absolue à la poignée bas-droite du Post-it
+			if (dessin.estPostIt) {
+				const l = (dessin._largeurActuelle || 165) + 6;
+				const h = (dessin._hauteurActuelle || 46) + 6;
+				const handleX = pt.x + (l / 2);
+				const handleY = pt.y + (h / 2);
+
+				if (estProchePoint(clicX, clicY, handleX, handleY, 24)) {
+					dessin._modeEditionLigne = 'resize-postit';
+					return dessin;
+				}
+
+				// Détection sur toute la surface rectangulaire du Post-it
+				if (Math.abs(clicX - pt.x) <= (l / 2) + 8 && Math.abs(clicY - pt.y) <= (h / 2) + 8) {
+					dessin._modeEditionLigne = null;
+					return dessin;
+				}
+			}
+
 			let tolerance = 25;
-			if (dessin.estPostIt) tolerance = 55;
 			if (dessin.estCible || dessin.estCarre) tolerance = 55;
 			if (dessin.estPointContact || dessin.estEffetBlanche) tolerance = 60;
 
@@ -950,6 +967,7 @@ window.trouverFormeTactiqueProche = function(clicX, clicY) {
 	}
 	return null;
 };
+
 
 
 
