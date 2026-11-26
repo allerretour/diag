@@ -916,7 +916,6 @@ window.trouverFormeTactiqueProche = function(clicX, clicY) {
 		if (estFormeDeplacable && dessin.points && dessin.points.length > 0) {
 			const pt = dessin.points[0];
 
-			// Priorité absolue à la poignée bas-droite du Post-it
 			if (dessin.estPostIt) {
 				const l = (dessin._largeurActuelle || 165) + 6;
 				const h = (dessin._hauteurActuelle || 46) + 6;
@@ -928,7 +927,6 @@ window.trouverFormeTactiqueProche = function(clicX, clicY) {
 					return dessin;
 				}
 
-				// Détection sur toute la surface rectangulaire du Post-it
 				if (Math.abs(clicX - pt.x) <= (l / 2) + 8 && Math.abs(clicY - pt.y) <= (h / 2) + 8) {
 					dessin._modeEditionLigne = null;
 					return dessin;
@@ -936,6 +934,21 @@ window.trouverFormeTactiqueProche = function(clicX, clicY) {
 			}
 
 			let tolerance = 25;
+			
+			if (dessin.estGhostBall) {
+				const distAuCentre = Math.hypot(clicX - pt.x, clicY - pt.y);
+				if (distAuCentre <= 8) {
+					// Clic au milieu du Ghost : mode rotation verrouillée autour de la cible
+					dessin._modeEditionLigne = 'rotate-ghost';
+					return dessin;
+				} else if (distAuCentre <= 24) {
+					// Clic sur le bord du Ghost : mode déplacement libre vers une autre bille
+					dessin._modeEditionLigne = 'move-ghost';
+					return dessin;
+				}
+				continue;
+			}
+
 			if (dessin.estCible || dessin.estCarre) tolerance = 55;
 			if (dessin.estPointContact || dessin.estEffetBlanche) tolerance = 60;
 
@@ -949,7 +962,6 @@ window.trouverFormeTactiqueProche = function(clicX, clicY) {
 			const p1 = dessin.points[0];
 			const p2 = dessin.points[dessin.points.length - 1];
 
-			// 1. Priorité aux poignées de départ (start) et d'arrivée (end)
 			if (estProchePoint(clicX, clicY, p1.x, p1.y, 16)) {
 				dessin._modeEditionLigne = 'start';
 				return dessin;
@@ -958,15 +970,24 @@ window.trouverFormeTactiqueProche = function(clicX, clicY) {
 				dessin._modeEditionLigne = 'end';
 				return dessin;
 			}
-			// 2. Sinon, clic sur le corps de la ligne pour la déplacer en bloc
 			if (estProcheLigne(clicX, clicY, p1, p2, 12)) {
 				dessin._modeEditionLigne = 'move';
 				return dessin;
 			}
 		}
+		// === NOUVEAU : DÉTECTION DES TRACÉS LIBRES (CRAYON) ===
+		else if (!dessin.estZoneGrille && dessin.points && dessin.points.length >= 2) {
+			for (let j = 0; j < dessin.points.length - 1; j++) {
+				if (estProcheLigne(clicX, clicY, dessin.points[j], dessin.points[j + 1], 12)) {
+					dessin._modeEditionLigne = 'move-freehand';
+					return dessin;
+				}
+			}
+		}
 	}
 	return null;
 };
+
 
 
 

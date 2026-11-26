@@ -406,7 +406,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			barre = document.createElement('div');
 			barre.id = 'ghost-angle-tuner';
 			barre.style.cssText = `
-				position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+				position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
 				background: rgba(11, 15, 23, 0.94); border: 1px solid rgba(255, 255, 255, 0.25);
 				border-radius: 24px; padding: 6px 12px; display: flex; align-items: center; gap: 8px;
 				z-index: 1005; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5); touch-action: manipulation;
@@ -640,27 +640,34 @@ document.addEventListener("DOMContentLoaded", () => {
 				if (typeof rafraichirListeLateraleBilles === "function") rafraichirListeLateraleBilles();
 			}
 
-					if (formeTrouvee.estDroite || formeTrouvee.avecFleche) {
-				const p1 = formeTrouvee.points[0];
-				const p2 = formeTrouvee.points[formeTrouvee.points.length - 1];
-				formeTrouvee._dragOrigin = {
-					clicX: coords.x,
-					clicY: coords.y,
-					p1: { x: p1.x, y: p1.y },
-					p2: { x: p2.x, y: p2.y }
-				};
-			} else if (formeTrouvee.estPostIt && formeTrouvee._modeEditionLigne === 'resize-postit') {
-				// Mémorise le coin haut-gauche fixe avant l'étirement
-				const lActuelle = formeTrouvee._largeurActuelle || 165;
-				const hActuelle = formeTrouvee._hauteurActuelle || 46;
-				formeTrouvee._resizeOrigin = {
-					topLeftX: formeTrouvee.points[0].x - (lActuelle / 2),
-					topLeftY: formeTrouvee.points[0].y - (hActuelle / 2)
-				};
-			} else {
-				dragOffsetFormeX = coords.x - formeTrouvee.points[0].x;
-				dragOffsetFormeY = coords.y - formeTrouvee.points[0].y;
-			}
+if (formeTrouvee.estDroite || formeTrouvee.avecFleche) {
+	const p1 = formeTrouvee.points[0];
+	const p2 = formeTrouvee.points[formeTrouvee.points.length - 1];
+	formeTrouvee._dragOrigin = {
+		clicX: coords.x,
+		clicY: coords.y,
+		p1: { x: p1.x, y: p1.y },
+		p2: { x: p2.x, y: p2.y }
+	};
+} else if (formeTrouvee._modeEditionLigne === 'move-freehand') {
+	// === NOUVEAU : MÉMORISATION DE TOUS LES POINTS DU TRACÉ LIBRE ===
+	formeTrouvee._dragOrigin = {
+		clicX: coords.x,
+		clicY: coords.y,
+		points: formeTrouvee.points.map(pt => ({ x: pt.x, y: pt.y }))
+	};
+} else if (formeTrouvee.estPostIt && formeTrouvee._modeEditionLigne === 'resize-postit') {
+	const lActuelle = formeTrouvee._largeurActuelle || 165;
+	const hActuelle = formeTrouvee._hauteurActuelle || 46;
+	formeTrouvee._resizeOrigin = {
+		topLeftX: formeTrouvee.points[0].x - (lActuelle / 2),
+		topLeftY: formeTrouvee.points[0].y - (hActuelle / 2)
+	};
+} else {
+	dragOffsetFormeX = coords.x - formeTrouvee.points[0].x;
+	dragOffsetFormeY = coords.y - formeTrouvee.points[0].y;
+}
+
 
 
 			window.redessinerToutesLesLignes();
@@ -709,6 +716,20 @@ if (window.formeTactiqueSelectionnee.estPostIt && window.formeTactiqueSelectionn
 	return;
 }
 
+// === NOUVEAU : DÉPLACEMENT D'UN TRACÉ LIBRE EN BLOC ===
+if (window.formeTactiqueSelectionnee._modeEditionLigne === 'move-freehand') {
+	const f = window.formeTactiqueSelectionnee;
+	const orig = f._dragOrigin;
+
+	if (orig && orig.points) {
+		const dx = coords.x - orig.clicX;
+		const dy = coords.y - orig.clicY;
+		f.points = orig.points.map(pt => clampPositionDessin(pt.x + dx, pt.y + dy));
+	}
+
+	window.redessinerToutesLesLignes();
+	return;
+}
 
 
 
@@ -745,18 +766,26 @@ if (window.formeTactiqueSelectionnee.estPostIt && window.formeTactiqueSelectionn
 
 		// --- SI C'EST UNE BILLE FANTÔME EN DÉPLACEMENT ---
 		if (window.formeTactiqueSelectionnee.estGhostBall) {
-			const resultatGhost = dessinerBilleFantome(coords.x, coords.y, window.formeTactiqueSelectionnee.couleur);
+			const f = window.formeTactiqueSelectionnee;
+			const estRotationCentre = (f._modeEditionLigne === 'rotate-ghost');
 
-			window.formeTactiqueSelectionnee.points = [{ x: resultatGhost.x, y: resultatGhost.y }];
-			window.formeTactiqueSelectionnee.cibleCentre = resultatGhost.cibleCentre;
-			window.formeTactiqueSelectionnee.blancheCentre = resultatGhost.blancheCentre;
-			window.formeTactiqueSelectionnee.couleurCible = resultatGhost.couleurCible;
-			window.formeTactiqueSelectionnee.enDeplacement = true;
-			window.formeTactiqueSelectionnee.curseurLevier = { x: coords.x, y: coords.y };
+			// Si clic sur le bord ('move-ghost'), on libère le Ghost pour le déplacer librement.
+			// Si clic au milieu ('rotate-ghost'), on verrouille la cible pour régler l'angle.
+			const resultatGhost = estRotationCentre
+				? dessinerBilleFantome(coords.x, coords.y, f.couleur, f, 'verrouillerCible')
+				: dessinerBilleFantome(coords.x, coords.y, f.couleur);
+
+			f.points = [{ x: resultatGhost.x, y: resultatGhost.y }];
+			f.cibleCentre = resultatGhost.cibleCentre;
+			f.blancheCentre = resultatGhost.blancheCentre;
+			f.couleurCible = resultatGhost.couleurCible;
+			f.enDeplacement = true;
+			// Affiche le fil de précision uniquement lors du réglage d'angle depuis le centre
+			f.curseurLevier = estRotationCentre ? { x: coords.x, y: coords.y } : null;
 
 			if (resultatGhost.pctImpact !== null) {
 				let panneauImpact = window.dessinsSauvegardes.find(
-					d => d.estPointContact && d.lieAGhostId === window.formeTactiqueSelectionnee.ghostId
+					d => d.estPointContact && d.lieAGhostId === f.ghostId
 				);
 				if (!panneauImpact) {
 					const panneaux = window.dessinsSauvegardes.filter(d => d.estPointContact);
@@ -774,6 +803,9 @@ if (window.formeTactiqueSelectionnee.estPostIt && window.formeTactiqueSelectionn
 			window.redessinerToutesLesLignes();
 			return;
 		}
+
+
+
 
 		// Magnétisme sur la grille pour les autres formes
 		if (typeof calculerSnapGrille === "function" && !e.shiftKey) {
@@ -1485,8 +1517,8 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 			}
 		}
 
-		if (cibleCentre) {
-			if (angleForce !== null) {
+				if (cibleCentre) {
+			if (angleForce !== null && angleForce !== 'verrouillerCible') {
 				ghostX = cibleCentre.x + Math.cos(angleForce) * distanceContact;
 				ghostY = cibleCentre.y + Math.sin(angleForce) * distanceContact;
 			} else {
@@ -1518,6 +1550,7 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 						}
 					}
 				}
+
 
 				// C. Aimantation douce vers les 6 poches du tapis
 				if (!estAimante) {
@@ -1734,27 +1767,55 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 	ctx.restore();
 
 
-	// 4 bis. Fil de précision (Bras de levier) affiché uniquement pendant le déplacement
+	// 4 bis. Fil de précision (Bras de levier) et repères visuels d'angle verrouillé
 	if (donneeFigee && donneeFigee.enDeplacement && donneeFigee.curseurLevier) {
-		const distLevier = Math.hypot(donneeFigee.curseurLevier.x - ghostX, donneeFigee.curseurLevier.y - ghostY);
-		if (distLevier > 20) {
-			ctx.save();
+		ctx.save();
+
+		// 1. Anneau central lumineux sur le Ghost indiquant le verrouillage d'angle
+		ctx.beginPath();
+		ctx.setLineDash([]);
+		ctx.arc(ghostX, ghostY, 5, 0, 2 * Math.PI);
+		ctx.fillStyle = "rgba(56, 189, 248, 0.35)";
+		ctx.fill();
+		ctx.lineWidth = 1.5;
+		ctx.strokeStyle = "#38bdf8";
+		ctx.stroke();
+
+		// 2. Orbite de rotation en pointillés autour de la bille cible
+		if (cibleCentre) {
 			ctx.beginPath();
 			ctx.setLineDash([2, 4]);
-			ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
-			ctx.lineWidth = 1.5;
+			ctx.arc(cibleCentre.x, cibleCentre.y, distanceContact, 0, 2 * Math.PI);
+			ctx.lineWidth = 1;
+			ctx.strokeStyle = "rgba(56, 189, 248, 0.45)";
+			ctx.stroke();
+		}
+
+		// 3. Fil de précision (levier) et poignée sous le curseur/doigt
+		const distLevier = Math.hypot(donneeFigee.curseurLevier.x - ghostX, donneeFigee.curseurLevier.y - ghostY);
+		if (distLevier > 12) {
+			ctx.beginPath();
+			ctx.setLineDash([3, 3]);
+			ctx.strokeStyle = "#38bdf8";
+			ctx.lineWidth = 1.8;
 			ctx.moveTo(ghostX, ghostY);
 			ctx.lineTo(donneeFigee.curseurLevier.x, donneeFigee.curseurLevier.y);
 			ctx.stroke();
 
 			ctx.beginPath();
 			ctx.setLineDash([]);
-			ctx.arc(donneeFigee.curseurLevier.x, donneeFigee.curseurLevier.y, 4, 0, 2 * Math.PI);
-			ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+			ctx.arc(donneeFigee.curseurLevier.x, donneeFigee.curseurLevier.y, 4.5, 0, 2 * Math.PI);
+			ctx.fillStyle = "#38bdf8";
 			ctx.fill();
-			ctx.restore();
+			ctx.lineWidth = 1.5;
+			ctx.strokeStyle = "#ffffff";
+			ctx.stroke();
 		}
+
+		ctx.restore();
 	}
+
+
 
 
 
@@ -2806,21 +2867,34 @@ if (dessin.estPostIt) {
 			}
 			// NOUVEAU : Poignées visuelles aux extrémités de la ligne ou flèche sélectionnée
 			else if ((f.estDroite || f.avecFleche) && f.points.length >= 2) {
-				const p1 = f.points[0];
-				const p2 = f.points[f.points.length - 1];
+	const p1 = f.points[0];
+	const p2 = f.points[f.points.length - 1];
 
-				ctx.setLineDash([]);
-				[p1, p2].forEach((extremite, idx) => {
-					ctx.beginPath();
-					ctx.arc(extremite.x, extremite.y, 6, 0, 2 * Math.PI);
-					// Vert pour le point de départ, bleu clair pour l'arrivée
-					ctx.fillStyle = idx === 0 ? "#2ecc71" : "#38bdf8";
-					ctx.fill();
-					ctx.lineWidth = 2;
-					ctx.strokeStyle = "#ffffff";
-					ctx.stroke();
-				});
-			}
+	ctx.setLineDash([]);
+	[p1, p2].forEach((extremite, idx) => {
+		ctx.beginPath();
+		ctx.arc(extremite.x, extremite.y, 6, 0, 2 * Math.PI);
+		ctx.fillStyle = idx === 0 ? "#2ecc71" : "#38bdf8";
+		ctx.fill();
+		ctx.lineWidth = 2;
+		ctx.strokeStyle = "#ffffff";
+		ctx.stroke();
+	});
+}
+// === NOUVEAU : CADRE EN POINTILLÉS AUTOUR DU TRACÉ LIBRE SÉLECTIONNÉ ===
+else if (!f.estZoneGrille && f.points.length >= 2) {
+	const xs = f.points.map(p => p.x);
+	const ys = f.points.map(p => p.y);
+	const minX = Math.min(...xs) - 8;
+	const minY = Math.min(...ys) - 8;
+	const largeur = (Math.max(...xs) - Math.min(...xs)) + 16;
+	const hauteur = (Math.max(...ys) - Math.min(...ys)) + 16;
+
+	ctx.beginPath();
+	ctx.roundRect(minX, minY, largeur, hauteur, 8);
+	ctx.stroke();
+}
+
 
 
 			ctx.restore();
