@@ -975,15 +975,27 @@ window.trouverFormeTactiqueProche = function(clicX, clicY) {
 				return dessin;
 			}
 		}
-		// === NOUVEAU : DÉTECTION DES TRACÉS LIBRES (CRAYON) ===
-		else if (!dessin.estZoneGrille && dessin.points && dessin.points.length >= 2) {
-			for (let j = 0; j < dessin.points.length - 1; j++) {
-				if (estProcheLigne(clicX, clicY, dessin.points[j], dessin.points[j + 1], 12)) {
-					dessin._modeEditionLigne = 'move-freehand';
-					return dessin;
-				}
-			}
+		// === DÉTECTION DES TRACÉS LIBRES (CRAYON) : DÉBUT, FIN OU DÉPLACEMENT ===
+else if (!dessin.estZoneGrille && dessin.points && dessin.points.length >= 2) {
+	const p1 = dessin.points[0];
+	const p2 = dessin.points[dessin.points.length - 1];
+
+	if (estProchePoint(clicX, clicY, p1.x, p1.y, 16)) {
+		dessin._modeEditionLigne = 'start-freehand';
+		return dessin;
+	}
+	if (estProchePoint(clicX, clicY, p2.x, p2.y, 16)) {
+		dessin._modeEditionLigne = 'end-freehand';
+		return dessin;
+	}
+	for (let j = 0; j < dessin.points.length - 1; j++) {
+		if (estProcheLigne(clicX, clicY, dessin.points[j], dessin.points[j + 1], 12)) {
+			dessin._modeEditionLigne = 'move-freehand';
+			return dessin;
 		}
+	}
+}
+
 	}
 	return null;
 };

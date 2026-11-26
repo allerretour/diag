@@ -731,6 +731,52 @@ if (window.formeTactiqueSelectionnee._modeEditionLigne === 'move-freehand') {
 	return;
 }
 
+// === PROLONGER OU RACCOURCIR UN TRACÉ LIBRE (SANS CLIGNOTEMENT) ===
+if (['start-freehand', 'end-freehand'].includes(window.formeTactiqueSelectionnee._modeEditionLigne)) {
+	const f = window.formeTactiqueSelectionnee;
+	const mode = f._modeEditionLigne;
+	const ptClampe = clampPositionDessin(coords.x, coords.y);
+
+	if (mode === 'end-freehand') {
+		// Raccourcit uniquement si on recule nettement vers l'avant-dernier point
+		if (f.points.length > 2) {
+			const avantDernier = f.points[f.points.length - 2];
+			const dernier = f.points[f.points.length - 1];
+			if (Math.hypot(ptClampe.x - avantDernier.x, ptClampe.y - avantDernier.y) < Math.hypot(dernier.x - avantDernier.x, dernier.y - avantDernier.y) * 0.6) {
+				f.points.pop();
+			}
+		}
+		// Ajoute un point seulement tous les 5px pour garder une courbe légère
+		const dernier = f.points[f.points.length - 1];
+		if (Math.hypot(ptClampe.x - dernier.x, ptClampe.y - dernier.y) >= 5) {
+			f.points.push(ptClampe);
+		}
+	} else if (mode === 'start-freehand') {
+		if (f.points.length > 2) {
+			const deuxieme = f.points[1];
+			const premier = f.points[0];
+			if (Math.hypot(ptClampe.x - deuxieme.x, ptClampe.y - deuxieme.y) < Math.hypot(premier.x - deuxieme.x, premier.y - deuxieme.y) * 0.6) {
+				f.points.shift();
+			}
+		}
+		const premier = f.points[0];
+		if (Math.hypot(ptClampe.x - premier.x, ptClampe.y - premier.y) >= 5) {
+			f.points.unshift(ptClampe);
+		}
+	}
+
+	// Synchronise le dessin avec le taux de rafraîchissement de l'écran (60 FPS)
+	if (!animationFrameId) {
+		animationFrameId = requestAnimationFrame(() => {
+			window.redessinerToutesLesLignes();
+			animationFrameId = null;
+		});
+	}
+	return;
+}
+
+
+
 
 
 		// --- NOUVEAU : ÉDITION D'UNE LIGNE DROITE OU D'UNE FLÈCHE ---
@@ -757,8 +803,15 @@ if (window.formeTactiqueSelectionnee._modeEditionLigne === 'move-freehand') {
 			return;
 		}
 
-		let newX = coords.x - dragOffsetFormeX;
+				let newX = coords.x - dragOffsetFormeX;
 		let newY = coords.y - dragOffsetFormeY;
+
+		// --- SI C'EST UN POST-IT : LIBERTÉ TOTALE (SANS LIMITE DE BANDES NI MAGNÉTISME) ---
+		if (window.formeTactiqueSelectionnee.estPostIt) {
+			window.formeTactiqueSelectionnee.points[0] = { x: newX, y: newY };
+			window.redessinerToutesLesLignes();
+			return;
+		}
 
 		const posClampee = clampPositionDessin(newX, newY);
 		newX = posClampee.x;
@@ -824,8 +877,23 @@ if (window.formeTactiqueSelectionnee._modeEditionLigne === 'move-freehand') {
 	if (isDraggingForme) {
 		isDraggingForme = false;
 		if (window.formeTactiqueSelectionnee) {
-			window.formeTactiqueSelectionnee._modeEditionLigne = null;
-		}
+	const f = window.formeTactiqueSelectionnee;
+	const mode = f._modeEditionLigne;
+
+	if (mode === 'end-freehand' && f.points.length > 0) {
+		const dernier = f.points[f.points.length - 1];
+		f.points[f.points.length - 1] = calculerAimantationExtremiteLigne(dernier.x, dernier.y);
+		window.redessinerToutesLesLignes();
+		} else if (mode === 'start-freehand' && f.points.length > 0) {
+		const premier = f.points[0];
+		f.points[0] = calculerAimantationExtremiteLigne(premier.x, premier.y);
+		window.redessinerToutesLesLignes();
+	}
+
+
+	f._modeEditionLigne = null;
+}
+
 
 
 			// --- NOUVEAU : RELANCE LE COMPTE À REBOURS DU BADGE POUR LA BILLE FANTÔME ---
@@ -1264,21 +1332,22 @@ function dessinerPostIt(x, y, texte, couleurFond = "#fef08a", largeurCustom = nu
 	ctx.save();
 	ctx.setLineDash([]);
 	ctx.imageSmoothingEnabled = true;
+	ctx.imageSmoothingQuality = 'high';
 
 	const taillePolice = options.taillePolice || 12;
 	const alignement = options.alignement || "left";
 	const estTransparent = Boolean(options.transparent);
 
-	const LARGEUR_MIN = 110;
-	const LARGEUR_MAX = largeurCustom || 175;
-	const HAUTEUR_MIN = 46;
-	const PADDING_X = 12;
-	const HAUTEUR_LIGNE = Math.round(taillePolice * 1.35);
+	const LARGEUR_MIN = 115;
+	const LARGEUR_MAX = largeurCustom || 180;
+	const HAUTEUR_MIN = 48;
+	const PADDING_X = 14;
+	const HAUTEUR_LIGNE = Math.round(taillePolice * 1.38);
 
-				const taillesMap = { S: 10, M: 13, L: 19 };
+	const taillesMap = { S: 10, M: 13, L: 19 };
 	const getFont = (gras, tagTaille) => {
 		const t = tagTaille ? taillesMap[tagTaille] : taillePolice;
-		return `${gras ? 800 : 400} ${t}px system-ui, -apple-system, sans-serif`;
+		return `${gras ? 800 : 600} ${t}px system-ui, -apple-system, sans-serif`;
 	};
 
 	const analyserSegments = (ligne) => {
@@ -1305,8 +1374,6 @@ function dessinerPostIt(x, y, texte, couleurFond = "#fef08a", largeurCustom = nu
 		});
 	};
 
-
-
 	ctx.font = getFont(false, null);
 	const lignes = decouperLignesPostIt(ctx, texte, LARGEUR_MAX - (PADDING_X * 2));
 
@@ -1319,13 +1386,11 @@ function dessinerPostIt(x, y, texte, couleurFond = "#fef08a", largeurCustom = nu
 		return w;
 	}), 0);
 
-
-
 	const largeur = largeurCustom
 		? Math.max(LARGEUR_MIN, largeurCustom)
 		: Math.max(LARGEUR_MIN, Math.min(LARGEUR_MAX, Math.ceil(largeurMaxTexte) + (PADDING_X * 2)));
 
-	const hauteurTexte = (lignes.length * HAUTEUR_LIGNE) + (estTransparent ? 16 : 22);
+	const hauteurTexte = (lignes.length * HAUTEUR_LIGNE) + (estTransparent ? 16 : 26);
 	const hauteur = hauteurCustom
 		? Math.max(HAUTEUR_MIN, hauteurCustom, hauteurTexte)
 		: Math.max(HAUTEUR_MIN, hauteurTexte);
@@ -1333,48 +1398,99 @@ function dessinerPostIt(x, y, texte, couleurFond = "#fef08a", largeurCustom = nu
 	const cadreX = Math.floor(x - largeur / 2);
 	const cadreY = Math.floor(y - hauteur / 2);
 
-	// Fond : Papier opaque ou Étiquette sombre translucide
 	if (estTransparent) {
 		ctx.beginPath();
 		ctx.roundRect(cadreX, cadreY, largeur, hauteur, 6);
-		ctx.fillStyle = "rgba(11, 15, 23, 0.65)";
+		ctx.fillStyle = "rgba(0, 0, 0, 0.14)";
 		ctx.fill();
-		ctx.strokeStyle = couleurFond;
-		ctx.lineWidth = 1.5;
-		ctx.stroke();
-	} else {
-		ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
-		ctx.shadowBlur = 8;
-		ctx.shadowOffsetX = 2;
-		ctx.shadowOffsetY = 4;
 
-		ctx.beginPath();
-		ctx.roundRect(cadreX, cadreY, largeur, hauteur, 6);
+		ctx.strokeStyle = couleurFond;
+		ctx.globalAlpha = 0.65;
+		ctx.lineWidth = 1.2;
+		ctx.stroke();
+		ctx.globalAlpha = 1;
+	} else {
+		const pli = 13;
+		const r = 6;
+
+		const tracerContourPapier = () => {
+			ctx.beginPath();
+			ctx.moveTo(cadreX + r, cadreY);
+			ctx.lineTo(cadreX + largeur - r, cadreY);
+			ctx.quadraticCurveTo(cadreX + largeur, cadreY, cadreX + largeur, cadreY + r);
+			ctx.lineTo(cadreX + largeur, cadreY + hauteur - pli);
+			ctx.lineTo(cadreX + largeur - pli, cadreY + hauteur);
+			ctx.lineTo(cadreX + r, cadreY + hauteur);
+			ctx.quadraticCurveTo(cadreX, cadreY + hauteur, cadreX, cadreY + hauteur - r);
+			ctx.lineTo(cadreX, cadreY + r);
+			ctx.quadraticCurveTo(cadreX, cadreY, cadreX + r, cadreY);
+			ctx.closePath();
+		};
+
+		ctx.save();
+		ctx.shadowColor = "rgba(0, 0, 0, 0.42)";
+		ctx.shadowBlur = 12;
+		ctx.shadowOffsetX = 2;
+		ctx.shadowOffsetY = 5;
+		tracerContourPapier();
 		ctx.fillStyle = couleurFond;
 		ctx.fill();
+		ctx.restore();
 
-		ctx.shadowColor = "transparent";
-		ctx.strokeStyle = "rgba(0, 0, 0, 0.18)";
+		tracerContourPapier();
+		const gradPapier = ctx.createLinearGradient(cadreX, cadreY, cadreX, cadreY + hauteur);
+		gradPapier.addColorStop(0, "rgba(255, 255, 255, 0.32)");
+		gradPapier.addColorStop(0.2, "rgba(255, 255, 255, 0.05)");
+		gradPapier.addColorStop(1, "rgba(0, 0, 0, 0.07)");
+		ctx.fillStyle = gradPapier;
+		ctx.fill();
+
+		ctx.save();
+		tracerContourPapier();
+		ctx.clip();
+		ctx.fillStyle = "rgba(15, 23, 42, 0.07)";
+		ctx.fillRect(cadreX, cadreY, largeur, 10);
+		ctx.fillStyle = "rgba(15, 23, 42, 0.08)";
+		ctx.fillRect(cadreX, cadreY + 10, largeur, 1);
+		ctx.restore();
+
+		tracerContourPapier();
+		ctx.strokeStyle = "rgba(15, 23, 42, 0.16)";
 		ctx.lineWidth = 1;
 		ctx.stroke();
 
-		// Bande adhésive supérieure
-		ctx.fillStyle = "rgba(0, 0, 0, 0.06)";
-		ctx.fillRect(cadreX, cadreY, largeur, 8);
+		ctx.save();
+		ctx.beginPath();
+		ctx.moveTo(cadreX + largeur - pli, cadreY + hauteur);
+		ctx.lineTo(cadreX + largeur - pli, cadreY + hauteur - pli + 2);
+		ctx.quadraticCurveTo(
+			cadreX + largeur - pli, cadreY + hauteur - pli,
+			cadreX + largeur - pli + 2, cadreY + hauteur - pli
+		);
+		ctx.lineTo(cadreX + largeur, cadreY + hauteur - pli);
+		ctx.closePath();
+
+		ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
+		ctx.fill();
+		ctx.strokeStyle = "rgba(15, 23, 42, 0.18)";
+		ctx.lineWidth = 0.8;
+		ctx.stroke();
+		ctx.restore();
 	}
 
-	// Rendu du texte aligné
-	ctx.fillStyle = estTransparent ? couleurFond : "#1e293b";
-	ctx.textAlign = alignement;
+	ctx.fillStyle = estTransparent ? couleurFond : "#0f172a";
 	ctx.textBaseline = "top";
 
-	let posXTexte = cadreX + PADDING_X;
-	if (alignement === "center") posXTexte = cadreX + (largeur / 2);
-	else if (alignement === "right") posXTexte = cadreX + largeur - PADDING_X;
+	if (estTransparent) {
+		ctx.shadowColor = "rgba(0, 0, 0, 0.85)";
+		ctx.shadowBlur = 3;
+		ctx.shadowOffsetX = 0;
+		ctx.shadowOffsetY = 1;
+	}
 
-	const departY = cadreY + (estTransparent ? 9 : 13);
+	const departY = cadreY + (estTransparent ? 9 : 15);
 
-			lignes.forEach((ligne, idx) => {
+	lignes.forEach((ligne, idx) => {
 		const morceaux = analyserSegments(ligne);
 
 		let largeurLigne = 0;
@@ -1390,7 +1506,6 @@ function dessinerPostIt(x, y, texte, couleurFond = "#fef08a", largeurCustom = nu
 		ctx.textAlign = "left";
 		morceaux.forEach(m => {
 			ctx.font = getFont(m.gras, m.tagTaille);
-			// Léger décalage vertical pour aligner proprement la base des lettres S/M/L
 			const tActuelle = m.tagTaille ? taillesMap[m.tagTaille] : taillePolice;
 			const offsetBase = (taillePolice - tActuelle) * 0.4;
 
@@ -1399,12 +1514,9 @@ function dessinerPostIt(x, y, texte, couleurFond = "#fef08a", largeurCustom = nu
 		});
 	});
 
-
-
 	ctx.restore();
 	return { largeur, hauteur };
 }
-
 
 
 
@@ -1446,17 +1558,17 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 	];
 
 
-	function limiterAuTapis(startX, startY, angle, longueurMax, ignorerBordures = false) {
+		function limiterAuTapis(startX, startY, angle, longueurMax, ignorerBordures = false, decalageBande = -4) {
 		const cos = Math.cos(angle);
 		const sin = Math.sin(angle);
 		let distMax = longueurMax;
 
 		if (!ignorerBordures) {
-			if (cos > 0.0001) distMax = Math.min(distMax, (maxX - 4 - startX) / cos);
-			else if (cos < -0.0001) distMax = Math.min(distMax, (minX + 4 - startX) / cos);
+			if (cos > 0.0001) distMax = Math.min(distMax, (maxX + decalageBande - startX) / cos);
+			else if (cos < -0.0001) distMax = Math.min(distMax, (minX - decalageBande - startX) / cos);
 
-			if (sin > 0.0001) distMax = Math.min(distMax, (maxY - 4 - startY) / sin);
-			else if (sin < -0.0001) distMax = Math.min(distMax, (minY + 4 - startY) / sin);
+			if (sin > 0.0001) distMax = Math.min(distMax, (maxY + decalageBande - startY) / sin);
+			else if (sin < -0.0001) distMax = Math.min(distMax, (minY - decalageBande - startY) / sin);
 		}
 
 		distMax = Math.max(0, distMax);
@@ -1466,6 +1578,7 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 			longueur: distMax
 		};
 	}
+
 
 	// 1. Recherche de la bille blanche sur le tapis
 	let blancheCentre = null;
@@ -1708,10 +1821,9 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 			dessinerPointeFleche(cibleCentre.x, cibleCentre.y, finX, finY, couleurCible);
 			ctx.restore();
 		}
-				// C. Ligne tangente naturelle de la bille blanche (90°, sans flèche, blanc pâle)
+		// C. Ligne tangente naturelle de la bille blanche (90°, sans flèche, dégradé blanc -> transparent)
 		let afficherDeviation = !estCoupImpossible;
 		let angleDeviation = angleImpact + Math.PI / 2;
-		const couleurDeviation = "rgba(255, 255, 255, 0.45)"; // Blanc pâle semi-transparent
 
 		if (blancheCentre && afficherDeviation) {
 			const angleArrivee = Math.atan2(ghostY - blancheCentre.y, ghostX - blancheCentre.x);
@@ -1729,21 +1841,81 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 		}
 
 		if (afficherDeviation) {
-			const longueurDeviation = 120;
-			const finDeviation = limiterAuTapis(ghostX, ghostY, angleDeviation, longueurDeviation);
+			const longueurTotale = 260;
+			const maxRebonds = 2;
+			const margeTangente = 6; // +10px uniquement pour la tangente
 
-			if (finDeviation.longueur > 10) {
+			const segments = [];
+			let curX = ghostX;
+			let curY = ghostY;
+			let curAngle = angleDeviation;
+			let distRestante = longueurTotale;
+
+			for (let r = 0; r <= maxRebonds && distRestante > 2; r++) {
+				const finSeg = limiterAuTapis(curX, curY, curAngle, distRestante, false, margeTangente);
+				if (finSeg.longueur <= 0.5) break;
+
+				segments.push({
+					x1: curX,
+					y1: curY,
+					x2: finSeg.x,
+					y2: finSeg.y,
+					longueur: finSeg.longueur
+				});
+
+				distRestante -= finSeg.longueur;
+				if (distRestante <= 2) break;
+
+				const cos = Math.cos(curAngle);
+				const sin = Math.sin(curAngle);
+				const toucheGaucheOuDroite = (cos < 0 && finSeg.x <= minX - margeTangente + 0.5) || (cos > 0 && finSeg.x >= maxX + margeTangente - 0.5);
+				const toucheHautOuBas = (sin < 0 && finSeg.y <= minY - margeTangente + 0.5) || (sin > 0 && finSeg.y >= maxY + margeTangente - 0.5);
+
+				if (toucheGaucheOuDroite) {
+					curAngle = Math.PI - curAngle;
+				} else if (toucheHautOuBas) {
+					curAngle = -curAngle;
+				} else {
+					break;
+				}
+
+				curX = finSeg.x;
+				curY = finSeg.y;
+			}
+
+			if (segments.length > 0) {
 				ctx.save();
-				ctx.beginPath();
 				ctx.setLineDash([4, 4]);
-				ctx.strokeStyle = couleurDeviation;
 				ctx.lineWidth = 2;
-				ctx.moveTo(ghostX, ghostY);
-				ctx.lineTo(finDeviation.x, finDeviation.y);
-				ctx.stroke();
+				ctx.lineCap = "round";
+
+				const opaciteDepart = 0.65;
+				let distParcourue = 0;
+
+				segments.forEach(seg => {
+					const opDebut = opaciteDepart * Math.max(0, 1 - (distParcourue / longueurTotale));
+					const opFin = opaciteDepart * Math.max(0, 1 - ((distParcourue + seg.longueur) / longueurTotale));
+
+					const gradSeg = ctx.createLinearGradient(seg.x1, seg.y1, seg.x2, seg.y2);
+					gradSeg.addColorStop(0, `rgba(255, 255, 255, ${opDebut.toFixed(3)})`);
+					gradSeg.addColorStop(1, `rgba(255, 255, 255, ${opFin.toFixed(3)})`);
+
+					ctx.beginPath();
+					ctx.strokeStyle = gradSeg;
+					ctx.moveTo(seg.x1, seg.y1);
+					ctx.lineTo(seg.x2, seg.y2);
+					ctx.stroke();
+
+					distParcourue += seg.longueur;
+				});
+
 				ctx.restore();
 			}
 		}
+
+
+
+
 
 	}
 
@@ -2881,7 +3053,7 @@ if (dessin.estPostIt) {
 		ctx.stroke();
 	});
 }
-// === NOUVEAU : CADRE EN POINTILLÉS AUTOUR DU TRACÉ LIBRE SÉLECTIONNÉ ===
+// === CADRE EN POINTILLÉS + POIGNÉES D'EXTRÉMITÉS POUR LE TRACÉ LIBRE ===
 else if (!f.estZoneGrille && f.points.length >= 2) {
 	const xs = f.points.map(p => p.x);
 	const ys = f.points.map(p => p.y);
@@ -2893,7 +3065,22 @@ else if (!f.estZoneGrille && f.points.length >= 2) {
 	ctx.beginPath();
 	ctx.roundRect(minX, minY, largeur, hauteur, 8);
 	ctx.stroke();
+
+	// NOUVEAU : Poignées verte (début) et bleue (fin)
+	const p1 = f.points[0];
+	const p2 = f.points[f.points.length - 1];
+	ctx.setLineDash([]);
+	[p1, p2].forEach((extremite, idx) => {
+		ctx.beginPath();
+		ctx.arc(extremite.x, extremite.y, 6, 0, 2 * Math.PI);
+		ctx.fillStyle = idx === 0 ? "#2ecc71" : "#38bdf8";
+		ctx.fill();
+		ctx.lineWidth = 2;
+		ctx.strokeStyle = "#ffffff";
+		ctx.stroke();
+	});
 }
+
 
 
 
@@ -3596,15 +3783,20 @@ function clampPositionDessin(x, y) {
     let x = coords.x;
     let y = coords.y;
 
-    // === EN DIRECT SUR IPAD - RAFRAÎCHIT L'APERÇU FANTÔME AU GLISSEMENT ===
+        // === EN DIRECT SUR IPAD - RAFRAÎCHIT L'APERÇU FANTÔME AU GLISSEMENT ===
+    const outilCourant = (window.outilTraceActif !== "select") ? window.outilTraceActif : outilActif;
     const listeFormesTactiques = ['cible', 'carre', 'effetBlanche', 'repereX', 'pointContact', 'ghostBall', 'postit'];
-    if (listeFormesTactiques.includes(window.outilTraceActif) || outilActif) {
+    if (listeFormesTactiques.includes(outilCourant)) {
         if (e.cancelable) e.preventDefault();
 
-        // On applique le bridage spécial dessin pour les aperçus d'outils tactiques
-        const posClampee = clampPositionDessin(x, y);
-        mouseX = posClampee.x;
-        mouseY = posClampee.y;
+        if (outilCourant === 'postit') {
+            mouseX = x;
+            mouseY = y;
+        } else {
+            const posClampee = clampPositionDessin(x, y);
+            mouseX = posClampee.x;
+            mouseY = posClampee.y;
+        }
 
         if (!animationFrameId) {
             animationFrameId = requestAnimationFrame(() => {
@@ -3614,6 +3806,7 @@ function clampPositionDessin(x, y) {
         }
         return;
     }
+
 
     // === LOGIQUE DE TRACÉ DE LIGNES CLASSIQUE MODIFIÉE ===
     if (!isDrawing || !currentLine) return;
