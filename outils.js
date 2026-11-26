@@ -2451,6 +2451,184 @@ if (btnStartPlaylist) {
 	
 	ajusterLargeurPanneaux();
 
+	
+// --- GESTION DU BOUTON RÉINITIALISER LA TABLE ---
+const btnResetTable = document.getElementById('btn-reset-table');
+
+if (btnResetTable) {
+	btnResetTable.addEventListener('click', () => {
+		if (!confirm("Voulez-vous vraiment réinitialiser toute la table (billes, tracés et poches) ?")) {
+			return;
+		}
+
+		// 1. Déverrouiller toutes les billes et annuler la sélection
+		if (window.billesVerrouillees) window.billesVerrouillees.clear();
+		if (window.billeSelectionneeCourante) {
+			window.billeSelectionneeCourante.style.outline = 'none';
+			window.billeSelectionneeCourante = null;
+		}
+		window.formeTactiqueSelectionnee = null;
+
+		// 2. Replacer les 16 billes sur leurs 2 lignes d'origine
+		const gridLeft = 19, gridTop = 17, gridWidth = 754, gridHeight = 364;
+		const pasX = gridWidth / 16, pasY = gridHeight / 8, rayon = 12;
+
+		let indexPos = 0;
+		for (let y = 1; y <= 2; y++) {
+			for (let x = 1; x <= 8; x++) {
+				const ballEl = activeBalls.find(b => parseInt(b.getAttribute('data-id'), 10) === indexPos);
+				if (ballEl) {
+					ballEl.style.left = `${gridLeft + (x * pasX) - rayon}px`;
+					ballEl.style.top = `${gridTop + ((8 - y) * pasY) - rayon}px`;
+					ballEl.style.display = 'flex';
+					ballEl.style.outline = 'none';
+				}
+				indexPos++;
+			}
+		}
+
+		// 3. Remettre le sélecteur sur 15 billes (Jeu de la 8)
+		if (ballsCountSelect) ballsCountSelect.value = "15";
+
+		// 4. Effacer tous les tracés, cibles, zones et post-its
+		window.dessinsSauvegardes = [];
+		if (typeof window.redessinerToutesLesLignes === "function") {
+			window.redessinerToutesLesLignes();
+		}
+
+		// 5. Réinitialiser la couleur de toutes les poches
+		document.querySelectorAll('.pocket').forEach(p => {
+			p.style.removeProperty('--pocket-color');
+			p.style.borderColor = "#333";
+		});
+
+		// 6. Réinitialiser le titre et la description
+		if (titleInput) titleInput.value = "Ma configuration de billard";
+		if (descInput) descInput.value = "";
+		if (typeof rafraichirZoneNotes === "function") rafraichirZoneNotes();
+		if (typeof rafraichirTitreSurTapis === "function") rafraichirTitreSurTapis();
+
+		// 7. Revenir à l'outil Sélection et rafraîchir la liste latérale
+		const btnSelect = document.querySelector('.tool-btn[data-tool="select"]');
+		if (btnSelect && typeof gererLogiquePalette === "function") {
+			gererLogiquePalette(btnSelect, { preventDefault: () => {}, cancelable: false });
+		}
+		if (typeof rafraichirListeLateraleBilles === "function") {
+			rafraichirListeLateraleBilles();
+		}
+
+		// 8. Vide également la sauvegarde automatique et la série en cours
+		localStorage.removeItem('billard_diagramme_autosave_v1');
+		window.playlistDiag = [];
+		window.indexPlaylistCourant = 0;
+		if (typeof majBarreNavigationPlaylist === "function") majBarreNavigationPlaylist();
+
+		btnResetTable.blur();
+	});
+}
+
+
+	
+	
+	
+// ====================================================================
+// SAUVEGARDE AUTOMATIQUE EN TEMPS RÉEL DANS LE LOCALSTORAGE
+// ====================================================================
+const CLE_AUTOSAVE = 'billard_diagramme_autosave_v1';
+let timerAutosave = null;
+
+// 1. Capture l'état complet de la table et l'enregistre dans le navigateur
+function sauvegarderDansLocalStorage() {
+	// Ne pas écraser votre brouillon local si vous consultez un lien partagé (?mode=view ou #diag=)
+	if (window.isViewMode || window.location.hash.startsWith('#diag=')) return;
+
+	try {
+		const listBilles = activeBalls.map(ball => {
+			const ballId = ball.getAttribute('data-id');
+			return {
+				id: ballId,
+				x: ball.style.left,
+				y: ball.style.top,
+				visible: ball.style.display !== 'none',
+				verrouillee: window.billesVerrouillees ? window.billesVerrouillees.has(ballId) : false
+			};
+		});
+
+		const etatPoches = Array.from(document.querySelectorAll('.pocket')).map(p => ({
+			id: p.getAttribute('data-pocket-id') || p.className.split(' ')[1],
+			color: p.style.getPropertyValue('--pocket-color').trim() || "#000000"
+		}));
+
+		const etatComplet = {
+			titre: titleInput ? titleInput.value.trim() : "",
+			description: descInput ? descInput.value : "",
+			nombreBillesVisibles: ballsCountSelect ? ballsCountSelect.value : "15",
+			logoImageRaw: window.logoBase64Courant || null,
+			billes: listBilles,
+			lignesDessinees: window.dessinsSauvegardes || [],
+			pochesColoriees: etatPoches,
+			optionsVisuelles: {
+				grille: document.getElementById('chk-toggle-grid')?.checked ?? false,
+				hd: document.getElementById('chk-high-density-grid')?.checked ?? false,
+				magnetisme: document.getElementById('chk-magnetism')?.checked ?? true,
+				logo: document.getElementById('chk-show-logo')?.checked ?? false,
+				titreVisible: document.getElementById('chk-show-title')?.checked ?? false,
+				couleurTapis: document.querySelector('input[name="felt-color"]:checked')?.value || "vert",
+				listeBillesVisible: document.getElementById('chk-toggle-balls-list')?.checked ?? true
+			},
+			// Conserve également l'intégralité de votre série multi-diagrammes
+			playlist: window.playlistDiag || [],
+			indexPlaylist: window.indexPlaylistCourant || 0
+		};
+
+		localStorage.setItem(CLE_AUTOSAVE, JSON.stringify(etatComplet));
+	} catch (err) {
+		console.warn("Impossible de sauvegarder dans le localStorage (quota dépassé ?) :", err);
+	}
+}
+
+// Déclenche la sauvegarde avec un léger délai (anti-rebond de 300ms) pour préserver la fluidité
+function planifierAutosave() {
+	if (timerAutosave) clearTimeout(timerAutosave);
+	timerAutosave = setTimeout(sauvegarderDansLocalStorage, 300);
+}
+
+// 2. Restauration automatique au chargement de la page (uniquement s'il n'y a pas de #diag= dans l'URL)
+if (!window.location.hash.startsWith('#diag=')) {
+	const sauvegardeJson = localStorage.getItem(CLE_AUTOSAVE);
+	if (sauvegardeJson) {
+		try {
+			const donneesRestaurees = JSON.parse(sauvegardeJson);
+			appliquerDonneesConfiguration(donneesRestaurees);
+
+			// Restaure la barre de série si plusieurs diagrammes étaient ouverts
+			if (Array.isArray(donneesRestaurees.playlist) && donneesRestaurees.playlist.length > 0) {
+				window.playlistDiag = donneesRestaurees.playlist;
+				window.indexPlaylistCourant = donneesRestaurees.indexPlaylist || 0;
+				majBarreNavigationPlaylist();
+			}
+		} catch (e) {
+			console.error("Erreur lors de la restauration de la sauvegarde automatique :", e);
+		}
+	}
+}
+
+// 3. Écouteurs automatiques sur toutes les actions (glisser-déposer, clavier, clics, saisie)
+['mouseup', 'touchend', 'keyup', 'change', 'input', 'click'].forEach(evt => {
+	document.addEventListener(evt, planifierAutosave, { passive: true });
+});
+
+// Sécurité ultime juste avant la fermeture de l'onglet ou du navigateur
+window.addEventListener('beforeunload', sauvegarderDansLocalStorage);
+	
+	
+	
+	
+	
+	
+	
+	
+	
 });
 
 

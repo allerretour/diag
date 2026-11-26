@@ -1675,82 +1675,28 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 			dessinerPointeFleche(cibleCentre.x, cibleCentre.y, finX, finY, couleurCible);
 			ctx.restore();
 		}
-
-				// C. Ligne de déviation de la bille blanche (Ligne droite orientée et colorée selon l'effet)
+				// C. Ligne tangente naturelle de la bille blanche (90°, sans flèche, blanc pâle)
 		let afficherDeviation = !estCoupImpossible;
 		let angleDeviation = angleImpact + Math.PI / 2;
-		let sensRotation = 1;
+		const couleurDeviation = "rgba(255, 255, 255, 0.45)"; // Blanc pâle semi-transparent
 
-		// 1. Récupération de l'effet actif (sur le panneau lié/présent ou la valeur courante)
-		let pointEffetActif = window.indexPointEffetCourant || 0;
-		let forceEffetActif = window.niveauForceCourant !== undefined ? window.niveauForceCourant : 2;
-
-		if (Array.isArray(window.dessinsSauvegardes)) {
-			const panneauEffet = (donneeFigee && donneeFigee.ghostId)
-				? (window.dessinsSauvegardes.find(d => d.estEffetBlanche && d.lieAGhostId === donneeFigee.ghostId) || window.dessinsSauvegardes.find(d => d.estEffetBlanche))
-				: window.dessinsSauvegardes.find(d => d.estEffetBlanche);
-
-			if (panneauEffet) {
-				pointEffetActif = panneauEffet.pointEffet !== undefined ? panneauEffet.pointEffet : pointEffetActif;
-				forceEffetActif = panneauEffet.force !== undefined ? panneauEffet.force : forceEffetActif;
-			}
-		}
-
-		// 2. Attribution de la couleur synchronisée avec le point du panneau Effet
-		let couleurDeviation = "rgba(56, 189, 248, 0.85)"; // Bleu clair (Milieu / Sans effet : 0, 3, 4)
-		if ([1, 5, 6].includes(pointEffetActif)) {
-			couleurDeviation = "rgba(46, 204, 113, 0.9)";  // Vert (Coulé : 1, 5, 6)
-		} else if ([2, 7, 8].includes(pointEffetActif)) {
-			couleurDeviation = "rgba(231, 76, 60, 0.9)";   // Rouge (Rétro : 2, 7, 8)
-		}
-
-		// 3. Calcul de l'angle de la ligne droite selon la coupe et l'effet
 		if (blancheCentre && afficherDeviation) {
 			const angleArrivee = Math.atan2(ghostY - blancheCentre.y, ghostX - blancheCentre.x);
 			const diff = Math.sin(angleArrivee - angleImpact);
-			sensRotation = diff >= 0 ? 1 : -1;
+			const sensRotation = diff >= 0 ? 1 : -1;
 
+			// Vérifie si l'impact est plein (100%)
 			const estPlein = (Math.cos(angleArrivee - angleImpact) > 0 && Math.abs(diff) <= seuilPleinRadian);
 
-			// Si coup plein (100%) sans effet haut/bas, la blanche s'arrête sur place (carreau)
-			if (estPlein && ![1, 2, 5, 6, 7, 8].includes(pointEffetActif)) {
+			if (estPlein) {
 				afficherDeviation = false;
 			} else {
-				// Base à 90° (tangente naturelle)
 				angleDeviation = angleImpact + (sensRotation * Math.PI / 2);
-
-				// Facteur d'intensité selon la force (0.25 à 1.0)
-				const facteurForce = Math.max(0.25, (forceEffetActif || 2) / 4);
-
-				// Modification de l'angle en ligne droite :
-				// - Coulé (1, 5, 6) : ferme l'angle vers l'avant (direction de l'impact)
-				if ([1, 5, 6].includes(pointEffetActif)) {
-					if (estPlein) {
-						angleDeviation = angleImpact; // Tout droit vers l'avant
-					} else {
-						angleDeviation -= sensRotation * (Math.PI / 3.2) * facteurForce;
-					}
-				}
-				// - Rétro (2, 7, 8) : ouvre l'angle vers l'arrière
-				else if ([2, 7, 8].includes(pointEffetActif)) {
-					if (estPlein) {
-						angleDeviation = angleImpact + Math.PI; // Tout droit en arrière
-					} else {
-						angleDeviation += sensRotation * (Math.PI / 2.8) * facteurForce;
-					}
-				}
-
-				// - Effet latéral Gauche (3, 5, 7) ou Droite (4, 6, 8) : léger décalage angulaire
-				if ([3, 5, 7].includes(pointEffetActif)) {
-					angleDeviation -= 0.14 * facteurForce;
-				} else if ([4, 6, 8].includes(pointEffetActif)) {
-					angleDeviation += 0.14 * facteurForce;
-				}
 			}
 		}
 
-				if (afficherDeviation) {
-			const longueurDeviation = 85 + ((forceEffetActif || 2) * 18);
+		if (afficherDeviation) {
+			const longueurDeviation = 120;
 			const finDeviation = limiterAuTapis(ghostX, ghostY, angleDeviation, longueurDeviation);
 
 			if (finDeviation.longueur > 10) {
@@ -1758,13 +1704,10 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 				ctx.beginPath();
 				ctx.setLineDash([4, 4]);
 				ctx.strokeStyle = couleurDeviation;
-				ctx.lineWidth = 2.2;
+				ctx.lineWidth = 2;
 				ctx.moveTo(ghostX, ghostY);
 				ctx.lineTo(finDeviation.x, finDeviation.y);
 				ctx.stroke();
-
-				// Pointe de flèche de la même couleur que l'effet au bout des pointillés
-				dessinerPointeFleche(ghostX, ghostY, finDeviation.x, finDeviation.y, couleurDeviation);
 				ctx.restore();
 			}
 		}

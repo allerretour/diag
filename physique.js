@@ -992,6 +992,7 @@ function appliquerRestrictionsModeVue() {
 		// 'btn-toggle-balls-sidebar',
 		'balls-sidebar',
 		'btn-ouvrir-guide',
+		'btn-reset-table',
         'btn-export',
         'btn-export-text',
         'btn-export-serie-aleatoire'
