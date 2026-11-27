@@ -2162,7 +2162,7 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 						pochesActiveesParGhost.set(pocheBilleT2.id, billeCollisionT.couleur);
 					}
 
-					ctx.save();
+										ctx.save();
 					// Cercle fantôme au point d'impact de la blanche
 					ctx.beginPath();
 					ctx.arc(nextX, nextY, rayon, 0, 2 * Math.PI);
@@ -2170,20 +2170,21 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 					ctx.lineWidth = 1.2;
 					ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
 					ctx.stroke();
+					ctx.restore();
 
-					// Flèche de la bille percutée par la blanche
+					// Flèche dégradée de la bille percutée par la blanche
 					if (distBilleT2 > 6) {
 						const finT2X = billeCollisionT.x + cosT2 * distBilleT2;
 						const finT2Y = billeCollisionT.y + sinT2 * distBilleT2;
-						ctx.beginPath();
-						ctx.setLineDash([]);
-						ctx.strokeStyle = billeCollisionT.couleur;
-						ctx.lineWidth = 2.5;
-						ctx.moveTo(billeCollisionT.x, billeCollisionT.y);
-						ctx.lineTo(finT2X, finT2Y);
-						ctx.stroke();
-						dessinerPointeFleche(billeCollisionT.x, billeCollisionT.y, finT2X, finT2Y, billeCollisionT.couleur);
+						tracerTrajectoireDegradee(
+							[{ x1: billeCollisionT.x, y1: billeCollisionT.y, x2: finT2X, y2: finT2Y, longueur: distBilleT2 }],
+							billeCollisionT.couleur,
+							false,
+							true,
+							0.25
+						);
 					}
+
 					ctx.restore();
 
 					// b) La tangente blanche prend sa nouvelle tangente à 90° sur 100px max
