@@ -1533,7 +1533,8 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 		// === PARAMÈTRES D'AIMANTATION ===
 	const TOLERANCE_IMPACT_PLEIN_DEGRES = 0.8; // Aimant fin pour le 100%
 	const TOLERANCE_AIMANT_ZERO_DEGRES = 1.8;  // Aimant fin pour la coupe rasante à 0% (90°)
-	const TOLERANCE_AIMANT_POCHE_DEGRES = 4.0; // Aimantation franche vers les 6 poches
+	const TOLERANCE_AIMANT_POCHE_DEGRES = 4.6; // Détection des poches légèrement resserrée
+
 
 
 
@@ -1547,15 +1548,16 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 	const minY = 18 + rayon;       // 30px
 	const maxY = 18 + 364 - rayon; // 370px
 
-		// --- COORDONNÉES DES 6 POCHES DU TAPIS ---
+		// --- COORDONNÉES ET IDENTIFIANTS CSS DES 6 POCHES DU TAPIS ---
 	const pochesTapis = [
-		{ x: 24, y: 23 },             // Haut-Gauche
-		{ x: 19 + 377, y: 16 },       // Milieu-Haut
-		{ x: 19 + 754 - 5, y: 23 },   // Haut-Droit
-		{ x: 24, y: 18 + 364 - 5 },   // Bas-Gauche
-		{ x: 19 + 377, y: 18 + 366 }, // Milieu-Bas
-		{ x: 19 + 754 - 5, y: 18 + 364 - 5 } // Bas-Droit
+		{ id: 'tl', x: 24, y: 23 },             // Haut-Gauche
+		{ id: 'tc', x: 19 + 377, y: 16 },       // Milieu-Haut
+		{ id: 'tr', x: 19 + 754 - 5, y: 23 },   // Haut-Droit
+		{ id: 'bl', x: 24, y: 18 + 364 - 5 },   // Bas-Gauche
+		{ id: 'bc', x: 19 + 377, y: 18 + 366 }, // Milieu-Bas
+		{ id: 'br', x: 19 + 754 - 5, y: 18 + 364 - 5 } // Bas-Droit
 	];
+
 
 
 		function limiterAuTapis(startX, startY, angle, longueurMax, ignorerBordures = false, decalageBande = -4) {
@@ -1578,6 +1580,67 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 			longueur: distMax
 		};
 	}
+
+
+
+	// Utilitaire pour convertir une couleur (Hex ou RGB) en RGBA avec opacité contrôlée
+	function couleurAvecOpacite(c, alpha) {
+		if (!c) return `rgba(255, 255, 255, ${alpha})`;
+		const a = Math.max(0, Math.min(1, alpha)).toFixed(3);
+		if (c.startsWith('#')) {
+			let hex = c.slice(1);
+			if (hex.length === 3) hex = hex.split('').map(x => x + x).join('');
+			const r = parseInt(hex.substring(0, 2), 16) || 255;
+			const g = parseInt(hex.substring(2, 4), 16) || 255;
+			const b = parseInt(hex.substring(4, 6), 16) || 255;
+			return `rgba(${r}, ${g}, ${b}, ${a})`;
+		}
+		const match = c.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+		if (match) return `rgba(${match[1]}, ${match[2]}, ${match[3]}, ${a})`;
+		return c;
+	}
+
+	// Trace une série de segments avec dégradé continu + pointe de flèche assortie
+	function tracerTrajectoireDegradee(segments, couleurBase, estPointilleApresImpact = false, avecFlecheFinale = true, opaciteMin = 0.22) {
+		if (!segments || segments.length === 0) return;
+		const distTotale = segments.reduce((acc, s) => acc + s.longueur, 0);
+		if (distTotale <= 1) return;
+
+		let distParcourue = 0;
+
+		segments.forEach((seg, idx) => {
+			const ratioDebut = distParcourue / distTotale;
+			const ratioFin = (distParcourue + seg.longueur) / distTotale;
+
+			const opDebut = 1 - ratioDebut * (1 - opaciteMin);
+			const opFin = 1 - ratioFin * (1 - opaciteMin);
+
+			ctx.save();
+			ctx.beginPath();
+			ctx.setLineDash((estPointilleApresImpact && idx > 0) ? [5, 5] : []);
+			ctx.lineWidth = 2.5;
+			ctx.lineCap = "round";
+
+			const grad = ctx.createLinearGradient(seg.x1, seg.y1, seg.x2, seg.y2);
+			grad.addColorStop(0, couleurAvecOpacite(couleurBase, opDebut));
+			grad.addColorStop(1, couleurAvecOpacite(couleurBase, opFin));
+
+			ctx.strokeStyle = grad;
+			ctx.moveTo(seg.x1, seg.y1);
+			ctx.lineTo(seg.x2, seg.y2);
+			ctx.stroke();
+
+			// Pointe de flèche à l'extrémité finale avec l'opacité de fin du dégradé
+			if (avecFlecheFinale && idx === segments.length - 1) {
+				dessinerPointeFleche(seg.x1, seg.y1, seg.x2, seg.y2, couleurAvecOpacite(couleurBase, opFin));
+			}
+			ctx.restore();
+
+			distParcourue += seg.longueur;
+		});
+	}
+
+
 
 
 	// 1. Recherche de la bille blanche sur le tapis
@@ -1784,44 +1847,197 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 
 		}
 
-		// B. Trajectoire projetée de la bille objet (jusqu'aux bandes ou la poche)
-		let pocheAlignee = null;
-		let ecartPocheMin = seuilPocheRadian;
+				// B. Trajectoire projetée de la bille objet (Rebonds, collisions billes, poches + dégradé avec flèche)
+		const rayonCapturePoche = 26;
+		const maxSegmentsObjet = 4;
+		const distanceMaxAvantImpact = 1400;
+		const distanceMaxApresImpact = 250;
+		const margeBande = 6;
 
-		pochesTapis.forEach(poche => {
-			const angleVersPoche = Math.atan2(poche.y - cibleCentre.y, poche.x - cibleCentre.x);
-			if (Math.cos(angleImpact - angleVersPoche) > 0) {
-				const ecart = Math.abs(Math.sin(angleImpact - angleVersPoche));
-				if (ecart <= ecartPocheMin) {
-					ecartPocheMin = ecart;
-					pocheAlignee = poche;
+		const pochesActiveesParGhost = new Map();
+		const segmentsObjet = [];
+
+		const autresBilles = [];
+		if (Array.isArray(activeBalls)) {
+			activeBalls.forEach(ball => {
+				if (ball.style.display !== 'none') {
+					const bx = (parseFloat(ball.style.left) || 0) + rayon;
+					const by = (parseFloat(ball.style.top) || 0) + rayon;
+					const estCible = Math.hypot(bx - cibleCentre.x, by - cibleCentre.y) < 2;
+					const estBlanche = blancheCentre && Math.hypot(bx - blancheCentre.x, by - blancheCentre.y) < 2;
+					if (!estCible && !estBlanche) {
+						autresBilles.push({
+							x: bx,
+							y: by,
+							couleur: ball.style.backgroundColor || '#ffffff'
+						});
+					}
 				}
-			}
-		});
-
-		const longueurTrajectoire = pocheAlignee
-			? Math.max(10, Math.hypot(pocheAlignee.x - cibleCentre.x, pocheAlignee.y - cibleCentre.y) - 10)
-			: 2000;
-
-		const finCible = limiterAuTapis(cibleCentre.x, cibleCentre.y, angleImpact, longueurTrajectoire, Boolean(pocheAlignee));
-		const longueurFinale = !pocheAlignee ? Math.max(0, finCible.longueur + 12) : finCible.longueur;
-
-		if (longueurFinale > 6) {
-			const finX = cibleCentre.x + Math.cos(angleImpact) * longueurFinale;
-			const finY = cibleCentre.y + Math.sin(angleImpact) * longueurFinale;
-
-			ctx.save();
-			ctx.beginPath();
-			ctx.setLineDash([]);
-			ctx.strokeStyle = couleurCible;
-			ctx.lineWidth = 2.5;
-			ctx.moveTo(cibleCentre.x, cibleCentre.y);
-			ctx.lineTo(finX, finY);
-			ctx.stroke();
-			dessinerPointeFleche(cibleCentre.x, cibleCentre.y, finX, finY, couleurCible);
-			ctx.restore();
+			});
 		}
-		// C. Ligne tangente naturelle de la bille blanche (90°, sans flèche, dégradé blanc -> transparent)
+
+		let objX = cibleCentre.x;
+		let objY = cibleCentre.y;
+		let objAngle = angleImpact;
+		let distRestanteObj = distanceMaxAvantImpact;
+		let billesDejaTouchees = new Set();
+
+		for (let step = 0; step < maxSegmentsObjet && distRestanteObj > 4; step++) {
+			const cos = Math.cos(objAngle);
+			const sin = Math.sin(objAngle);
+
+			const finBande = limiterAuTapis(objX, objY, objAngle, distRestanteObj, false, margeBande);
+			let distEvenement = finBande.longueur;
+			let typeEvenement = (finBande.longueur < distRestanteObj - 0.5) ? 'bande' : 'fin';
+			let billeCollision = null;
+			let pocheCiblee = null;
+
+			pochesTapis.forEach(poche => {
+				const dx = poche.x - objX;
+				const dy = poche.y - objY;
+				const proj = dx * cos + dy * sin;
+				if (proj > 4 && proj <= distEvenement + 16) {
+					const distPerp = Math.abs(dx * sin - dy * cos);
+					if (distPerp <= rayonCapturePoche) {
+						distEvenement = Math.max(0, proj - 4);
+						typeEvenement = 'poche';
+						pocheCiblee = poche;
+					}
+				}
+			});
+
+			autresBilles.forEach((autre, idx) => {
+				if (billesDejaTouchees.has(idx)) return;
+				const dx = autre.x - objX;
+				const dy = autre.y - objY;
+				const proj = dx * cos + dy * sin;
+
+				if (proj > 0) {
+					const distPerpSq = (dx * dx + dy * dy) - (proj * proj);
+					const diametreSq = distanceContact * distanceContact;
+
+					if (distPerpSq < diametreSq - 0.5) {
+						const distImpact = proj - Math.sqrt(diametreSq - distPerpSq);
+						if (distImpact >= 0 && distImpact < distEvenement) {
+							distEvenement = distImpact;
+							typeEvenement = 'bille';
+							billeCollision = { ...autre, index: idx };
+							pocheCiblee = null;
+						}
+					}
+				}
+			});
+
+			if (distEvenement <= 0.5 && typeEvenement !== 'bille') break;
+
+			const nextX = objX + cos * distEvenement;
+			const nextY = objY + sin * distEvenement;
+
+			segmentsObjet.push({
+				x1: objX,
+				y1: objY,
+				x2: nextX,
+				y2: nextY,
+				longueur: distEvenement
+			});
+
+			distRestanteObj -= distEvenement;
+
+			if (typeEvenement === 'poche') {
+				if (pocheCiblee && !estCoupImpossible) {
+					pochesActiveesParGhost.set(pocheCiblee.id, couleurCible);
+				}
+				break;
+			} 
+			else if (typeEvenement === 'fin') {
+				break;
+			} 
+			else if (typeEvenement === 'bille' && billeCollision) {
+				billesDejaTouchees.add(billeCollision.index);
+
+				// a) Trajectoire de la bille percutée avec dégradé et flèche
+				const angleEjectionBille2 = Math.atan2(billeCollision.y - nextY, billeCollision.x - nextX);
+				const cos2 = Math.cos(angleEjectionBille2);
+				const sin2 = Math.sin(angleEjectionBille2);
+
+				const finBande2 = limiterAuTapis(billeCollision.x, billeCollision.y, angleEjectionBille2, distanceMaxApresImpact, false, margeBande);
+				let distBille2 = finBande2.longueur;
+				let pocheBille2 = null;
+
+				pochesTapis.forEach(poche => {
+					const dx = poche.x - billeCollision.x;
+					const dy = poche.y - billeCollision.y;
+					const proj = dx * cos2 + dy * sin2;
+					if (proj > 4 && proj <= distBille2 + 16) {
+						const distPerp = Math.abs(dx * sin2 - dy * cos2);
+						if (distPerp <= rayonCapturePoche) {
+							distBille2 = Math.max(0, proj - 4);
+							pocheBille2 = poche;
+						}
+					}
+				});
+
+				if (pocheBille2 && !estCoupImpossible) {
+					pochesActiveesParGhost.set(pocheBille2.id, billeCollision.couleur);
+				}
+
+				ctx.save();
+				ctx.beginPath();
+				ctx.arc(nextX, nextY, rayon, 0, 2 * Math.PI);
+				ctx.setLineDash([3, 3]);
+				ctx.lineWidth = 1.2;
+				ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
+				ctx.stroke();
+				ctx.restore();
+
+				if (distBille2 > 6) {
+					const fin2X = billeCollision.x + cos2 * distBille2;
+					const fin2Y = billeCollision.y + sin2 * distBille2;
+					tracerTrajectoireDegradee(
+						[{ x1: billeCollision.x, y1: billeCollision.y, x2: fin2X, y2: fin2Y, longueur: distBille2 }],
+						billeCollision.couleur,
+						false,
+						true,
+						0.25
+					);
+				}
+
+				// b) La bille objet prend la tangente à 90° limitée à 100px
+				const diffSens = Math.sin(objAngle - angleEjectionBille2);
+				if (Math.abs(diffSens) <= seuilPleinRadian) {
+					break;
+				}
+				const sensTangente = diffSens >= 0 ? 1 : -1;
+				objAngle = angleEjectionBille2 + (sensTangente * Math.PI / 2);
+				objX = nextX;
+				objY = nextY;
+				distRestanteObj = 100;
+			} 
+			else if (typeEvenement === 'bande') {
+				const toucheVerticale = (cos < 0 && nextX <= minX - margeBande + 0.5) || (cos > 0 && nextX >= maxX + margeBande - 0.5);
+				const toucheHorizontale = (sin < 0 && nextY <= minY - margeBande + 0.5) || (sin > 0 && nextY >= maxY + margeBande - 0.5);
+
+				if (toucheVerticale) objAngle = Math.PI - objAngle;
+				else if (toucheHorizontale) objAngle = -objAngle;
+				else break;
+
+				objX = nextX;
+				objY = nextY;
+				distRestanteObj = Math.min(distRestanteObj, distanceMaxApresImpact);
+			}
+		}
+
+		// Rendu en dégradé continu de toute la trajectoire de la bille objet + flèche finale
+		tracerTrajectoireDegradee(segmentsObjet, couleurCible, true, true, 0.25);
+
+
+		
+
+
+
+
+
+		// C. Ligne tangente naturelle de la bille blanche (Même logique de collision billes, rebonds bandes et poches)
 		let afficherDeviation = !estCoupImpossible;
 		let angleDeviation = angleImpact + Math.PI / 2;
 
@@ -1830,7 +2046,6 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 			const diff = Math.sin(angleArrivee - angleImpact);
 			const sensRotation = diff >= 0 ? 1 : -1;
 
-			// Vérifie si l'impact est plein (100%)
 			const estPlein = (Math.cos(angleArrivee - angleImpact) > 0 && Math.abs(diff) <= seuilPleinRadian);
 
 			if (estPlein) {
@@ -1841,48 +2056,167 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 		}
 
 		if (afficherDeviation) {
-			const longueurTotale = 260;
-			const maxRebonds = 2;
-			const margeTangente = 6; // +10px uniquement pour la tangente
+			const longueurInitialeTangente = 160;
+			const maxSegmentsTangente = 4;
+			const margeTangente = 6;
 
 			const segments = [];
 			let curX = ghostX;
 			let curY = ghostY;
 			let curAngle = angleDeviation;
-			let distRestante = longueurTotale;
+			let distRestante = longueurInitialeTangente;
+			let longueurReferenceDegrade = longueurInitialeTangente;
+			let billesDejaToucheesTangente = new Set();
 
-			for (let r = 0; r <= maxRebonds && distRestante > 2; r++) {
+			for (let r = 0; r < maxSegmentsTangente && distRestante > 2; r++) {
+				const cos = Math.cos(curAngle);
+				const sin = Math.sin(curAngle);
+
+				// 1. Distance jusqu'à la bande
 				const finSeg = limiterAuTapis(curX, curY, curAngle, distRestante, false, margeTangente);
-				if (finSeg.longueur <= 0.5) break;
+				let distEvenementT = finSeg.longueur;
+				let typeEvenementT = (finSeg.longueur < distRestante - 0.5) ? 'bande' : 'fin';
+				let billeCollisionT = null;
+
+				// 2. Détection d'entrée dans une poche (scratch)
+				pochesTapis.forEach(poche => {
+					const dx = poche.x - curX;
+					const dy = poche.y - curY;
+					const proj = dx * cos + dy * sin;
+					if (proj > 4 && proj <= distEvenementT + 16) {
+						const distPerp = Math.abs(dx * sin - dy * cos);
+						if (distPerp <= rayonCapturePoche) {
+							distEvenementT = Math.max(0, proj - 4);
+							typeEvenementT = 'poche';
+						}
+					}
+				});
+
+				// 3. Détection de collision avec une autre bille sur la trajectoire de la tangente
+				autresBilles.forEach((autre, idx) => {
+					if (billesDejaToucheesTangente.has(idx)) return;
+					const dx = autre.x - curX;
+					const dy = autre.y - curY;
+					const proj = dx * cos + dy * sin;
+
+					if (proj > 0) {
+						const distPerpSq = (dx * dx + dy * dy) - (proj * proj);
+						const diametreSq = distanceContact * distanceContact;
+
+						if (distPerpSq < diametreSq - 0.5) {
+							const distImpact = proj - Math.sqrt(diametreSq - distPerpSq);
+							if (distImpact >= 0 && distImpact < distEvenementT) {
+								distEvenementT = distImpact;
+								typeEvenementT = 'bille';
+								billeCollisionT = { ...autre, index: idx };
+							}
+						}
+					}
+				});
+
+				if (distEvenementT <= 0.5 && typeEvenementT !== 'bille') break;
+
+				const nextX = curX + cos * distEvenementT;
+				const nextY = curY + sin * distEvenementT;
 
 				segments.push({
 					x1: curX,
 					y1: curY,
-					x2: finSeg.x,
-					y2: finSeg.y,
-					longueur: finSeg.longueur
+					x2: nextX,
+					y2: nextY,
+					longueur: distEvenementT
 				});
 
-				distRestante -= finSeg.longueur;
-				if (distRestante <= 2) break;
+				distRestante -= distEvenementT;
 
-				const cos = Math.cos(curAngle);
-				const sin = Math.sin(curAngle);
-				const toucheGaucheOuDroite = (cos < 0 && finSeg.x <= minX - margeTangente + 0.5) || (cos > 0 && finSeg.x >= maxX + margeTangente - 0.5);
-				const toucheHautOuBas = (sin < 0 && finSeg.y <= minY - margeTangente + 0.5) || (sin > 0 && finSeg.y >= maxY + margeTangente - 0.5);
-
-				if (toucheGaucheOuDroite) {
-					curAngle = Math.PI - curAngle;
-				} else if (toucheHautOuBas) {
-					curAngle = -curAngle;
-				} else {
+				// 4. Résolution de l'événement de la tangente
+				if (typeEvenementT === 'poche' || typeEvenementT === 'fin') {
 					break;
-				}
+				} 
+				else if (typeEvenementT === 'bille' && billeCollisionT) {
+					billesDejaToucheesTangente.add(billeCollisionT.index);
 
-				curX = finSeg.x;
-				curY = finSeg.y;
+					// a) Trajectoire de la bille percutée par la blanche (250px max)
+					const angleEjectionBilleT = Math.atan2(billeCollisionT.y - nextY, billeCollisionT.x - nextX);
+					const cosT2 = Math.cos(angleEjectionBilleT);
+					const sinT2 = Math.sin(angleEjectionBilleT);
+
+					const finBandeT2 = limiterAuTapis(billeCollisionT.x, billeCollisionT.y, angleEjectionBilleT, distanceMaxApresImpact, false, margeTangente);
+					let distBilleT2 = finBandeT2.longueur;
+					let pocheBilleT2 = null;
+
+					pochesTapis.forEach(poche => {
+						const dx = poche.x - billeCollisionT.x;
+						const dy = poche.y - billeCollisionT.y;
+						const proj = dx * cosT2 + dy * sinT2;
+						if (proj > 4 && proj <= distBilleT2 + 16) {
+							const distPerp = Math.abs(dx * sinT2 - dy * cosT2);
+							if (distPerp <= rayonCapturePoche) {
+								distBilleT2 = Math.max(0, proj - 4);
+								pocheBilleT2 = poche;
+							}
+						}
+					});
+
+					if (pocheBilleT2 && !estCoupImpossible) {
+						pochesActiveesParGhost.set(pocheBilleT2.id, billeCollisionT.couleur);
+					}
+
+					ctx.save();
+					// Cercle fantôme au point d'impact de la blanche
+					ctx.beginPath();
+					ctx.arc(nextX, nextY, rayon, 0, 2 * Math.PI);
+					ctx.setLineDash([3, 3]);
+					ctx.lineWidth = 1.2;
+					ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
+					ctx.stroke();
+
+					// Flèche de la bille percutée par la blanche
+					if (distBilleT2 > 6) {
+						const finT2X = billeCollisionT.x + cosT2 * distBilleT2;
+						const finT2Y = billeCollisionT.y + sinT2 * distBilleT2;
+						ctx.beginPath();
+						ctx.setLineDash([]);
+						ctx.strokeStyle = billeCollisionT.couleur;
+						ctx.lineWidth = 2.5;
+						ctx.moveTo(billeCollisionT.x, billeCollisionT.y);
+						ctx.lineTo(finT2X, finT2Y);
+						ctx.stroke();
+						dessinerPointeFleche(billeCollisionT.x, billeCollisionT.y, finT2X, finT2Y, billeCollisionT.couleur);
+					}
+					ctx.restore();
+
+					// b) La tangente blanche prend sa nouvelle tangente à 90° sur 100px max
+					const diffSensT = Math.sin(curAngle - angleEjectionBilleT);
+					if (Math.abs(diffSensT) <= seuilPleinRadian) {
+						break;
+					}
+					const sensTangenteT = diffSensT >= 0 ? 1 : -1;
+					curAngle = angleEjectionBilleT + (sensTangenteT * Math.PI / 2);
+					curX = nextX;
+					curY = nextY;
+					distRestante = 100;
+					const distDejaParcourue = segments.reduce((acc, s) => acc + s.longueur, 0);
+					longueurReferenceDegrade = distDejaParcourue + 100;
+				} 
+				else if (typeEvenementT === 'bande') {
+					const toucheGaucheOuDroite = (cos < 0 && nextX <= minX - margeTangente + 0.5) || (cos > 0 && nextX >= maxX + margeTangente - 0.5);
+					const toucheHautOuBas = (sin < 0 && nextY <= minY - margeTangente + 0.5) || (sin > 0 && nextY >= maxY + margeTangente - 0.5);
+
+					if (toucheGaucheOuDroite) {
+						curAngle = Math.PI - curAngle;
+					} else if (toucheHautOuBas) {
+						curAngle = -curAngle;
+					} else {
+						break;
+					}
+
+					curX = nextX;
+					curY = nextY;
+				}
 			}
 
+			// Rendu graphique de la tangente avec dégradé continu
 			if (segments.length > 0) {
 				ctx.save();
 				ctx.setLineDash([4, 4]);
@@ -1893,8 +2227,8 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 				let distParcourue = 0;
 
 				segments.forEach(seg => {
-					const opDebut = opaciteDepart * Math.max(0, 1 - (distParcourue / longueurTotale));
-					const opFin = opaciteDepart * Math.max(0, 1 - ((distParcourue + seg.longueur) / longueurTotale));
+					const opDebut = opaciteDepart * Math.max(0.08, 1 - (distParcourue / longueurReferenceDegrade));
+					const opFin = opaciteDepart * Math.max(0.05, 1 - ((distParcourue + seg.longueur) / longueurReferenceDegrade));
 
 					const gradSeg = ctx.createLinearGradient(seg.x1, seg.y1, seg.x2, seg.y2);
 					gradSeg.addColorStop(0, `rgba(255, 255, 255, ${opDebut.toFixed(3)})`);
@@ -1912,6 +2246,20 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 				ctx.restore();
 			}
 		}
+
+		// --- MISE À JOUR VISUELLE DES INDICATEURS DE POCHES (Bille objet + Tangente blanche) ---
+		pochesTapis.forEach(poche => {
+			const elPoche = document.querySelector(`.pocket.${poche.id}`);
+			if (!elPoche) return;
+
+			if (pochesActiveesParGhost.has(poche.id)) {
+				elPoche.style.setProperty('--pocket-color', pochesActiveesParGhost.get(poche.id));
+				elPoche.dataset.ghostAutoPocket = "true";
+			} else if (elPoche.dataset.ghostAutoPocket === "true") {
+				elPoche.style.removeProperty('--pocket-color');
+				delete elPoche.dataset.ghostAutoPocket;
+			}
+		});
 
 
 
@@ -2831,6 +3179,16 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 	// Redessine l'ensemble des calques de dessin (lignes, flèches et cibles)
 	window.redessinerToutesLesLignes = function() {
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+		// Si aucun Ghost n'est présent sur le tapis, éteint les poches allumées automatiquement par le Ghost
+		const aUnGhostSurTapis = window.dessinsSauvegardes.some(d => d.estGhostBall);
+		if (!aUnGhostSurTapis && outilActif !== 'ghostBall' && window.outilTraceActif !== 'ghostBall') {
+			document.querySelectorAll('.pocket[data-ghost-auto-pocket="true"]').forEach(elPoche => {
+				elPoche.style.removeProperty('--pocket-color');
+				delete elPoche.dataset.ghostAutoPocket;
+			});
+		}
+
 
 		// --- NOUVEAU : Affichage automatique de la Breakbox Matchroom ---
 		const ballsCountSelect = document.getElementById('select-balls-count');
