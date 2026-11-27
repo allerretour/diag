@@ -1521,6 +1521,88 @@ function dessinerPostIt(x, y, texte, couleurFond = "#fef08a", largeurCustom = nu
 
 
 
+function dessinerQueueBillard(blancheX, blancheY, cibleX, cibleY, decalageLateralPx = 0) {
+	// L'angle va de la cible (Ghost) vers la bille blanche pour pointer vers l'arrière
+	const angleArriere = Math.atan2(blancheY - cibleY, blancheX - cibleX);
+	const rayonBille = 12;
+
+	ctx.save();
+	ctx.translate(blancheX, blancheY);
+	ctx.rotate(angleArriere);
+	// Décalage latéral optionnel (ex: effet gauche/droite)
+	ctx.translate(0, decalageLateralPx);
+
+	// Distance entre le centre de la bille et le bout du procédé (légèrement décollé de 3px)
+	const departProcede = rayonBille + 3;
+	const longProcede = 5;
+	const longVirole = 14;
+	const longFut = 135;
+
+	// 1. Ombre portée douce sur le tapis
+	ctx.save();
+	ctx.beginPath();
+	ctx.moveTo(departProcede, 4);
+	ctx.lineTo(departProcede + longProcede + longVirole + longFut, 8);
+	ctx.strokeStyle = "rgba(0, 0, 0, 0.35)";
+	ctx.lineWidth = 7;
+	ctx.lineCap = "round";
+	ctx.stroke();
+	ctx.restore();
+
+	// 2. Procédé (embout en cuir bleu bombé)
+	ctx.beginPath();
+	ctx.arc(departProcede + 3, 0, 3.2, Math.PI * 0.5, Math.PI * 1.5);
+	ctx.lineTo(departProcede + longProcede, -3.2);
+	ctx.lineTo(departProcede + longProcede, 3.2);
+	ctx.closePath();
+	ctx.fillStyle = "#2980b9";
+	ctx.fill();
+
+	// 3. Virole (bague blanche ivoire)
+	const debutVirole = departProcede + longProcede;
+	ctx.beginPath();
+	ctx.moveTo(debutVirole, -3.2);
+	ctx.lineTo(debutVirole + longVirole, -3.5);
+	ctx.lineTo(debutVirole + longVirole, 3.5);
+	ctx.lineTo(debutVirole, 3.2);
+	ctx.closePath();
+	const gradVirole = ctx.createLinearGradient(0, -3.5, 0, 3.5);
+	gradVirole.addColorStop(0, "#e2e8f0");
+	gradVirole.addColorStop(0.4, "#ffffff");
+	gradVirole.addColorStop(1, "#cbd5e1");
+	ctx.fillStyle = gradVirole;
+	ctx.fill();
+
+	// 4. Fût en bois d'érable (dégradé cylindrique + dégradé de transparence au bout)
+	const debutFut = debutVirole + longVirole;
+	const finFut = debutFut + longFut;
+	ctx.beginPath();
+	ctx.moveTo(debutFut, -3.5);
+	ctx.lineTo(finFut, -5.5);
+	ctx.lineTo(finFut, 5.5);
+	ctx.lineTo(debutFut, 3.5);
+	ctx.closePath();
+
+	const gradBois = ctx.createLinearGradient(0, -5, 0, 5);
+	gradBois.addColorStop(0, "#b07d4f");
+	gradBois.addColorStop(0.35, "#e6be8a");
+	gradBois.addColorStop(0.7, "#c68e59");
+	gradBois.addColorStop(1, "#7c4d25");
+	ctx.fillStyle = gradBois;
+	ctx.fill();
+
+	// Légère bordure fine pour détacher la queue du tapis
+	ctx.strokeStyle = "rgba(0, 0, 0, 0.35)";
+	ctx.lineWidth = 0.8;
+	ctx.stroke();
+
+	ctx.restore();
+}
+
+
+
+
+
 function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angleForce = null) {
 	ctx.save();
 	ctx.imageSmoothingEnabled = true;
@@ -1832,7 +1914,7 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 			ctx.lineTo(ghostX, ghostY);
 			ctx.stroke();
 
-			// 2. Ligne centrale de visée (optionnelle, aide à garder l'axe précis)
+						// 2. Ligne centrale de visée (optionnelle, aide à garder l'axe précis)
 			ctx.beginPath();
 			ctx.setLineDash([4, 4]);
 			ctx.lineWidth = 1.5;
@@ -1842,6 +1924,13 @@ function dessinerBilleFantome(mouseX, mouseY, couleur, donneeFigee = null, angle
 			ctx.moveTo(blancheCentre.x, blancheCentre.y);
 			ctx.lineTo(ghostX, ghostY);
 			ctx.stroke();
+
+			ctx.restore();
+
+			// 3. Dessin du bout de la queue de billard alignée derrière la bille blanche
+			if (!estCoupImpossible) {
+				dessinerQueueBillard(blancheCentre.x, blancheCentre.y, ghostX, ghostY);
+			}
 
 			ctx.restore();
 
