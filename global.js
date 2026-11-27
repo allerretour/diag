@@ -38,13 +38,13 @@ const labelsForce = {
 	4: "MAX"
 };
 
+// --- Paramètres de Rendu de Force (Touche 0 / Effets) ---
 const couleursForce = {
-	1: "#2ecc71", // Vert
-	2: "#f1c40f", // Jaune
-	3: "#e67e22", // Orange
-	4: "#e74c3c"  // Rouge
+	1: "#2ecc71", 2: "#2ecc71", 3: "#82e0aa", // Doux (10% - 30%)
+	4: "#f1c40f", 5: "#f1c40f", 6: "#f39c12", // Moyen (40% - 60%)
+	7: "#e67e22", 8: "#e67e22",               // Fort (70% - 80%)
+	9: "#e74c3c", 10: "#e74c3c"               // Max (90% - 100%)
 };
-
 
 /**
  * ====================================================================
@@ -73,7 +73,7 @@ window.tailleCarreCourante = 95;      // Dimension active du carré en pixels (9
 window.quadrantCibleCourant = 0;      // Index du quadrant actif (0: BD, 1: BG, 2: HG, 3: HD)
 
 // --- Configuration de l'Outil : Effet Blanche (Touche 0) ---
-window.niveauForceCourant = 2;        // Force sélectionnée (0: désactivé, 1: 25%, 2: 50%, 3: 75%, 4: 100%)
+window.niveauForceCourant = 5;        // Force sélectionnée (0: désactivé, 1: 25%, 2: 50%, 3: 75%, 4: 100%)
 window.indexPointEffetCourant = 0;    // NOUVEAU : 0 = Centre, 1 à 8 = Points périphériques
 
 // --- Configuration de l'Outil : Point de Contact (Touche P) ---
